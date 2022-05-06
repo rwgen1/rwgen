@@ -1,0 +1,16 @@
+Point_ID,Easting,Northing,File_Path,Other_ID,Name,Elevation,Latitude,Longitude
+1,659493,5556905,./input/gauge_01.csv,812,Burgkunstadt,277.5,50.1429,11.2322
+2,640130,5574573,./input/gauge_02.csv,867,Lautertal-Oberlauter,343.79,50.3066,10.9679
+3,688073,5524669,./input/gauge_03.csv,885,Creussen-Buehl,449.5,49.8449,11.616
+4,703430,5540344,./input/gauge_04.csv,1357,Oberfranken-Huettstadl,654.5,49.9807,11.8376
+5,638050,5555283,./input/gauge_05.csv,2431,Itzgrund-Herreth,366.5,50.1337,10.9317
+6,665451,5569271,./input/gauge_06.csv,2750,Kronach,310,50.2524,11.3209
+7,667772,5598357,./input/gauge_07.csv,3080,Ludwigsstadt-Lauenstein,520.5,50.5131,11.3664
+8,659060,5590063,./input/gauge_08.csv,3491,Foeritztal-Neuenbau,738,50.441,11.2401
+9,682961,5555399,./input/gauge_09.csv,3497,Ludwigschorgast,336,50.1226,11.5596
+10,651296,5596422,./input/gauge_10.csv,3513,Neuhaus am Rennweg,845,50.5002,11.1334
+11,695744,5559248,./input/gauge_11.csv,4818,Stammbach-Querenbach,597,50.1531,11.7402
+12,669764,5585856,./input/gauge_12.csv,5017,Teuschnitz,633,50.4002,11.3888
+13,672106,5539636,./input/gauge_13.csv,5034,Thurnau-Tannfeld,513,49.9842,11.4008
+14,644816,5535692,./input/gauge_14.csv,6195,Schesslitz-Koettensdorf,304.5,49.956,11.0189
+15,686506,5582146,./input/gauge_15.csv,6338,Bad Steben,605,50.3618,11.6223
