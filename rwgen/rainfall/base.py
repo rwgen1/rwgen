@@ -37,12 +37,6 @@ class Preprocessor(object):
             maximum_alterations=5
     ):
         self.season_definitions = utils.parse_season_definitions(season_definitions)
-        # if season_definitions is not None:
-        #     self.season_definitions = utils.parse_season_definitions(season_definitions)
-        # else:
-        #     self.season_definitions = {}
-        #     for month in range(1, 12 + 1):
-        #         self.season_definitions[month] = month
 
         if statistic_definitions is not None:
             self.statistic_definitions = statistic_definitions
@@ -208,32 +202,6 @@ class Fitter(object):
 
             statistic_ids, fitting_data, ref, weights, gs = self.prepare(season_reference_statistics)
 
-            # ---
-            # TESTING
-
-            # print(fitting_data[(9, 'df')])
-            # sys.exit()
-            #
-            # parameters = [
-            #     0.00945254898757336,
-            #     0.02,
-            #     0.892091280465614,
-            #     0.47269953912173,
-            #     1.20182852521822,
-            #     0.872755871631909
-            # ]
-            # mod_stats = self.analytical_properties_wrapper(parameters, statistic_ids, fitting_data)
-            # # print(ref[-15:])
-            # # print(mod_stats[-15:])
-            # # print(fitting_data[9, 'df'])
-            # assert ref.shape[0] == mod_stats.shape[0]
-            # for idx in range(ref.shape[0]):
-            #     print(ref[idx], mod_stats[idx])
-            #
-            # sys.exit()
-
-            # ---
-
             result = scipy.optimize.differential_evolution(
                 func=self.fitting_wrapper,
                 bounds=parameter_bounds,  # self.parameter_bounds,
@@ -269,36 +237,7 @@ class Fitter(object):
             df['season'] = season
             fitted_statistics.append(df)
 
-            # ---
-            # TESTING
-
-            # results = {
-            #     ('lamda', 1): 0.00732875,
-            #     ('beta', 1): 0.022149654,
-            #     ('rho', 1): 0.000691021,
-            #     ('eta', 1): 0.559397196,
-            #     ('xi', 1): 0.969101918,
-            #     ('gamma', 1): 0.021796784,
-            #     ('fit_success', 1): 0,
-            #     ('objective_function', 1): 0,
-            #     ('number_of_iterations', 1): 0,
-            #     ('number_of_evaluations', 1): 0,
-            #     # --
-            #     ('lamda', 2): 0.007889213,
-            #     ('beta', 2): 0.060779866,
-            #     ('rho', 2): 0.010529908,
-            #     ('eta', 2): 8.649824087,
-            #     ('xi', 2): 0.078204973,
-            #     ('gamma', 2): 0.080409177,
-            #     ('fit_success', 2): 0,
-            #     ('objective_function', 2): 0,
-            #     ('number_of_iterations', 2): 0,
-            #     ('number_of_evaluations', 2): 0,
-            # }
-
-            # END TESTING
-            # ---
-
+        # Format results and write output tables (parameter values and fitted statistics)
         self.parameters = self.format_results(results)
         if self.output_folder is not None:
             df = self.parameters[self.parameter_output_columns]
@@ -1094,72 +1033,6 @@ class Simulator(object):
     ):
         raise NotImplementedError
 
-    # @staticmethod
-    # @numba.jit(nopython=True)
-    # def discretise_point(
-    #         period_start_time, period_end_time, timestep_length, raincell_arrival_times, raincell_end_times,
-    #         raincell_intensities, discrete_rainfall
-    # ):
-    #     # Modifying the discrete rainfall arrays themselves so need to ensure zeros before starting
-    #     discrete_rainfall.fill(0.0)
-    #
-    #     # Subset on raincells overlapping the required period
-    #     mask = (raincell_arrival_times < period_end_time) & (raincell_end_times > period_start_time)
-    #     period_rc_arrival_times = raincell_arrival_times[mask]
-    #     period_rc_end_times = raincell_end_times[mask]
-    #     period_rc_intensities = raincell_intensities[mask]
-    #
-    #     # Discretise each raincell in turn
-    #     for idx in range(period_rc_arrival_times.shape[0]):
-    #
-    #         # Times relative to period start
-    #         rc_arrival_time = period_rc_arrival_times[idx] - period_start_time
-    #         rc_end_time = period_rc_end_times[idx] - period_start_time
-    #         rc_intensity = period_rc_intensities[idx]
-    #
-    #         # Timesteps relative to period start
-    #         rc_arrival_timestep = int(np.floor(rc_arrival_time / timestep_length))
-    #         rc_end_timestep = int(np.floor(rc_end_time / timestep_length))  # timestep containing end
-    #
-    #         # Proportion of raincell in each relevant timestep
-    #         for timestep in range(rc_arrival_timestep, rc_end_timestep+1):
-    #             timestep_start_time = timestep * timestep_length
-    #             timestep_end_time = (timestep + 1) * timestep_length
-    #             effective_start = max(rc_arrival_time, timestep_start_time)
-    #             effective_end = min(rc_end_time, timestep_end_time)
-    #             timestep_coverage = effective_end - effective_start
-    #
-    #             if timestep < discrete_rainfall.shape[0]:
-    #                 discrete_rainfall[timestep] += rc_intensity * timestep_coverage
-
-    # @staticmethod
-    # @numba.jit(nopython=True)
-    # def discretise_multiple_points(
-    #         period_start_time, period_end_time, timestep_length, raincell_arrival_times, raincell_end_times,
-    #         raincell_intensities, discrete_rainfall,
-    #         raincell_x_coords, raincell_y_coords, raincell_radii,
-    #         point_eastings, point_northings, point_phi,  # point_ids,
-    # ):
-    #     # - id array needed?
-    #
-    #     # Modifying the discrete rainfall arrays themselves so need to ensure zeros before starting
-    #     discrete_rainfall.fill(0.0)
-    #
-    #     # Subset raincells based on whether they intersect the point being discretised
-    #     for idx in range(point_eastings.shape[0]):
-    #         x = point_eastings[idx]
-    #         y = point_northings[idx]
-    #         yi = idx
-    #
-    #         distances_from_raincell_centres = np.sqrt((x - raincell_x_coords) ** 2 + (y - raincell_y_coords) ** 2)
-    #         mask = distances_from_raincell_centres <= raincell_radii
-    #
-    #         Simulator.discretise_point(
-    #             period_start_time, period_end_time, timestep_length, raincell_arrival_times[mask],
-    #             raincell_end_times[mask], raincell_intensities[mask], discrete_rainfall[:, yi]
-    #         )
-    #         discrete_rainfall[:, yi] *= point_phi[idx]
-
     def write_output(self, realisation_id, output_lists):
         for output_type in self.output_types:
             if output_type == 'point':
@@ -1365,20 +1238,6 @@ class Process(object):
         idx = np.digitize(times, end_times)  # -1 not required... check
         months = repeated_months[idx]
         return months
-    # def _lookup_months(months, month_lengths, period_length, df, times_column):
-    #     months_repeated = pd.DataFrame({
-    #         'end_time': np.cumsum(month_lengths),
-    #         'start_time': np.insert(np.cumsum(month_lengths)[:-1], 0, 0.0),
-    #         'month': np.tile(months, period_length)
-    #     })
-    #
-    #     def lookup_month(time):
-    #         match = (months_repeated['start_time'] <= time) & (months_repeated['end_time'] > time)
-    #         month = months_repeated['month'][match]
-    #         return month.values[0]
-    #
-    #     df['month'] = df[times_column].apply(lookup_month)
-    #     return df
 
     @staticmethod
     def _storm_arrays_by_raincell(number_of_raincells_by_storm, storm_ids, storm_arrival_times, storm_months):
@@ -1393,6 +1252,7 @@ class Process(object):
 class Model(object):
 
     # - should probably keep track of seasons at least and flag if some error on user input / inconsistency?
+    # - also the place to specify intensity distribution
 
     def __init__(
             self,
@@ -1402,6 +1262,20 @@ class Model(object):
             process_class=None,
             simulator_class=None
     ):
+        """
+        Basic NSRP model class for pre-processing, fitting and simulation.
+
+        Override this class with a specific model subclass (e.g. for a NSRP or STNSRP model).
+
+        Args:
+            season_definitions (dict): Month identifier (as integer 1-12) as key and season identifier (integer) as
+                value
+            preprocessor_class (class): Preprocessor class for model
+            fitter_class (class): Fitter class for model
+            process_class (class): NSRP Process class for model
+            simulator_class (class): Simulator class for model
+
+        """
         if season_definitions is not None:
             self.season_definitions = utils.parse_season_definitions(season_definitions)
         else:

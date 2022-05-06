@@ -342,6 +342,25 @@ class Model(base.Model):
             maximum_relative_difference=2.0,
             maximum_alterations=5
     ):
+        """
+        Calculate statistics required in model fitting.
+
+        Args:
+            statistic_definitions (dict): Month identifier (as integer 1-12) as key and season identifier (integer) as
+                value
+            statistic_definitions_path:
+            timeseries_format:
+            calculation_period:
+            completeness_threshold:
+            timeseries_path:
+            output_folder:
+            point_statistics_filename:
+            override_phi:
+            outlier_method:
+            maximum_relative_difference:
+            maximum_alterations:
+
+        """
         print('  Preprocessing')
         self.preprocessor = self.preprocessor_class(
             self.season_definitions,
@@ -370,6 +389,19 @@ class Model(base.Model):
             statistics_filename=None,
             parameter_bounds=None
     ):
+        """
+        Optimise model parameters.
+
+        Args:
+            preprocessor:
+            reference_statistics:
+            reference_statistics_path:
+            output_folder:
+            parameters_filename:
+            statistics_filename:
+            parameter_bounds:
+
+        """
         print('  Fitting')
         if preprocessor is not None:
             reference_statistics = preprocessor.statistics
@@ -405,6 +437,25 @@ class Model(base.Model):
             start_year=2000,
             calendar='gregorian',
     ):
+        """
+        Simulate rainfall time series.
+
+        Args:
+            fitter:
+            output_folder:
+            output_format:
+            parameters:
+            process_class:
+            output_prefix:
+            number_of_years:
+            number_of_realisations:
+            concatenate_output:
+            equal_length_output:
+            timestep_length:
+            start_year:
+            calendar:
+
+        """
         print('  Simulating')
         if fitter is not None:
             parameters = fitter.parameters
