@@ -537,10 +537,6 @@ class Simulator(base.Simulator):
             else:
                 discretisation_case = output_type
 
-            # import datetime
-            # t1 = datetime.datetime.now()
-            # print(discretisation_case)
-
             # self.discretise_multiple_points(
             utils.discretise_multiple_points(
                 start_time,
@@ -559,14 +555,6 @@ class Simulator(base.Simulator):
                 discretisation_metadata[(discretisation_case, 'phi', season)],  # ! how to handle season... take as arg for now !
                 # point_indexes_axis_1, point_indexes_axis_2=None
             )
-
-            # t2 = datetime.datetime.now()
-
-            # print(np.max(discrete_rainfall[discretisation_case]))
-            # print(t2 - t1)
-            # print()
-
-        # sys.exit()
 
 
 class Model(base.Model):
