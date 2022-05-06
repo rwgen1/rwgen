@@ -1,0 +1,9 @@
+Statistic_ID,Name,Duration,Weight
+1,variance,1,1
+2,skewness,1,2
+3,probability_dry_0.2mm,1,7
+4,mean,24,6
+5,variance,24,2
+6,skewness,24,3
+7,probability_dry_0.2mm,24,7
+8,autocorrelation_lag1,24,6
