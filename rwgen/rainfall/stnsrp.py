@@ -690,7 +690,6 @@ class Model(base.Model):
             calendar=calendar,
         )
 
-        # self.simulator.simulate_realisation(1, 2000)
         self.simulator.run()
 
 
