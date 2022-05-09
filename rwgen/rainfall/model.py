@@ -324,9 +324,65 @@ class Model:
 
     def simulate(
             self,
+            output_types=None,
+            output_folder=None,  # could also be dictionary for paths to point, catchment, grid folders...
+            output_format=None,  # either string or dictionary? {'point': 'csv', 'catchment': 'txt'} ?
+            output_prefix=None,
+            season_definitions=None,
+            process_class=None,
+            parameters=None,
+            points=None,
+            catchments=None,
+            catchment_id_field=None,
+            grid=None,  # dictionary {'ncols': 10, 'nrow': 10, ...}
+            cell_size=None,  # of grid for discretisation
+            dem=None,  # path to ascii raster [or xarray data array]
+            phi=None,  # phi df, path to phi df [or xarray data array]
+            number_of_years=30,  # stick to <= 1000 for now?
+            number_of_realisations=1,
+            concatenate_output=False,
+            equal_length_output=False,
+            timestep_length=1,  # hrs
+            start_year=2000,
+            calendar='gregorian',  # gregorian or 365-day
     ):
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
-        pass
+
+        # ---
+
+        # Output folder/format details
+        self.output_types = output_types  # ['point', 'catchment', 'grid']
+
+        if isinstance(output_format, dict):
+            self.output_format = output_format
+        else:
+            self.output_format = {output_type: output_format for output_type in self.output_types}
+            if 'grid' in self.output_types:
+                self.output_format['grid'] = 'nc'
+
+        if isinstance(output_folder, dict):
+            self.output_folder = output_folder
+        else:
+            self.output_folder = {output_type: output_folder for output_type in self.output_types}
+
+        if output_prefix is None:
+            self.output_prefix = {'point': 'point', 'catchment': 'catchment', 'grid': 'grid'}
+        elif isinstance(output_prefix, dict):
+            self.output_prefix = output_prefix
+        else:
+            self.output_prefix = {output_type: output_prefix for output_type in self.output_types}
+
+        # Model details
+        self.season_definitions = utils.parse_season_definitions(season_definitions)
+        self.process_class = process_class
+        if os.path.exists(parameters):
+            self.parameters = utils.read_csv_(parameters)
+        else:
+            self.parameters = parameters
+        if dem is not None:  # moved up here so change order of arguments - attribute?
+            if os.path.exists(dem):
+                dem = utils.read_ascii_raster(dem)
+            dem_cell_size = dem.x.values[1] - dem.x.values[0]
 
     @property
     def unique_seasons(self):
