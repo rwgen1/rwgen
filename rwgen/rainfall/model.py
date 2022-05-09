@@ -73,7 +73,7 @@ class Model:
         Args:
             output_folder (str): Folder in which to save output parameters and fitted statistics files.
             fitting_method (str): Flag to indicate fitting method. Using `default` will fit each month or season
-                independently. Option for `nonparametric_smoothing` under development (see Notes).
+                independently. Option for `empirical_smoothing` under development (see Notes).
             reference_statistics (pandas.DataFrame): Statistics for fitting model parameters.
             reference_point_statistics_path (str): Path to file containing point statistics.
             reference_cross_correlations_path (str): Path to file containing cross-correlation statistics.
@@ -85,11 +85,11 @@ class Model:
             output_point_statistics_filename (str): Name of output point statistics file.
             output_cross_correlation_filename (str): Name of output cross-correlation statistics file.
             initial_parameters (pandas.DataFrame): Initial parameter values to use if fitting_method is
-                nonparametric_smoothing. If not specified then initial parameter values will be obtained using
+                empirical_smoothing. If not specified then initial parameter values will be obtained using
                 the default fitting method (for which no initial values are currently required).
-            initial_parameters_path (str): Path to file from which initial_parameters should be read
+            initial_parameters_path (str): Path to file from which initial_parameters should be read if desired.
             smoothing_tolerance (float): Permitted deviation in smoothed annual cycle of parameter values (only used
-                if fitting_method is nonparametric_smoothing). Expressed as fraction of annual mean parameter value,
+                if fitting_method is empirical_smoothing). Expressed as fraction of annual mean parameter value,
                 such that 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.
 
         Notes:
@@ -103,7 +103,7 @@ class Model:
             Fitting can be speeded up significantly with n_workers > 1. The maximum n_workers should be less than or
             equal to the number of cores or logical processors available.
 
-            Non-parametric smoothing.  # TODO: Explain method so far
+            Empirical smoothing.  # TODO: Explain method so far
 
         """
         # Read reference statistics if not available from preprocessing or passed directly

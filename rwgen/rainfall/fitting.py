@@ -48,9 +48,11 @@ def main(
             unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
             parameter_names
         )
-    elif fitting_method == 'nonparametric_smoothing':
-        # parameters, fitted_statistics = fit_with_nonparametric_smoothing()
-        pass
+    elif fitting_method == 'empirical_smoothing':
+        parameters, fitted_statistics = fit_with_empirical_smoothing(
+            unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
+            parameter_names, initial_parameters, initial_parameters_path, smoothing_tolerance
+        )
 
     # Write outputs
     df = parameters[parameter_output_columns]
@@ -134,69 +136,72 @@ def fit_by_season(
     return parameters, fitted_statistics
 
 
-# TO BE UPDATED
-def fit_with_nonparametric_smoothing(self):
-    # - do we want to write the results of the first step? yes - might be useful to inspect
-    # - also useful to be able to start from a parameter file, rather than necessarily having to do the first step
-    # - should we be operating on self.parameter_bounds or not?
+def fit_with_empirical_smoothing(
+        unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
+        parameter_names, initial_parameters, initial_parameters_path, smoothing_tolerance
+):
+    """
+    Optimise parameters by season but with an empirical smoothing step.
 
-    # First step is a normal season-wise fit
-    # self.fit_by_season()
+    Notes:
+        Three-step process: (1) optimise each season independently, (2) smooth annual cycle of parameter values using a
+        simple weighted moving-average, (3) optimise each season independently again but this time using bounds based on
+        a permitted deviation from the smoothed annual cycle determined in step (2). These bounds are currently set as
+        constant for each season. The half-width of the bounds is set as the mean value of a parameter from step (2)
+        (i.e. averaged across all seasons) multiplied by a factor smoothing_tolerance. The bounds for each season are
+        then set as the smoothed parameter value +/- the half-width of the bounds (constrained according to
+        parameter_bounds).
 
-    # ---
-    # Read starting parameters from here for now
-    self.parameters = utils.read_csv_('H:/Projects/rwgen/examples/stnsrp/output/parameters.csv')
-    # self.parameters = utils.read_csv_('H:/Projects/rwgen/examples/nsrp/output2/parameters.csv')
-    # ---
+    """
+    # Step 1 - Initial parameters for can either be passed, read or obtained from default season-wise fitting
+    if initial_parameters is not None:
+        initial_parameters = initial_parameters.copy()
+    elif initial_parameters_path is not None:
+        initial_parameters = utils.read_csv_(initial_parameters_path)
+    else:
+        initial_parameters, _ = fit_by_season(
+            unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
+            parameter_names, stage='interim'
+        )
 
-    # Then smooth the parameter values using a +/-1 month (season?) weighted moving average
+    # Step 2 - Smooth the parameter values using a +/-1 season weighted moving average
 
     # Insert (repeat) final season at beginning of df and first season at end to avoid boundary effects
-    tmp1 = self.parameters.loc[self.parameters['season'] == 12].copy()
+    tmp1 = initial_parameters.loc[initial_parameters['season'] == 12].copy()
     tmp1.loc[:, 'season'] = 0
-    tmp2 = self.parameters.loc[self.parameters['season'] == 1].copy()
-    tmp2.loc[:, 'season'] = max(self.unique_seasons) + 1
-    df = pd.concat([self.parameters, tmp1, tmp2])
+    tmp2 = initial_parameters.loc[initial_parameters['season'] == 1].copy()
+    tmp2.loc[:, 'season'] = max(unique_seasons) + 1
+    df = pd.concat([initial_parameters, tmp1, tmp2])
     df.sort_values('season', inplace=True)
 
-    # Weighted moving average
+    # TODO: Consider removing hardcoded weights in moving average
     def weighted_average(x):
         return (x.values[0] * 0.5 + x.values[1] + x.values[2] * 0.5) / 2.0
 
+    # Apply weighted moving average smoothing
     df1 = df.rolling(window=3, center=True, on='season').apply(weighted_average)
-    df1 = df1.loc[(df1['season'] >= min(self.unique_seasons)) & (df1['season'] <= max(self.unique_seasons))]
+    df1 = df1.loc[(df1['season'] >= min(unique_seasons)) & (df1['season'] <= max(unique_seasons))]
 
-    # # Define new bounds for optimisation by season
-    # seasonal_parameter_bounds = {}
-    # for season in self.unique_seasons:
-    #     seasonal_parameter_bounds[season] = []
-    #     for parameter in self.parameter_names:
-    #         parameter_idx = self.parameter_names.index(parameter)
-    #         smoothed_initial_value = df1.loc[df1['season'] == season, parameter].values[0]
-    #         offset = smoothed_initial_value * 0.25
-    #         lower_bound = max(smoothed_initial_value - offset, self.parameter_bounds[parameter_idx][0])
-    #         upper_bound = min(smoothed_initial_value + offset, self.parameter_bounds[parameter_idx][1])
-    #         seasonal_parameter_bounds[season].append((lower_bound, upper_bound))
-
-    # ALTERNATIVE Define new bounds for optimisation by season using fraction of annual mean of smoothed parameter
-    seasonal_parameter_bounds = {}
-    for season in self.unique_seasons:
-        seasonal_parameter_bounds[season] = []
-        for parameter in self.parameter_names:
-            parameter_idx = self.parameter_names.index(parameter)
+    # Define new bounds for optimisation by season using fraction of annual mean of smoothed parameter
+    new_parameter_bounds = {}
+    for season in unique_seasons:
+        new_parameter_bounds[season] = []
+        for parameter in parameter_names:
+            parameter_idx = parameter_names.index(parameter)
             parameter_mean = df1[parameter].mean()
-            offset = parameter_mean * 0.15  # 0.25
+            offset = parameter_mean * smoothing_tolerance
             smoothed_initial_value = df1.loc[df1['season'] == season, parameter].values[0]
-            lower_bound = max(smoothed_initial_value - offset, self.parameter_bounds[parameter_idx][0])
-            upper_bound = min(smoothed_initial_value + offset, self.parameter_bounds[parameter_idx][1])
-            seasonal_parameter_bounds[season].append((lower_bound, upper_bound))
+            lower_bound = max(smoothed_initial_value - offset, parameter_bounds[parameter_idx][0])
+            upper_bound = min(smoothed_initial_value + offset, parameter_bounds[parameter_idx][1])
+            new_parameter_bounds[season].append((lower_bound, upper_bound))
 
-    # Refit by season with refined bounds
-    # - temporarily adjust output file names here - needs to be rationalised
-    self.parameters_path = self.parameters_path.replace('.csv', '3_15.csv')
-    self.point_statistics_path = self.point_statistics_path.replace('.csv', '3_15.csv')
-    self.cross_correlation_path = self.cross_correlation_path.replace('.csv', '3_15.csv')
-    self.fit_by_season(seasonal_parameter_bounds)
+    # Step 3 - Refit by season with refined bounds
+    parameters, fitted_statistics = fit_by_season(
+        unique_seasons, reference_statistics, new_parameter_bounds, spatial_model, intensity_distribution, n_workers,
+        parameter_names, stage='final'
+    )
+
+    return parameters, fitted_statistics
 
 
 def format_results(results):
