@@ -12,17 +12,17 @@ def main(
         season_definitions,
         statistic_definitions,
         timeseries_format,
-        timeseries_path,  # point only
-        timeseries_folder,  # spatial only
-        metadata,  # spatial only
+        timeseries_path,
+        timeseries_folder,
+        metadata,
         calculation_period,
         completeness_threshold,
         output_point_statistics_path,
-        output_cross_correlation_path,  # spatial only
-        output_phi_path,  # spatial only
-        outlier_method,  # None
-        maximum_relative_difference,  # 2.0
-        maximum_alterations,  # 5
+        output_cross_correlation_path,
+        output_phi_path,
+        outlier_method,
+        maximum_relative_difference,
+        maximum_alterations,
 
 ):
     """

@@ -179,17 +179,17 @@ class Model:
             season_definitions=self.season_definitions,
             statistic_definitions=statistic_definitions,
             timeseries_format=timeseries_format,
-            timeseries_path=timeseries_path,  # point only
-            timeseries_folder=timeseries_folder,  # spatial only
-            metadata=metadata,  # spatial only
+            timeseries_path=timeseries_path,
+            timeseries_folder=timeseries_folder,
+            metadata=metadata,
             calculation_period=calculation_period,
             completeness_threshold=completeness_threshold,
             output_point_statistics_path=output_point_statistics_path,
-            output_cross_correlation_path=output_cross_correlation_path,  # spatial only
-            output_phi_path=output_phi_path,  # spatial only
-            outlier_method=outlier_method,  # None
-            maximum_relative_difference=maximum_relative_difference,  # 2.0
-            maximum_alterations=maximum_alterations,  # 5
+            output_cross_correlation_path=output_cross_correlation_path,
+            output_phi_path=output_phi_path,
+            outlier_method=outlier_method,
+            maximum_relative_difference=maximum_relative_difference,
+            maximum_alterations=maximum_alterations,
         )
 
     def fit(
