@@ -102,7 +102,7 @@ class Model:
             maximum_alterations (int): Maximum number of trimming or clipping alterations permitted. Used only if
                 outlier_method is not None.
 
-        Notes:
+        Notes:  # TODO: Expand notes
             statistic_definitions
 
             metadata
