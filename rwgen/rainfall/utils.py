@@ -103,6 +103,10 @@ def parse_season_definitions(user_input):
     return season_definitions
 
 
+def identify_unique_seasons(season_definitions):
+    return list(set(season_definitions.values()))
+
+
 def check_if_leap_year(year):
     if year % 4 == 0:
         if year % 100 == 0:
@@ -232,12 +236,16 @@ def make_column_names_lowercase(df):
 def merge_statistics(point_statistics, cross_correlations):
     point_statistics['point_id2'] = pd.NA
     point_statistics['distance'] = np.nan
-    point_statistics['phi2'] = np.nan
+    if 'phi' in cross_correlations.columns:
+        point_statistics['phi2'] = np.nan
     statistics = pd.concat([point_statistics, cross_correlations])
     column_order = [
-        'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value', 'gs',
-        'phi', 'phi2'  # 'lag', 'threshold',
+        'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value',
     ]
+    if 'gs' in point_statistics.columns:
+        column_order.append('gs')
+    if 'phi' in cross_correlations.columns:
+        column_order.extend('phi', 'phi2')
     statistics = statistics[column_order]
     return statistics
 
@@ -340,7 +348,7 @@ def read_csv_timeseries(input_path):
     return df
 
 
-def read_csvy(input_path):
+def read_csvy_timeseries(input_path):
     with open(input_path, 'r') as fh:
         fh.readline()
         number_of_headers = 1

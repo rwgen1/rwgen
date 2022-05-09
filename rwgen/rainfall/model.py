@@ -1,5 +1,9 @@
 import os
 
+import numpy as np
+import pandas as pd
+
+from . import preprocessing
 from . import fitting
 from . import utils
 
@@ -50,6 +54,143 @@ class Model:
 
         #: pandas.DataFrame: Parameters for time series simulation.
         self.parameters = None
+
+    def preprocess(
+            self,
+            output_folder,
+            statistic_definitions=None,
+            statistic_definitions_path=None,
+            timeseries_format='csv',
+            timeseries_path=None,
+            timeseries_folder=None,
+            metadata=None,
+            metadata_path=None,
+            calculation_period=None,
+            completeness_threshold=0.0,
+            output_point_statistics_filename='reference_point_statistics.csv',
+            output_cross_correlations_filename='reference_cross_correlations.csv',
+            output_phi_filename='phi.csv',
+            outlier_method=None,
+            maximum_relative_difference=2.0,
+            maximum_alterations=5
+    ):
+        """
+        Prepare reference statistics, weights and scale factors for use in model fitting.
+
+        Args:
+            output_folder (str): Path to folder in which output statistics (and scale factors) should be written.
+            statistic_definitions (pandas.DataFrame): Definitions (descriptions) of statistics to calculate. See Notes
+                for explanation of DataFrame contents.
+            statistic_definitions_path (str): Path to file containing statistic definitions (see Notes for details).
+            timeseries_format (str): Flag indicating format of timeseries inputs. Use `csv` for now.
+            timeseries_path (str): Path to file containing timeseries data (only required for point model).
+            timeseries_folder (str): Path to folder containing timeseries data files (only required for spatial model).
+            metadata (pandas.DataFrame): Metadata on point locations for which preprocessing should be carried out for
+                a spatial model. The dataframe should contain identifiers (integers) and coordinates - see Notes.
+            metadata_path (str): Path to file containing metadata for a spatial model.
+            calculation_period (list of int): Start year and end year of calculation period. If not specified then all
+                available data will be used in statistics calculations.
+            completeness_threshold (float): Percentage completeness for a month or season to be included in statistics
+                calculations. Default is 0.0, i.e. any completeness (or missing data) percentage is acceptable.
+            output_point_statistics_filename (str): Name of output file for point statistics.
+            output_cross_correlations_filename (str): Name of output file for cross-correlations (spatial model only).
+            output_phi_filename (str): Name of output file for phi scale factors (spatial model only).
+            outlier_method (str): Flag indicating which (if any) method should be to reduce the influence of outliers.
+                Options are None (default), 'trim' (remove outliers) or 'clip' (Winsorise). See Notes for details.
+            maximum_relative_difference (float): Maximum relative difference to allow between the two largest values
+                in a timeseries. Used only if outlier_method is not None.
+            maximum_alterations (int): Maximum number of trimming or clipping alterations permitted. Used only if
+                outlier_method is not None.
+
+        Notes:
+            statistic_definitions
+
+            metadata
+
+            outlier_method
+
+        """
+        # Set default statistic definitions (and weights) if needed (taken largely from RainSim V3.1 documentation)
+        if statistic_definitions is not None:
+            pass
+        elif statistic_definitions_path is not None:
+            statistic_definitions = utils.read_statistic_definitions(statistic_definitions_path)
+        else:
+            if self.spatial_model:
+                dc = {
+                    1: {'weight': 3.0, 'duration': 1, 'name': 'variance'},
+                    2: {'weight': 3.0, 'duration': 1, 'name': 'skewness'},
+                    3: {'weight': 5.0, 'duration': 1, 'name': 'probability_dry', 'threshold': 0.2},
+                    4: {'weight': 5.0, 'duration': 24, 'name': 'mean'},
+                    5: {'weight': 2.0, 'duration': 24, 'name': 'variance'},
+                    6: {'weight': 2.0, 'duration': 24, 'name': 'skewness'},
+                    7: {'weight': 6.0, 'duration': 24, 'name': 'probability_dry', 'threshold': 0.2},
+                    8: {'weight': 3.0, 'duration': 24, 'name': 'autocorrelation', 'lag': 1},
+                    9: {'weight': 2.0, 'duration': 24, 'name': 'cross-correlation', 'lag': 0}
+                }
+            else:
+                dc = {
+                    1: {'weight': 1.0, 'duration': 1, 'name': 'variance'},
+                    2: {'weight': 2.0, 'duration': 1, 'name': 'skewness'},
+                    3: {'weight': 7.0, 'duration': 1, 'name': 'probability_dry', 'threshold': 0.2},
+                    4: {'weight': 6.0, 'duration': 24, 'name': 'mean'},
+                    5: {'weight': 2.0, 'duration': 24, 'name': 'variance'},
+                    6: {'weight': 3.0, 'duration': 24, 'name': 'skewness'},
+                    7: {'weight': 7.0, 'duration': 24, 'name': 'probability_dry', 'threshold': 0.2},
+                    8: {'weight': 6.0, 'duration': 24, 'name': 'autocorrelation', 'lag': 1},
+                }
+            id_name = 'statistic_id'
+            non_id_columns = ['name', 'duration', 'lag', 'threshold', 'weight']
+            statistic_definitions = utils.nested_dictionary_to_dataframe(dc, id_name, non_id_columns)
+
+        # Check that statistics include 24hr mean, as it is currently required for calculating phi (add in if absent)
+        includes_24hr_mean = statistic_definitions.loc[
+            (statistic_definitions['name'] == 'mean') & (statistic_definitions['duration'] == 24)
+        ].shape[0]
+        if not includes_24hr_mean:
+            df = pd.DataFrame({
+                'statistic_id': [int(np.max(statistic_definitions['statistic_id'])) + 1], 'weight': [0],
+                'duration': [24], 'name': ['mean'], 'lag': ['NA'], 'threshold': ['NA']
+            })
+            statistic_definitions = pd.concat([statistic_definitions, df])
+
+        # Spatial model requires a table of metadata for points
+        if self.spatial_model:
+            if metadata is not None:
+                pass
+            else:
+                metadata = pd.read_csv(metadata_path)
+            metadata.columns = [column_name.lower() for column_name in metadata.columns]
+
+        # Construct output paths
+        output_point_statistics_path = os.path.join(output_folder, output_point_statistics_filename)
+        if 'cross-correlation' in statistic_definitions['name'].tolist():
+            output_cross_correlation_path = os.path.join(output_folder, output_cross_correlations_filename)
+        else:
+            output_cross_correlation_path = None
+        if self.spatial_model:
+            output_phi_path = os.path.join(output_folder, output_phi_filename)
+        else:
+            output_phi_path = None
+
+        # Do preprocessing
+        self.reference_statistics = preprocessing.main(
+            spatial_model=self.spatial_model,
+            season_definitions=self.season_definitions,
+            statistic_definitions=statistic_definitions,
+            timeseries_format=timeseries_format,
+            timeseries_path=timeseries_path,  # point only
+            timeseries_folder=timeseries_folder,  # spatial only
+            metadata=metadata,  # spatial only
+            calculation_period=calculation_period,
+            completeness_threshold=completeness_threshold,
+            output_point_statistics_path=output_point_statistics_path,
+            output_cross_correlation_path=output_cross_correlation_path,  # spatial only
+            output_phi_path=output_phi_path,  # spatial only
+            outlier_method=outlier_method,  # None
+            maximum_relative_difference=maximum_relative_difference,  # 2.0
+            maximum_alterations=maximum_alterations,  # 5
+        )
 
     def fit(
             self,
@@ -119,10 +260,10 @@ class Model:
         # If bounds are passed as a list assume that they should be applied to each season
         if parameter_bounds is not None:
             if isinstance(parameter_bounds, list):
-                _ = {}
+                dc = {}
                 for season in self.unique_seasons:
-                    _[season] = parameter_bounds
-                parameter_bounds = _
+                    dc[season] = parameter_bounds
+                parameter_bounds = dc
 
         # Identify relevant parameters and set default bounds by season if required
         if not self.spatial_model:
@@ -180,6 +321,12 @@ class Model:
             smoothing_tolerance=smoothing_tolerance
         )
         self.parameters = parameters
+
+    def simulate(
+            self,
+    ):
+        # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
+        pass
 
     @property
     def unique_seasons(self):
