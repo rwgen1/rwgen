@@ -2,9 +2,11 @@ import os
 
 import numpy as np
 import pandas as pd
+import geopandas
 
 from . import preprocessing
 from . import fitting
+from . import simulation
 from . import utils
 
 
@@ -13,6 +15,8 @@ class Model:
     Pre-processing, fitting and simulation of point and spatial Neyman-Scott Rectangular Pulse (NSRP) models.
 
     """
+
+    # TODO: Clarify which arguments are optional and which are needed for point vs spatial model
 
     def __init__(
             self,
@@ -76,6 +80,8 @@ class Model:
     ):
         """
         Prepare reference statistics, weights and scale factors for use in model fitting.
+
+        # TODO: Document each item calculated (e.g. definitions of scale factors)
 
         Args:
             output_folder (str): Path to folder in which output statistics (and scale factors) should be written.
@@ -324,65 +330,156 @@ class Model:
 
     def simulate(
             self,
+            discretisation_method='default',
             output_types=None,
-            output_folder=None,  # could also be dictionary for paths to point, catchment, grid folders...
-            output_format=None,  # either string or dictionary? {'point': 'csv', 'catchment': 'txt'} ?
-            output_prefix=None,
-            season_definitions=None,
-            process_class=None,
+            output_folder=None,
+            output_subfolders='default',
+            output_format=None,
             parameters=None,
             points=None,
             catchments=None,
-            catchment_id_field=None,
-            grid=None,  # dictionary {'ncols': 10, 'nrow': 10, ...}
-            cell_size=None,  # of grid for discretisation
-            dem=None,  # path to ascii raster [or xarray data array]
-            phi=None,  # phi df, path to phi df [or xarray data array]
-            number_of_years=30,  # stick to <= 1000 for now?
+            grid=None,  # TODO: Consider whether to add grid_output_prefix
+            epsg_code=None,
+            cell_size=None,
+            dem=None,
+            phi=None,
+            simulation_length=30,
             number_of_realisations=1,
-            concatenate_output=False,
-            equal_length_output=False,
-            timestep_length=1,  # hrs
+            timestep_length=1,
             start_year=2000,
-            calendar='gregorian',  # gregorian or 365-day
+            calendar='gregorian',
+            random_seed=None,
+            additional_output=True,
     ):
+        """
+        Simulate realisation(s) of NSRP process.
+
+        Args:
+            discretisation_method (str): Flag indicating whether to discretise rainfall series for output (`default`)
+                or to calculate total depth for each event (`event_totals`), as required by Kim and Onof (2020)
+                shuffling method (not yet fully implemented).
+            output_types (list of str): Types of output (discretised) rainfall required. Options are `point`,
+                `catchment` and `grid`.
+            output_folder (str): Path to folder in which output files should be written.
+            output_subfolders (str or dict): Sub-folder in which to place each output type. If `default` then the
+                following dictionary is used: dict(point='point', catchment='catchment', grid='grid'). If None then
+                all output files are written to output_folder.
+            output_format (str): Flag indicating output file format for point and catchment output. Current
+                option is `txt`. Gridded output will be written in NetCDF format.
+            parameters (pandas.DataFrame or str): Dataframe of parameters to use in simulation (or path to file
+                containing parameters). Optional, as self.parameters will be used by default (and take precedence) if it
+                is not None (i.e. if the self.fitting() method has been run).
+            points (pandas.DataFrame or str): Metadata dataframe of points for which output is required (or path to
+                file). See Notes.
+            catchments (geopandas.GeoDataFrame or str): Geodataframe containing catchments for which output is required
+                (or path to catchments shapefile).
+            grid (dict or str): Specification of output grid to use for both gridded output (if required). This grid
+                is also used to support catchment output. Dictionary keys use ascii raster header keywords, e.g.
+                dict(ncols=10, nrow=10, ...). Use xllcorner and yllcorner, as well as lowercase for each keyword.
+                If None then a grid is defined to encompass catchment locations using cell_size argument. Path to an
+                ascii raster file to use as a template for the grid can be given instead.
+            epsg_code (int): EPSG code for projected coordinate system used for domain (used explicitly if catchment or
+                grid output is required).
+            cell_size (float): Cell size to use if grid is None but a grid is needed for gridded output and/or catchment
+                output.
+            dem (xarray.DataArray): Digital elevation model (DEM) [m] as data array or ascii raster file path.
+            phi (pandas.DataFrame or str): Dataframe containing phi scale factor at point locations
+                (from self.preprocessing() method). Path to phi file can be passed. If self.phi is not None (i.e.
+                preprocessing method has been run) then self.phi is given precedence.
+            simulation_length (int): Number of years to simulate in one realisation.
+            number_of_realisations (int): Number of realisations to simulate.
+            timestep_length (int): Timestep of output [hr]. Default is 1 (hour).
+            start_year (int): Start year of simulation.
+            calendar (str): Flag to indicate whether `gregorian` (default accounting for leap years) or `365-day`
+                calendar should be used.
+            random_seed (int): Seed to use in random number generation.
+            additional_output (bool): Flag to write additional output files to output_folder. These files are
+                catchment weights as ascii rasters and phi grid as ascii raster.
+            # TODO: Implement additional output and include also random seed (entropy attribute of SeedSequence)
+
+        Notes:
+            Though gridded output is calculated (if output_types includes `grid`) it is not yet available to write (i.e.
+            under development).
+
+            Dataframe of metadata for points should contain fields (columns) for ...  # TODO: Complete description
+
+            The code currently calculates catchment weights and performs interpolation of phi. Features could be added
+            for these variables to be passed directly as arguments.
+
+            Point metadata dataframe assumed to have a `Point_ID` field that can be sued to identify points.
+            Catchment shapefile or geodataframe assumed to have an `ID` field that can be used to identify catchments.
+            Both point and catchment metadata are assumed to have a `Name` field for use as a prefix in file naming.
+            Point (single site) simulations and grid output are assumed not to need a prefix.
+
+        """
+        # TODO: Implement output for catchment_weights_output_folder and phi_output_path - currently not implemented
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
 
-        # ---
+        # Make output folders if required
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        for output_subfolder in output_subfolders:
+            if not os.path.exists(os.path.join(output_folder, output_subfolder)):
+                os.mkdir(os.path.join(output_folder, output_subfolder))
 
-        # Output folder/format details
-        self.output_types = output_types  # ['point', 'catchment', 'grid']
+        # Get parameters if required
+        if self.parameters is not None:
+            parameters = self.parameters
+        elif isinstance(parameters, str):
+            parameters = utils.read_csv_(parameters)
 
-        if isinstance(output_format, dict):
-            self.output_format = output_format
-        else:
-            self.output_format = {output_type: output_format for output_type in self.output_types}
-            if 'grid' in self.output_types:
-                self.output_format['grid'] = 'nc'
+        # Get DEM if required
+        if os.path.exists(dem):
+            dem = utils.read_ascii_raster(dem)
 
-        if isinstance(output_folder, dict):
-            self.output_folder = output_folder
-        else:
-            self.output_folder = {output_type: output_folder for output_type in self.output_types}
+        # Output location details (grid must be defined or derived for catchment output)
+        if 'point' in output_types:
+            if isinstance(points, str):
+                points = utils.read_csv_(points)
+        if 'catchment' in output_types:
+            if isinstance(catchments, str):
+                catchments = geopandas.read_file(catchments)
+        if ('grid' in output_types) or ('catchment' in output_types):
+            if grid is not None:
+                cell_size = grid['cellsize']
+            elif isinstance(grid, str):
+                grid = utils.grid_definition_from_ascii(grid)
+                cell_size = grid['cellsize']
+            else:
+                grid = utils.define_grid_extent(catchments, cell_size, dem)
 
-        if output_prefix is None:
-            self.output_prefix = {'point': 'point', 'catchment': 'catchment', 'grid': 'grid'}
-        elif isinstance(output_prefix, dict):
-            self.output_prefix = output_prefix
-        else:
-            self.output_prefix = {output_type: output_prefix for output_type in self.output_types}
+        # Known phi values at point locations
+        if self.phi is not None:
+            phi = self.phi
+        elif isinstance(phi, str):
+            phi = utils.read_csv_(phi)
 
-        # Model details
-        self.season_definitions = utils.parse_season_definitions(season_definitions)
-        self.process_class = process_class
-        if os.path.exists(parameters):
-            self.parameters = utils.read_csv_(parameters)
-        else:
-            self.parameters = parameters
-        if dem is not None:  # moved up here so change order of arguments - attribute?
-            if os.path.exists(dem):
-                dem = utils.read_ascii_raster(dem)
-            dem_cell_size = dem.x.values[1] - dem.x.values[0]
+        # Do simulation
+        simulation.main(
+            spatial_model=self.spatial_model,
+            intensity_distribution=self.intensity_distribution,
+            discretisation_method=discretisation_method,
+            output_types=output_types,
+            output_folder=output_folder,
+            output_subfolders=output_subfolders,
+            output_format=output_format,
+            season_definitions=self.season_definitions,
+            parameters=parameters,
+            points=points,
+            catchments=catchments,
+            grid=grid,
+            epsg_code=epsg_code,
+            cell_size=cell_size,
+            dem=dem,
+            phi=phi,
+            simulation_length=simulation_length,
+            number_of_realisations=number_of_realisations,
+            timestep_length=timestep_length,
+            start_year=start_year,
+            calendar=calendar,
+            random_seed=random_seed,
+            additional_output=additional_output
+        )
 
     @property
     def unique_seasons(self):

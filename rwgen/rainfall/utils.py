@@ -395,7 +395,7 @@ def nested_dictionary_to_dataframe(dc, id_name, non_id_columns):
     return df
 
 
-def format_with_leading_zeros(x, min_string_length=3):
+def format_with_leading_zeros(x, min_string_length=3):  # TODO: Check if still used anywhere
     format_string = '0' + str(max(min_string_length, (len(str(x)))))
     return format(x, format_string)
 
@@ -508,6 +508,55 @@ def ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size, nodata_val
         'nodata_value': nodata_value
     }
     return dc
+
+
+def grid_definition_from_ascii(filepath):
+    dc = {}
+    with open(filepath, 'r') as fh:
+        for _ in range(6):
+            line = fh.readline()
+            line = line.rstrip().split()
+            if line[0] in ['ncols', 'nrows']:
+                dc[line[0]] = int(line[1])
+            else:
+                dc[line[0]] = float(line[1])
+    return dc
+
+
+def define_grid_extent(catchments, cell_size, dem):
+    """
+    Identify grid extent that fits in catchments and aligns with DEM if present.
+
+    """
+    xmin, ymin, xmax, ymax = geodataframe_bounding_box(catchments, round_extent=False)
+    if dem is not None:
+        dem_cell_size = dem.x.values[1] - dem.x.values[0]
+        new_xmin = dem.x.values[0] - dem_cell_size / 2.0
+        new_ymin = dem.y.values[-1] - dem_cell_size / 2.0
+        x_offset = new_xmin - round_down(xmin, cell_size)
+        y_offset = new_ymin - round_down(ymin, cell_size)
+        new_xmax = round_up(xmax, cell_size) - (cell_size - x_offset)
+        new_ymax = round_up(ymax, cell_size) - (cell_size - y_offset)
+        if new_xmax < xmax:
+            xmax = new_xmax + cell_size
+        else:
+            xmax = new_xmax
+        if new_ymax < ymax:
+            ymax = new_ymax + cell_size
+        else:
+            ymax = new_ymax
+        xmin = new_xmin
+        ymin = new_ymin
+    grid = ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size)
+    return grid
+
+
+def grid_limits(grid):
+    xmin = grid['xllcorner']
+    ymin = grid['yllcorner']
+    xmax = xmin + grid['ncols'] * grid['cell_size']
+    ymax = ymin + grid['nrows'] * grid['cell_size']
+    return xmin, ymin, xmax, ymax
 
 
 def catchment_weights(
