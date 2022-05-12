@@ -17,6 +17,10 @@ class Model:
     """
 
     # TODO: Clarify which arguments are optional and which are needed for point vs spatial model
+    # TODO: Consider breaking up into smaller methods
+    # - e.g. pre-processing for NSRP fitting, NSRP simulation, SARIMA fitting, etc
+    # - plus e.g. simulation constructing output paths, doing normal vs shuffling simulations
+    # - any value in setting more stuff as attributes to allow calling etc from different places?
 
     def __init__(
             self,
@@ -330,7 +334,7 @@ class Model:
 
     def simulate(
             self,
-            discretisation_method='default',
+            discretisation_method='default',  # TODO: Probably more like simulation_type
             output_types=None,
             output_folder=None,
             output_subfolders='default',
