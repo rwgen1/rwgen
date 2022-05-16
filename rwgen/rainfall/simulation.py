@@ -438,7 +438,7 @@ def simulate_realisation(
     # simulation can complete
     # TODO: Consider making this an optional check - add flag as argument?
     rng = np.random.default_rng(seed_sequence)
-    block_size = min(number_of_years, 1000)  # TODO: Reasonable choice? 500?
+    block_size = min(number_of_years, 1000)  # TODO: Reasonable choice? 500? Full simulation length?
     block_id = 0
     while block_id * block_size < number_of_years:
         idx1 = block_id * block_size * 12
@@ -455,7 +455,15 @@ def simulate_realisation(
                 n_timesteps = datetimes.loc[
                     (datetimes['year'] >= block_start_year) & (datetimes['year'] < (block_start_year + 100))
                 ].shape[0]
-                n_points = points.shape[0] * catchments.shape[0]
+                if spatial_model:
+                    if ('point' in output_types) and ('catchment' in output_types):
+                        n_points = points.shape[0] * catchments.shape[0]
+                    elif ('point' in output_types) and ('catchment' not in output_types):
+                        n_points = points.shape[0]
+                    elif ('point' not in output_types) and ('catchment' in output_types):
+                        n_points = catchments.shape[0]
+                else:
+                    n_points = 1
                 dummy2 = np.zeros((n_timesteps * n_points), dtype=np.float16) + 1
                 dummy2 = 0
             elif discretisation_method == 'event_totals':
@@ -574,7 +582,7 @@ def discretise_by_point(
                 )
         else:
             discretise_point(
-                start_time, end_time, timestep_length, raincell_arrival_times, raincell_end_times,
+                start_time, timestep_length, raincell_arrival_times, raincell_end_times,
                 raincell_intensities, discrete_rainfall['point'][:, 0]
             )
 

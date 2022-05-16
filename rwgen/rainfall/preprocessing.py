@@ -126,10 +126,12 @@ def main(
         statistics, output_point_statistics_path, season_definitions, output_cross_correlation_path
     )
     if spatial_model:
-        phi_ = pd.merge(metadata, phi, how='outer', on=['point_id'])
-        utils.write_phi(phi_, output_phi_path)
+        phi = pd.merge(metadata, phi, how='outer', on=['point_id'])
+        utils.write_phi(phi, output_phi_path)
+    else:
+        phi = None
 
-    return statistics
+    return statistics, phi
 
 
 def calculate_gs(statistics, merge=True):

@@ -60,6 +60,9 @@ class Model:
         #: pandas.DataFrame: Statistics for fitting model parameters or evaluating model fit / simulated statistics.
         self.reference_statistics = None
 
+        #: pandas.DataFrame: Scale factor phi at point locations (used in spatial model simulation).
+        self.phi = None
+
         #: pandas.DataFrame: Parameters for time series simulation.
         self.parameters = None
 
@@ -186,7 +189,7 @@ class Model:
             output_phi_path = None
 
         # Do preprocessing
-        self.reference_statistics = preprocessing.main(
+        self.reference_statistics, self.phi = preprocessing.main(
             spatial_model=self.spatial_model,
             season_definitions=self.season_definitions,
             statistic_definitions=statistic_definitions,
@@ -347,7 +350,7 @@ class Model:
             output_types=None,
             output_folder=None,
             output_subfolders='default',
-            output_format=None,
+            output_format='txt',
             parameters=None,
             points=None,
             catchments=None,
@@ -433,9 +436,20 @@ class Model:
         # Make output folders if required
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
-        for output_subfolder in output_subfolders:
-            if not os.path.exists(os.path.join(output_folder, output_subfolder)):
-                os.mkdir(os.path.join(output_folder, output_subfolder))
+        if output_subfolders == 'default':
+            if self.spatial_model:
+                output_subfolders = dict(point='point', catchment='catchment', grid='grid')
+            else:
+                output_subfolders = dict(point='')
+        if isinstance(output_subfolders, dict):
+            for output_type, output_subfolder in output_subfolders.items():
+                if not os.path.exists(os.path.join(output_folder, output_subfolder)):
+                    os.mkdir(os.path.join(output_folder, output_subfolder))
+
+        # Ensure valid output types
+        # TODO: Expand checks on user input arguments
+        if not self.spatial_model:
+            output_types = ['point']
 
         # Get parameters if required
         if self.parameters is not None:
@@ -444,30 +458,32 @@ class Model:
             parameters = utils.read_csv_(parameters)
 
         # Get DEM if required
-        if os.path.exists(dem):
+        if isinstance(dem, str):
             dem = utils.read_ascii_raster(dem)
 
         # Output location details (grid must be defined or derived for catchment output)
-        if 'point' in output_types:
-            if isinstance(points, str):
-                points = utils.read_csv_(points)
-        if 'catchment' in output_types:
-            if isinstance(catchments, str):
-                catchments = geopandas.read_file(catchments)
-        if ('grid' in output_types) or ('catchment' in output_types):
-            if grid is not None:
-                cell_size = grid['cellsize']
-            elif isinstance(grid, str):
-                grid = utils.grid_definition_from_ascii(grid)
-                cell_size = grid['cellsize']
-            else:
-                grid = utils.define_grid_extent(catchments, cell_size, dem)
+        if self.spatial_model:
+            if 'point' in output_types:
+                if isinstance(points, str):
+                    points = utils.read_csv_(points)
+            if 'catchment' in output_types:
+                if isinstance(catchments, str):
+                    catchments = geopandas.read_file(catchments)
+            if ('grid' in output_types) or ('catchment' in output_types):
+                if grid is not None:
+                    cell_size = grid['cellsize']
+                elif isinstance(grid, str):
+                    grid = utils.grid_definition_from_ascii(grid)
+                    cell_size = grid['cellsize']
+                else:
+                    grid = utils.define_grid_extent(catchments, cell_size, dem)
 
         # Known phi values at point locations
-        if self.phi is not None:
-            phi = self.phi
-        elif isinstance(phi, str):
-            phi = utils.read_csv_(phi)
+        if self.spatial_model:
+            if self.phi is not None:
+                phi = self.phi
+            elif isinstance(phi, str):
+                phi = utils.read_csv_(phi)
 
         # Do simulation
         simulation.main(
