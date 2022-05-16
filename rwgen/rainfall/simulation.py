@@ -74,19 +74,32 @@ def main(
         ymax = None
         discretisation_metadata = None
 
+    # Date/time helper - monthly time series indicating number of hours and timesteps in month
+    end_year = start_year + simulation_length - 1
+    datetime_helper = utils.make_datetime_helper(start_year, end_year, timestep_length, calendar)
+
+    # Identify block size needed to avoid memory issues
+    block_size = identify_block_size(
+        datetime_helper, season_definitions,
+        seed_sequence, simulation_length, number_of_realisations,
+        spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
+        discretisation_method, output_types, points, catchments
+    )  # TODO: Consider making this an optional step
+
     # Do simulation
+    rng = np.random.default_rng(seed_sequence)
     for realisation_id in realisation_ids:
         if discretisation_method == 'default':
             simulate_realisation(
-                realisation_id, start_year, simulation_length, timestep_length, season_definitions, calendar,
+                realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
                 discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, seed_sequence, xmin, xmax, ymin, ymax, output_paths
+                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
             )
         elif discretisation_method == 'event_totals':
             df = simulate_realisation(
-                realisation_id, start_year, simulation_length, timestep_length, season_definitions, calendar,
+                realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
                 discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, seed_sequence, xmin, xmax, ymin, ymax, output_paths
+                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
             )
 
     # TODO: Implement additional output - phi, catchment weights, random seed
@@ -400,10 +413,79 @@ def output_paths_helper(
     return output_paths
 
 
+def identify_block_size(
+        datetime_helper, season_definitions,
+        seed_sequence, number_of_years, number_of_realisations,
+        spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
+        discretisation_method, output_types, points, catchments
+):
+    # TODO: One way to speed up would just be to check that one block can be simulated and add a safety factor (10%)
+    # The arrays assignment could be tested and then the simulation could proceed
+    # Not an exact solution, but likely to work lots of the time
+    # If a memory error arose during the simulation process then the block size could be re-identified
+
+    # Identify size of blocks (number of years) needed to avoid potential memory issues in simulations. Test both (1)
+    # whether arrays needed to store point/catchment numbers for writing can be assigned and (2) whether NSRP process
+    # simulation can complete. Also find suitable block size for all required realisations
+    block_size = min(number_of_years, 1000)  # TODO: Reasonable choice? 500? Full simulation length?
+    found_block_size = False
+    while not found_block_size:
+        try:
+            rng = np.random.default_rng(seed_sequence)
+            for realisation in range(number_of_realisations):
+                block_id = 0
+                block_start_year = datetime_helper['year'].values[0] + block_id * block_size
+                block_end_year = block_start_year + block_size - 1
+                month_lengths = datetime_helper.loc[
+                    (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year),
+                    'n_hours'].values
+
+                while block_id * block_size < number_of_years:
+                    dummy1 = nsproc.main(
+                        spatial_model, parameters, block_size, month_lengths, season_definitions,
+                        intensity_distribution, rng, xmin, xmax, ymin, ymax
+                    )
+                    if discretisation_method == 'default':
+                        # TODO: Check calculations of number of timesteps and points required here
+                        n_timesteps = datetime_helper.loc[
+                            (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year),
+                            'n_timesteps'].sum()
+                        if spatial_model:
+                            if ('point' in output_types) and ('catchment' in output_types):
+                                n_points = points.shape[0] * catchments.shape[0]
+                            elif ('point' in output_types) and ('catchment' not in output_types):
+                                n_points = points.shape[0]
+                            elif ('point' not in output_types) and ('catchment' in output_types):
+                                n_points = catchments.shape[0]
+                        else:
+                            n_points = 1
+                        dummy2 = np.zeros((n_timesteps * n_points), dtype=np.float16) + 1
+                        dummy2 = 0
+                    elif discretisation_method == 'event_totals':
+                        if block_id == 0:
+                            dummy2 = np.zeros((dummy1.shape[0], 3))
+                            # TODO: Check that storm ID, arrival time and total are sufficient
+                            # TODO: Also consider assigning as dataframe, as ID can be integer and total can be float16
+                        else:
+                            dummy2 = np.concatenate([dummy2, np.zeros((dummy1.shape[0], 3))])
+                    dummy1 = 0
+                    block_id += 1
+            found_block_size = True
+        except MemoryError:
+            block_size = int(np.floor(block_size / 2))
+            dummy1 = 0
+            dummy2 = 0
+
+    dummy1 = 0
+    dummy2 = 0
+
+    return block_size
+
+
 def simulate_realisation(
-        realisation_id, start_year, number_of_years, timestep_length, season_definitions, calendar,
+        realisation_id, datetime_helper, number_of_years, timestep_length, season_definitions,
         discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments, parameters,
-        intensity_distribution, seed_sequence, xmin, xmax, ymin, ymax, output_paths
+        intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
 ):
     """
     Simulate realisation of NSRP process.
@@ -411,6 +493,57 @@ def simulate_realisation(
     """
     print('    - Realisation =', realisation_id)
 
+    # Initialise arrays according to discretisation method
+    if discretisation_method == 'default':  # one-month blocks
+        discrete_rainfall = initialise_discrete_rainfall_arrays(
+            spatial_model, output_types, discretisation_metadata, points, int((24 / timestep_length) * 31)
+        )
+    # TODO: Consider whether arrays for point or whole-domain event totals need to be initialised here
+
+    # Simulate and discretise NSRP process by block
+    block_id = 0
+    while block_id * block_size < number_of_years:
+
+        # NSRP process simulation
+        block_start_year = datetime_helper['year'].values[0] + block_id * block_size
+        block_end_year = block_start_year + block_size - 1
+        month_lengths = datetime_helper.loc[
+            (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year),
+            'n_hours'].values
+        df = nsproc.main(
+            spatial_model, parameters, block_size, month_lengths, season_definitions, intensity_distribution,
+            rng, xmin, xmax, ymin, ymax
+        )
+
+        # Convert raincell coordinates and radii from km to m for discretisation
+        if 'raincell_x' in df.columns:
+            df['raincell_x'] *= 1000.0
+            df['raincell_y'] *= 1000.0
+            df['raincell_radii'] *= 1000.0
+
+        # Discretisation
+        if discretisation_method == 'default':
+            discretise_by_point(
+                spatial_model,
+                datetime_helper.loc[
+                    (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year)
+                ],
+                season_definitions, df, output_types, timestep_length,
+                discrete_rainfall,
+                discretisation_metadata, points, catchments, realisation_id, output_paths, block_id
+            )
+            # TODO: Check that slice of datetime_helper is correct
+        elif discretisation_method == 'event_totals':
+            events_df = discretise_by_event()  # TODO: Not yet implemented
+
+        block_id += 1
+
+    # Assuming that event totals etc are not being written to file but should be returned for shuffling etc
+    if discretisation_method == 'event_totals':
+        return events_df
+
+
+def get_datetime_helper(start_year, number_of_years, timestep_length, season_definitions, calendar):
     # Get datetime series and end year
     end_year = start_year + number_of_years - 1
     datetimes = utils.datetime_series(start_year, end_year, timestep_length, season_definitions, calendar)
@@ -426,99 +559,7 @@ def simulate_realisation(
     datetime_helper['end_time'] = datetime_helper['end_timestep'] * timestep_length
     datetime_helper['n_hours'] = datetime_helper['end_time'] - datetime_helper['start_time']
 
-    # Initialise arrays according to discretisation method
-    if discretisation_method == 'default':  # one-month blocks
-        discrete_rainfall = initialise_discrete_rainfall_arrays(
-            spatial_model, output_types, discretisation_metadata, points, int((24 / timestep_length) * 31)
-        )
-    # TODO: Consider whether arrays for point or whole-domain event totals need to be initialised here
-
-    # Identify size of blocks (number of years) needed to avoid potential memory issues in simulations. Test both (1)
-    # whether arrays needed to store point/catchment numbers for writing can be assigned and (2) whether NSRP process
-    # simulation can complete
-    # TODO: Consider making this an optional check - add flag as argument?
-    rng = np.random.default_rng(seed_sequence)
-    block_size = min(number_of_years, 1000)  # TODO: Reasonable choice? 500? Full simulation length?
-    block_id = 0
-    while block_id * block_size < number_of_years:
-        idx1 = block_id * block_size * 12
-        idx2 = (block_id + 1) * block_size * 12
-        month_lengths = datetime_helper['n_hours'].values[idx1:idx2]  # TODO: Slice is new - check
-        try:
-            dummy1 = nsproc.main(
-                spatial_model, parameters, number_of_years, month_lengths, season_definitions, intensity_distribution,
-                rng, xmin, xmax, ymin, ymax
-            )
-            if discretisation_method == 'default':
-                # TODO: Check calculations of number of timesteps and points required here
-                block_start_year = start_year + block_id * block_size
-                n_timesteps = datetimes.loc[
-                    (datetimes['year'] >= block_start_year) & (datetimes['year'] < (block_start_year + 100))
-                ].shape[0]
-                if spatial_model:
-                    if ('point' in output_types) and ('catchment' in output_types):
-                        n_points = points.shape[0] * catchments.shape[0]
-                    elif ('point' in output_types) and ('catchment' not in output_types):
-                        n_points = points.shape[0]
-                    elif ('point' not in output_types) and ('catchment' in output_types):
-                        n_points = catchments.shape[0]
-                else:
-                    n_points = 1
-                dummy2 = np.zeros((n_timesteps * n_points), dtype=np.float16) + 1
-                dummy2 = 0
-            elif discretisation_method == 'event_totals':
-                if block_id == 0:
-                    dummy2 = np.zeros((dummy1.shape[0], 3))
-                    # TODO: Check that storm ID, arrival time and total are sufficient
-                    # TODO: Also consider assigning as dataframe, as ID can be integer and total can be float16
-                else:
-                    dummy2 = np.concatenate([dummy2, np.zeros((dummy1.shape[0], 3))])
-            block_id += 1
-        except MemoryError:
-            block_size = int(np.floor(block_size / 2))
-            block_id = 0
-            rng = np.random.default_rng(seed_sequence)
-            dummy1 = 0
-            dummy2 = 0
-    dummy1 = 0
-    dummy2 = 0
-
-    # Simulate and discretise NSRP process by block
-    rng = np.random.default_rng(seed_sequence)
-    block_id = 0
-    while block_id * block_size < number_of_years:
-
-        # NSRP process simulation
-        idx1 = block_id * block_size * 12
-        idx2 = (block_id + 1) * block_size * 12
-        month_lengths = datetime_helper['n_hours'].values[idx1:idx2]  # TODO: Slice is new - check
-        df = nsproc.main(
-            spatial_model, parameters, number_of_years, month_lengths, season_definitions, intensity_distribution,
-            rng, xmin, xmax, ymin, ymax
-        )
-
-        # Convert raincell coordinates and radii from km to m for discretisation
-        if 'raincell_x' in df.columns:
-            df['raincell_x'] *= 1000.0
-            df['raincell_y'] *= 1000.0
-            df['raincell_radii'] *= 1000.0
-
-        # Discretisation
-        if discretisation_method == 'default':
-            discretise_by_point(
-                spatial_model, datetime_helper.iloc[idx1:idx2], season_definitions, df, output_types, timestep_length,
-                discrete_rainfall,
-                discretisation_metadata, datetimes, points, catchments, realisation_id, output_paths
-            )
-            # TODO: Check that slice of datetime_helper is correct
-        elif discretisation_method == 'event_totals':
-            events_df = discretise_by_event()  # TODO: Not yet implemented
-
-        block_id += 1
-
-    # Assuming that event totals etc are not being written to file but should be returned for shuffling etc
-    if discretisation_method == 'event_totals':
-        return events_df
+    return datetimes, datetime_helper
 
 
 def initialise_discrete_rainfall_arrays(spatial_model, output_types, discretisation_metadata, points, nt):
@@ -535,7 +576,7 @@ def initialise_discrete_rainfall_arrays(spatial_model, output_types, discretisat
 
 def discretise_by_point(
         spatial_model, datetime_helper, season_definitions, df, output_types, timestep_length, discrete_rainfall,
-        discretisation_metadata, datetimes, points, catchments, realisation_id, output_paths
+        discretisation_metadata, points, catchments, realisation_id, output_paths, block_id
 ):
     # TODO: Expecting datetime_helper just for block - check that correctly subset before argument passed
 
@@ -587,8 +628,9 @@ def discretise_by_point(
             )
 
         # Find number of timesteps in month to be able to subset the discretised arrays (if < 31 days in current month)
-        month_datetimes = datetimes.loc[(datetimes['year'] == year) & (datetimes['month'] == month)]
-        timesteps_in_month = month_datetimes.shape[0]
+        timesteps_in_month = datetime_helper.loc[
+            (datetime_helper['year'] == year) & (datetime_helper['month'] == month), 'n_timesteps'
+        ].values[0]
 
         # Put discrete rainfall in arrays ready for writing once all block available
         for output_type in output_types:
@@ -630,7 +672,7 @@ def discretise_by_point(
                 idx += 1
 
     # Write output
-    write_output(output_arrays, output_paths)
+    write_output(output_arrays, output_paths, block_id)
 
 
 @numba.jit(nopython=True)
@@ -692,7 +734,7 @@ def discretise_spatial(
         discrete_rainfall[:, yi] *= point_phi[idx]
 
 
-def write_output(output_arrays, output_paths):
+def write_output(output_arrays, output_paths, block_id):
     for output_key, output_array in output_arrays.items():
         # output_type, location_id, realisation_id = output_key
         output_path = output_paths[output_key]
@@ -700,8 +742,12 @@ def write_output(output_arrays, output_paths):
         for value in output_array:
             values.append(('%.1f' % value).rstrip('0').rstrip('.'))  # + '\n'
         output_lines = '\n'.join(values)
-        with open(output_path, 'a') as fh:
-            fh.writelines(output_lines)
+        if block_id == 0:
+            with open(output_path, 'w') as fh:
+                fh.writelines(output_lines)
+        else:
+            with open(output_path, 'a') as fh:
+                fh.writelines(output_lines)
         # TODO: Implement other text file output options
 
 

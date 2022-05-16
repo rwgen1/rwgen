@@ -169,6 +169,36 @@ def datetime_series(start_year, end_year, timestep, season_definitions, calendar
     return df
 
 
+def make_datetime_helper(start_year, end_year, timestep_length, calendar):
+    # Construct dataframe of core date information
+    unique_years = np.arange(start_year, end_year+1)
+    years = np.repeat(unique_years, 12)
+    months = np.tile(np.arange(1, 12+1), unique_years.shape[0])
+    leap_year = (
+        ((np.mod(years, 4) == 0) & (np.mod(years, 100) == 0) & (np.mod(years, 400) == 0))
+        | ((np.mod(years, 4) == 0) & (np.mod(years, 100) != 0))
+    )
+    days = np.tile(np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]), unique_years.shape)
+    if calendar == 'gregorian':
+        days[leap_year & (months == 2)] = 29
+    hours = days * 24
+    timesteps = hours / timestep_length
+    timesteps = timesteps.astype(int)
+    df = pd.DataFrame(dict(year=years, month=months, n_days=days, n_hours=hours, n_timesteps=timesteps))
+
+    # Add helpers
+    df['end_timestep'] = df['n_timesteps'].cumsum()  # beginning timestep of next month
+    df['end_timestep'] = df['end_timestep'].astype(int)
+    df['start_timestep'] = df['end_timestep'].shift()
+    df.iloc[0, df.columns.get_loc('start_timestep')] = 0
+    df['start_timestep'] = df['start_timestep'].astype(int)
+    df['start_time'] = df['start_timestep'] * timestep_length
+    df['end_time'] = df['end_timestep'] * timestep_length
+    # df['n_hours'] = df['end_time'] - df['start_time']
+
+    return df
+
+
 # def statistic_definitions_from_reference_statistics():
 #     pass
 #
