@@ -120,6 +120,8 @@ class Model:
             outlier_method
 
         """
+        print('  Preprocessing')
+
         # Set default statistic definitions (and weights) if needed (taken largely from RainSim V3.1 documentation)
         if statistic_definitions is not None:
             pass
@@ -257,15 +259,19 @@ class Model:
             Empirical smoothing.  # TODO: Explain method so far
 
         """
+        print('  Fitting')
+
         # Read reference statistics if not available from preprocessing or passed directly
         if self.reference_statistics is not None:
             reference_statistics = self.reference_statistics
         elif reference_statistics is not None:
             pass
         else:
-            reference_statistics = utils.read_statistics(
-                reference_point_statistics_path, reference_cross_correlations_path
-            )
+            # TODO: Fix read of reference statistics in utils.read_statistics (parsing of lag and threshold)
+            # reference_statistics = utils.read_statistics(
+            #     reference_point_statistics_path, reference_cross_correlations_path
+            # )
+            raise NotImplementedError
 
         # If bounds are passed as a list assume that they should be applied to each season
         if parameter_bounds is not None:
@@ -311,7 +317,10 @@ class Model:
         # Construct output paths
         output_parameters_path = os.path.join(output_folder, output_parameters_filename)
         output_point_statistics_path = os.path.join(output_folder, output_point_statistics_filename)
-        output_cross_correlation_path = os.path.join(output_folder, output_cross_correlation_filename)
+        if self.spatial_model:
+            output_cross_correlation_path = os.path.join(output_folder, output_cross_correlation_filename)
+        else:
+            output_cross_correlation_path = None
 
         # Do fitting
         parameters, fitted_statistics = fitting.main(
@@ -416,6 +425,8 @@ class Model:
             Point (single site) simulations and grid output are assumed not to need a prefix.
 
         """
+        print('  Simulating')
+
         # TODO: Implement output for catchment_weights_output_folder and phi_output_path - currently not implemented
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
 

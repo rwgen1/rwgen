@@ -238,19 +238,22 @@ def merge_statistics(point_statistics, cross_correlations):
     point_statistics['distance'] = np.nan
     if 'phi' in cross_correlations.columns:
         point_statistics['phi2'] = np.nan
+    cross_correlations['threshold'] = np.nan
     statistics = pd.concat([point_statistics, cross_correlations])
     column_order = [
         'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value',
+        'lag', 'threshold'  # lag and threshold will be removed before write
     ]
     if 'gs' in point_statistics.columns:
         column_order.append('gs')
     if 'phi' in cross_correlations.columns:
-        column_order.extend('phi', 'phi2')
+        column_order.extend(['phi', 'phi2'])
     statistics = statistics[column_order]
     return statistics
 
 
 def read_statistics(point_statistics_path, cross_correlations_path=None):
+    # TODO: Fix to parse lag and threshold
     statistics = pd.read_csv(point_statistics_path)
     statistics = make_column_names_lowercase(statistics)
     statistics.rename({'month': 'season'}, axis=1, inplace=True)

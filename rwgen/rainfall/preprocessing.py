@@ -54,6 +54,8 @@ def main(
     else:
 
         # Calculate statistics, gs and phi for each point
+        print('    - Point Statistics')
+        timeseries_dfs = {}
         statistics_dfs = {}
         gs_dfs = {}
         phi_dfs = {}
@@ -75,9 +77,10 @@ def main(
                 maximum_relative_difference=maximum_relative_difference,
                 maximum_alterations=maximum_alterations
             )
-            statistics = analysis.calculate_point_statistics(statistic_definitions, dfs)
+            statistics = analysis.calculate_point_statistics(point_statistic_defs, dfs)
             gs, statistics = calculate_gs(statistics)
             phi, statistics = calculate_phi(statistics, override_phi=False)
+            timeseries_dfs[row['point_id']] = dfs
             statistics_dfs[row['point_id']] = statistics
             gs_dfs[row['point_id']] = gs
             phi_dfs[row['point_id']] = phi
@@ -92,15 +95,19 @@ def main(
 
         # Calculate cross-correlations
         xcorr_statistic_defs = statistic_definitions.loc[statistic_definitions['name'] == 'cross-correlation']
-        unique_seasons = utils.identify_unique_seasons(season_definitions)
-        cross_correlations = analysis.calculate_cross_correlations(xcorr_statistic_defs, unique_seasons, statistics_dfs)
+        if xcorr_statistic_defs.shape[0] > 0:
+            print('    - Cross-correlations')
+            unique_seasons = utils.identify_unique_seasons(season_definitions)
+            cross_correlations = analysis.calculate_cross_correlations(
+                metadata, xcorr_statistic_defs, unique_seasons, timeseries_dfs
+            )
 
-        # Merge gs and phi into cross-correlations dataframe
-        cross_correlations['gs'] = 1.0
-        cross_correlations = pd.merge(cross_correlations, phi, how='left', on=['season', 'point_id'])
-        phi2 = phi.copy()
-        phi2.rename({'phi': 'phi2', 'point_id': 'point_id2'}, axis=1, inplace=True)
-        cross_correlations = pd.merge(cross_correlations, phi2, how='left', on=['season', 'point_id2'])
+            # Merge gs and phi into cross-correlations dataframe
+            cross_correlations['gs'] = 1.0
+            cross_correlations = pd.merge(cross_correlations, phi, how='left', on=['season', 'point_id'])
+            phi2 = phi.copy()
+            phi2.rename({'phi': 'phi2', 'point_id': 'point_id2'}, axis=1, inplace=True)
+            cross_correlations = pd.merge(cross_correlations, phi2, how='left', on=['season', 'point_id2'])
 
         # Merge point statistics and cross-correlations
         dfs = []
@@ -109,7 +116,10 @@ def main(
             df['point_id'] = point_id
             dfs.append(df)
         point_statistics = pd.concat(dfs)
-        statistics = utils.merge_statistics(point_statistics, cross_correlations)
+        if xcorr_statistic_defs.shape[0] > 0:
+            statistics = utils.merge_statistics(point_statistics, cross_correlations)
+        else:
+            statistics = point_statistics
 
     # Write statistics to output files
     utils.write_statistics(

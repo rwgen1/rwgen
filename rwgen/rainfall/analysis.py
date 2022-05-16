@@ -119,7 +119,7 @@ def calculate_point_statistics(statistic_definitions, dfs):
     return statistics
 
 
-def calculate_cross_correlations(metadata, statistic_definitions, unique_seasons, statistic_dfs):
+def calculate_cross_correlations(metadata, statistic_definitions, unique_seasons, dfs):
     """
     Calculate cross-correlations between all pairs of points by season and duration.
 
@@ -159,8 +159,8 @@ def calculate_cross_correlations(metadata, statistic_definitions, unique_seasons
                 # Subset on point pair and season
                 id1 = pair_details['point_id']
                 id2 = pair_details['point_id2']
-                df1 = statistic_dfs[id1][duration]
-                df2 = statistic_dfs[id2][duration]
+                df1 = dfs[id1][duration]
+                df2 = dfs[id2][duration]
                 x = df1.loc[df1['season'] == season]
                 y = df2.loc[df2['season'] == season]
 
