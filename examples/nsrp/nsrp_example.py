@@ -22,7 +22,7 @@ if __name__ == '__main__':
     #     n_workers=6
     # )
 
-    # Simulate five realisation of 1000 years at an hourly timestep (the default)
+    # Simulate five realisations of 1000 years at an hourly timestep (the default)
     m.simulate(
         output_folder='Z:/DP/Work/ER/rwgen/testing/examples/nsrp',  # './output'
         parameters='Z:/DP/Work/ER/rwgen/testing/examples/nsrp/parameters.csv',

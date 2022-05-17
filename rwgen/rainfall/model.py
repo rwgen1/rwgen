@@ -398,7 +398,7 @@ class Model:
                 grid output is required).
             cell_size (float): Cell size to use if grid is None but a grid is needed for gridded output and/or catchment
                 output.
-            dem (xarray.DataArray): Digital elevation model (DEM) [m] as data array or ascii raster file path.
+            dem (xarray.DataArray or str): Digital elevation model (DEM) [m] as data array or ascii raster file path.
             phi (pandas.DataFrame or str): Dataframe containing phi scale factor at point locations
                 (from self.preprocessing() method). Path to phi file can be passed. If self.phi is not None (i.e.
                 preprocessing method has been run) then self.phi is given precedence.
@@ -469,6 +469,7 @@ class Model:
             if 'catchment' in output_types:
                 if isinstance(catchments, str):
                     catchments = geopandas.read_file(catchments)
+                    catchments.columns = [column_name.lower() for column_name in catchments.columns]
             if ('grid' in output_types) or ('catchment' in output_types):
                 if grid is not None:
                     cell_size = grid['cellsize']
