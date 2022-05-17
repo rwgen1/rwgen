@@ -77,9 +77,9 @@ def fit_by_season(
     fitted_statistics = []
     for season in unique_seasons:
         if len(unique_seasons) == 12:
-            print('    - Month =', season)
+            print('  - Month =', season)
         else:
-            print('    - Season =', season)
+            print('  - Season =', season)
 
         # Gather relevant data, weights and objective function scaling terms
         season_reference_statistics = reference_statistics.loc[reference_statistics['season'] == season].copy()

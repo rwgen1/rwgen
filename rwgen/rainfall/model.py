@@ -48,6 +48,8 @@ class Model:
                   give quarterly seasons beginning in December.
 
         """
+        print()
+
         if season_definitions is not None:
             self.season_definitions = utils.parse_season_definitions(season_definitions)
         else:
@@ -123,7 +125,7 @@ class Model:
             outlier_method
 
         """
-        print('  Preprocessing')
+        print('Preprocessing')
 
         # Set default statistic definitions (and weights) if needed (taken largely from RainSim V3.1 documentation)
         if statistic_definitions is not None:
@@ -262,7 +264,7 @@ class Model:
             Empirical smoothing.  # TODO: Explain method so far
 
         """
-        print('  Fitting')
+        print('Fitting')
 
         # Read reference statistics if not available from preprocessing or passed directly
         if self.reference_statistics is not None:
@@ -428,7 +430,7 @@ class Model:
             Point (single site) simulations and grid output are assumed not to need a prefix.
 
         """
-        print('  Simulating')
+        print('Simulating')
 
         # TODO: Implement output for catchment_weights_output_folder and phi_output_path - currently not implemented
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
