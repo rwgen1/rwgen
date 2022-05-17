@@ -1,5 +1,6 @@
 import os
 import itertools
+import datetime  # TEMPORARY
 
 import numpy as np
 import scipy.stats
@@ -64,7 +65,7 @@ def main(
         if 'catchment' in output_types:
             discretisation_metadata = get_catchment_weights(
                 grid, catchments, cell_size, epsg_code, discretisation_metadata, output_types, dem,
-                unique_seasons, catchment_id_field='ID'
+                unique_seasons, catchment_id_field='id'
             )
 
     else:
@@ -79,12 +80,13 @@ def main(
     datetime_helper = utils.make_datetime_helper(start_year, end_year, timestep_length, calendar)
 
     # Identify block size needed to avoid memory issues
-    block_size = identify_block_size(
-        datetime_helper, season_definitions,
-        seed_sequence, simulation_length, number_of_realisations,
-        spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
-        discretisation_method, output_types, points, catchments
-    )  # TODO: Consider making this an optional step
+    # block_size = identify_block_size(
+    #     datetime_helper, season_definitions,
+    #     seed_sequence, simulation_length, number_of_realisations,
+    #     spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
+    #     discretisation_method, output_types, points, catchments
+    # )  # TODO: Consider making this an optional step
+    block_size = 1000  # TEMPORARY
 
     # Do simulation
     rng = np.random.default_rng(seed_sequence)
@@ -208,7 +210,10 @@ def get_phi(unique_seasons, dem, phi, output_types, discretisation_metadata):
             )
 
         # Estimate phi for points and grid (if phi is known at point location then exact value should be preserved)
-        for output_type in list(set(output_types) & set(['point', 'grid'])):
+        discretisation_types = list(set(output_types) & set(['point', 'grid']))
+        if ('catchment' in output_types) and ('grid' not in output_types):
+            discretisation_types.append('grid')
+        for output_type in discretisation_types:
             if dem is not None:
                 interpolated_phi = interpolator(
                     (discretisation_metadata[(output_type, 'x')], discretisation_metadata[(output_type, 'y')]),
@@ -389,24 +394,26 @@ def output_paths_helper(
 
     if output_type == 'point':
         if spatial_model:
-            location_ids = points['name'].values
+            location_ids = list(points['point_id'].values)
+            location_names = list(points['name'].values)
         else:
             location_ids = [1]
+            location_names = ['simulation']
         output_subfolder = os.path.join(output_folder, output_subfolders['point'])
     elif output_type == 'catchment':
-        location_ids = catchments['name'].values
+        location_ids = list(catchments['id'].values)
+        location_names = list(catchments['name'].values)
         output_subfolder = os.path.join(output_folder, output_subfolders['catchment'])
     elif output_type == 'grid':
         location_ids = [1]
+        location_names = ['simulation']
         output_subfolder = os.path.join(output_folder, output_subfolders['grid'])
 
     output_paths = {}
     output_cases = itertools.product(realisation_ids, location_ids)
     for realisation_id, location_id in output_cases:
-        if not spatial_model:
-            output_file_name = 'r' + str(realisation_id) + output_format_extensions[output_format]
-        else:
-            output_file_name = location_id + '_r' + str(realisation_id) + output_format_extensions[output_format]
+        location_name = location_names[location_ids.index(location_id)]
+        output_file_name = location_name + '_r' + str(realisation_id) + output_format_extensions[output_format]
         output_path_key = (output_type, location_id, realisation_id)
         output_paths[output_path_key] = os.path.join(output_subfolder, output_file_name)
 
@@ -504,6 +511,8 @@ def simulate_realisation(
     block_id = 0
     while block_id * block_size < number_of_years:
 
+        # print(block_id)  # TEMPORARY
+
         # NSRP process simulation
         block_start_year = datetime_helper['year'].values[0] + block_id * block_size
         block_end_year = block_start_year + block_size - 1
@@ -583,96 +592,150 @@ def discretise_by_point(
     # Prepare to store realisation output for block (point and catchment output only)
     output_arrays = {}
 
-    # Looping time series of months
-    for month_idx in range(datetime_helper.shape[0]):
-        year = datetime_helper['year'].values[month_idx]
-        month = datetime_helper['month'].values[month_idx]
-        season = season_definitions[month]
+    # Use sub-blocks to speed up month-wise loop, as selection/subsetting of raincells for a given month is much faster
+    # with smaller arrays. Trying 50 years as a reasonable compromise
+    subset_n_years = min(int(datetime_helper.shape[0] / 12), 50)
+    subset_start_idx = 0
+    while subset_start_idx < datetime_helper.shape[0]:
+        print('     ', subset_start_idx)
+        subset_end_idx = min(subset_start_idx + subset_n_years * 12 - 1, datetime_helper.shape[0] - 1)
+        subset_start_time = datetime_helper['start_time'].values[subset_start_idx]
+        subset_end_time = datetime_helper['end_time'].values[subset_end_idx]
+        df1 = df.loc[
+            (df['raincell_arrival'].values < subset_end_time) & (df['raincell_end'].values > subset_start_time)
+        ]
 
-        # Perform temporal subset before discretising points (much more efficient for spatial model)
-        start_time = datetime_helper['start_time'][month_idx]
-        end_time = datetime_helper['end_time'][month_idx]
-        temporal_mask = (df['raincell_arrival'].values < end_time) & (df['raincell_end'].values > start_time)
-        raincell_arrival_times = df['raincell_arrival'].values[temporal_mask]
-        raincell_end_times = df['raincell_end'].values[temporal_mask]
-        raincell_intensities = df['raincell_intensity'].values[temporal_mask]
+        # Looping time series of months
+        for month_idx in range(subset_start_idx, subset_end_idx+1):  # range(datetime_helper.shape[0]):
 
-        # Spatial model discretisation requires temporal subset of additional raincell properties
-        if spatial_model:
-            raincell_x = df['raincell_x'].values[temporal_mask]
-            raincell_y = df['raincell_y'].values[temporal_mask]
-            raincell_radii = df['raincell_radii'].values[temporal_mask]
+            # t1 = datetime.datetime.now()  # TEMPORARY
 
-            # If both catchment and grid are in output types then the same grid is used so only need to do once
-            if ('catchment' in output_types) and ('grid' in output_types):
-                _output_types = list(set(output_types) & set(['point', 'catchment']))
+            year = datetime_helper['year'].values[month_idx]
+            month = datetime_helper['month'].values[month_idx]
+            season = season_definitions[month]
+
+            # Perform temporal subset before discretising points (much more efficient for spatial model)
+            start_time = datetime_helper['start_time'][month_idx]
+            end_time = datetime_helper['end_time'][month_idx]
+            # temporal_mask = (df['raincell_arrival'].values < end_time) & (df['raincell_end'].values > start_time)
+            # raincell_arrival_times = df['raincell_arrival'].values[temporal_mask]
+            # raincell_end_times = df['raincell_end'].values[temporal_mask]
+            # raincell_intensities = df['raincell_intensity'].values[temporal_mask]
+            temporal_mask = (df1['raincell_arrival'].values < end_time) & (df1['raincell_end'].values > start_time)
+            raincell_arrival_times = df1['raincell_arrival'].values[temporal_mask]
+            raincell_end_times = df1['raincell_end'].values[temporal_mask]
+            raincell_intensities = df1['raincell_intensity'].values[temporal_mask]
+
+            # TESTING
+            # df1 = df.loc[(df['raincell_arrival'] < end_time) & (df['raincell_end'].values > start_time)]
+            # raincell_arrival_times = df1['raincell_arrival'].values
+            # raincell_end_times = df1['raincell_end'].values
+            # raincell_intensities = df1['raincell_intensity'].values
+
+            # Spatial model discretisation requires temporal subset of additional raincell properties
+            if spatial_model:
+                # raincell_x = df['raincell_x'].values[temporal_mask]
+                # raincell_y = df['raincell_y'].values[temporal_mask]
+                # raincell_radii = df['raincell_radii'].values[temporal_mask]
+                raincell_x = df1['raincell_x'].values[temporal_mask]
+                raincell_y = df1['raincell_y'].values[temporal_mask]
+                raincell_radii = df1['raincell_radii'].values[temporal_mask]
+
+                # TESTING
+                # raincell_x = df1['raincell_x'].values
+                # raincell_y = df1['raincell_y'].values
+                # raincell_radii = df1['raincell_radii'].values
+
+                # If both catchment and grid are in output types then the same grid is used so only need to do once
+                if ('catchment' in output_types) and ('grid' in output_types):
+                    _output_types = list(set(output_types) & set(['point', 'catchment']))
+                else:
+                    _output_types = output_types
+                for output_type in _output_types:
+                    if output_type == 'catchment':
+                        discretisation_case = 'grid'
+                    else:
+                        discretisation_case = output_type
+
+                    # t2 = datetime.datetime.now()  # TEMPORARY
+
+                    discretise_spatial(
+                        start_time, timestep_length, raincell_arrival_times, raincell_end_times,
+                        raincell_intensities, discrete_rainfall[discretisation_case],
+                        raincell_x, raincell_y, raincell_radii,
+                        discretisation_metadata[(discretisation_case, 'x')],
+                        discretisation_metadata[(discretisation_case, 'y')],
+                        discretisation_metadata[(discretisation_case, 'phi', season)],
+                    )
+
+                    # t3 = datetime.datetime.now()  # TEMPORARY
+
             else:
-                _output_types = output_types
-            for output_type in _output_types:
-                if output_type == 'catchment':
-                    discretisation_case = 'grid'
-                else:
-                    discretisation_case = output_type
-                discretise_spatial(
-                    start_time, end_time, timestep_length, raincell_arrival_times, raincell_end_times,
-                    raincell_intensities, discrete_rainfall[discretisation_case],
-                    raincell_x, raincell_y, raincell_radii,
-                    discretisation_metadata[(discretisation_case, 'x')],
-                    discretisation_metadata[(discretisation_case, 'y')],
-                    discretisation_metadata[(discretisation_case, 'phi', season)],
+                discretise_point(
+                    start_time, timestep_length, raincell_arrival_times, raincell_end_times,
+                    raincell_intensities, discrete_rainfall['point'][:, 0]
                 )
-        else:
-            discretise_point(
-                start_time, timestep_length, raincell_arrival_times, raincell_end_times,
-                raincell_intensities, discrete_rainfall['point'][:, 0]
-            )
 
-        # Find number of timesteps in month to be able to subset the discretised arrays (if < 31 days in current month)
-        timesteps_in_month = datetime_helper.loc[
-            (datetime_helper['year'] == year) & (datetime_helper['month'] == month), 'n_timesteps'
-        ].values[0]
+            # Find number of timesteps in month to be able to subset the discretised arrays (if < 31 days in month)
+            timesteps_in_month = datetime_helper.loc[
+                (datetime_helper['year'] == year) & (datetime_helper['month'] == month), 'n_timesteps'
+            ].values[0]
 
-        # Put discrete rainfall in arrays ready for writing once all block available
-        for output_type in output_types:
-            if output_type == 'point':
-                if not spatial_model:
-                    location_ids = [1]
-                else:
-                    location_ids = points['name'].values  # self.points['point_id'].values
-            elif output_type == 'catchment':
-                location_ids = catchments['name'].values  # self.catchments[self.catchment_id_field].values
-            elif output_type == 'grid':
-                location_ids = [1]
-            # TODO: See if output keys can be looped directly without needing to figure out location_ids again
-
-            # TODO: Reduce dependence on list/array order
-            idx = 0
-            for location_id in location_ids:
-                output_key = (output_type, location_id, realisation_id)
-
+            # Put discrete rainfall in arrays ready for writing once all block available
+            for output_type in output_types:
                 if output_type == 'point':
-                    output_array = discrete_rainfall['point'][:timesteps_in_month, idx]
+                    if not spatial_model:
+                        location_ids = [1]
+                    else:
+                        location_ids = points['point_id'].values  # self.points['point_id'].values
                 elif output_type == 'catchment':
-                    catchment_discrete_rainfall = np.average(
-                        discrete_rainfall['grid'], axis=1,
-                        weights=discretisation_metadata[('catchment', 'weights', location_id)]
-                    )
-                    output_array = catchment_discrete_rainfall[:timesteps_in_month]
+                    location_ids = catchments['id'].values  # self.catchments[self.catchment_id_field].values
                 elif output_type == 'grid':
-                    raise NotImplementedError('Grid output not implemented yet')
+                    location_ids = [1]
+                # TODO: See if output keys can be looped directly without needing to figure out location_ids again
 
-                # Try concatenating arrays in first instance - could be changed so that upfront initialisation
-                if month_idx == 0:
-                    output_arrays[output_key] = output_array.astype(np.float16)
-                else:
-                    output_arrays[output_key] = np.concatenate(
-                        [output_arrays[output_key], output_array.astype(np.float16)]
-                    )
+                # TODO: Reduce dependence on list/array order
+                idx = 0
+                for location_id in location_ids:
+                    output_key = (output_type, location_id, realisation_id)
 
-                idx += 1
+                    if output_type == 'point':
+                        output_array = discrete_rainfall['point'][:timesteps_in_month, idx]
+                    elif output_type == 'catchment':
+                        catchment_discrete_rainfall = np.average(
+                            discrete_rainfall['grid'], axis=1,
+                            weights=discretisation_metadata[('catchment', 'weights', location_id)]
+                        )
+                        output_array = catchment_discrete_rainfall[:timesteps_in_month]
+                    elif output_type == 'grid':
+                        raise NotImplementedError('Grid output not implemented yet')
+
+                    # Try concatenating arrays in first instance - could be changed so that upfront initialisation
+                    if month_idx == 0:
+                        output_arrays[output_key] = output_array.astype(np.float16)
+                    else:
+                        output_arrays[output_key] = np.concatenate(
+                            [output_arrays[output_key], output_array.astype(np.float16)]
+                        )
+
+                    idx += 1
+
+            # t4 = datetime.datetime.now()  # TEMPORARY
+
+            # print(t2 - t1)  # TEMPORARY
+            # print(t3 - t2)
+            # print(t4 - t3)
+            # print()
+            # import sys
+            # sys.exit()
+
+        # Increment subset index tracker
+        subset_start_idx += (subset_n_years * 12)
 
     # Write output
-    write_output(output_arrays, output_paths, block_id)
+    if block_id == 0:
+        write_new_files = True
+    write_output(output_arrays, output_paths, write_new_files)
 
 
 @numba.jit(nopython=True)
@@ -734,7 +797,7 @@ def discretise_spatial(
         discrete_rainfall[:, yi] *= point_phi[idx]
 
 
-def write_output(output_arrays, output_paths, block_id):
+def write_output(output_arrays, output_paths, write_new_files):
     for output_key, output_array in output_arrays.items():
         # output_type, location_id, realisation_id = output_key
         output_path = output_paths[output_key]
@@ -742,7 +805,7 @@ def write_output(output_arrays, output_paths, block_id):
         for value in output_array:
             values.append(('%.1f' % value).rstrip('0').rstrip('.'))  # + '\n'
         output_lines = '\n'.join(values)
-        if block_id == 0:
+        if write_new_files:
             with open(output_path, 'w') as fh:
                 fh.writelines(output_lines)
         else:

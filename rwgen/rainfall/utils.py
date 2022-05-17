@@ -587,8 +587,8 @@ def define_grid_extent(catchments, cell_size, dem):
 def grid_limits(grid):
     xmin = grid['xllcorner']
     ymin = grid['yllcorner']
-    xmax = xmin + grid['ncols'] * grid['cell_size']
-    ymax = ymin + grid['nrows'] * grid['cell_size']
+    xmax = xmin + grid['ncols'] * grid['cellsize']
+    ymax = ymin + grid['nrows'] * grid['cellsize']
     return xmin, ymin, xmax, ymax
 
 

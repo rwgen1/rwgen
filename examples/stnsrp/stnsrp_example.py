@@ -24,16 +24,17 @@ if __name__ == '__main__':
     #     n_workers=6
     # )
 
-    # Simulate three realisations of 100 years at an hourly timestep (the default)
+    # Simulate three realisations of 1000 years at an hourly timestep (the default)
     m.simulate(
         output_types=['point', 'catchment'],
         output_folder='Z:/DP/Work/ER/rwgen/testing/examples/stnsrp',  # './output'
         parameters='Z:/DP/Work/ER/rwgen/testing/examples/stnsrp/parameters.csv',  # './output/parameters.csv'
         points='./input/metadata.csv',
         catchments='./input/catchments.shp',
+        epsg_code=32632,
         cell_size=1000.0,
         dem='./input/srtm_dem.asc',
         phi='Z:/DP/Work/ER/rwgen/testing/examples/stnsrp/phi.csv',  # './output/phi.csv',
-        simulation_length=100,
+        simulation_length=1000,
         number_of_realisations=3,
     )

@@ -471,13 +471,11 @@ class Model:
                     catchments = geopandas.read_file(catchments)
                     catchments.columns = [column_name.lower() for column_name in catchments.columns]
             if ('grid' in output_types) or ('catchment' in output_types):
-                if grid is not None:
-                    cell_size = grid['cellsize']
-                elif isinstance(grid, str):
+                if isinstance(grid, str):
                     grid = utils.grid_definition_from_ascii(grid)
-                    cell_size = grid['cellsize']
                 else:
                     grid = utils.define_grid_extent(catchments, cell_size, dem)
+                cell_size = grid['cellsize']
 
         # Known phi values at point locations
         if self.spatial_model:
