@@ -103,6 +103,10 @@ def parse_season_definitions(user_input):
     return season_definitions
 
 
+def identify_unique_seasons(season_definitions):
+    return list(set(season_definitions.values()))
+
+
 def check_if_leap_year(year):
     if year % 4 == 0:
         if year % 100 == 0:
@@ -161,6 +165,36 @@ def datetime_series(start_year, end_year, timestep, season_definitions, calendar
     df = pd.DataFrame(dc)
 
     df['season_uid'] = df['season'].ne(df['season'].shift()).cumsum()
+
+    return df
+
+
+def make_datetime_helper(start_year, end_year, timestep_length, calendar):
+    # Construct dataframe of core date information
+    unique_years = np.arange(start_year, end_year+1)
+    years = np.repeat(unique_years, 12)
+    months = np.tile(np.arange(1, 12+1), unique_years.shape[0])
+    leap_year = (
+        ((np.mod(years, 4) == 0) & (np.mod(years, 100) == 0) & (np.mod(years, 400) == 0))
+        | ((np.mod(years, 4) == 0) & (np.mod(years, 100) != 0))
+    )
+    days = np.tile(np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]), unique_years.shape)
+    if calendar == 'gregorian':
+        days[leap_year & (months == 2)] = 29
+    hours = days * 24
+    timesteps = hours / timestep_length
+    timesteps = timesteps.astype(int)
+    df = pd.DataFrame(dict(year=years, month=months, n_days=days, n_hours=hours, n_timesteps=timesteps))
+
+    # Add helpers
+    df['end_timestep'] = df['n_timesteps'].cumsum()  # beginning timestep of next month
+    df['end_timestep'] = df['end_timestep'].astype(int)
+    df['start_timestep'] = df['end_timestep'].shift()
+    df.iloc[0, df.columns.get_loc('start_timestep')] = 0
+    df['start_timestep'] = df['start_timestep'].astype(int)
+    df['start_time'] = df['start_timestep'] * timestep_length
+    df['end_time'] = df['end_timestep'] * timestep_length
+    # df['n_hours'] = df['end_time'] - df['start_time']
 
     return df
 
@@ -232,17 +266,24 @@ def make_column_names_lowercase(df):
 def merge_statistics(point_statistics, cross_correlations):
     point_statistics['point_id2'] = pd.NA
     point_statistics['distance'] = np.nan
-    point_statistics['phi2'] = np.nan
+    if 'phi' in cross_correlations.columns:
+        point_statistics['phi2'] = np.nan
+    cross_correlations['threshold'] = np.nan
     statistics = pd.concat([point_statistics, cross_correlations])
     column_order = [
-        'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value', 'gs',
-        'phi', 'phi2'  # 'lag', 'threshold',
+        'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value',
+        'lag', 'threshold'  # lag and threshold will be removed before write
     ]
+    if 'gs' in point_statistics.columns:
+        column_order.append('gs')
+    if 'phi' in cross_correlations.columns:
+        column_order.extend(['phi', 'phi2'])
     statistics = statistics[column_order]
     return statistics
 
 
 def read_statistics(point_statistics_path, cross_correlations_path=None):
+    # TODO: Fix to parse lag and threshold
     statistics = pd.read_csv(point_statistics_path)
     statistics = make_column_names_lowercase(statistics)
     statistics.rename({'month': 'season'}, axis=1, inplace=True)
@@ -340,7 +381,7 @@ def read_csv_timeseries(input_path):
     return df
 
 
-def read_csvy(input_path):
+def read_csvy_timeseries(input_path):
     with open(input_path, 'r') as fh:
         fh.readline()
         number_of_headers = 1
@@ -387,7 +428,7 @@ def nested_dictionary_to_dataframe(dc, id_name, non_id_columns):
     return df
 
 
-def format_with_leading_zeros(x, min_string_length=3):
+def format_with_leading_zeros(x, min_string_length=3):  # TODO: Check if still used anywhere
     format_string = '0' + str(max(min_string_length, (len(str(x)))))
     return format(x, format_string)
 
@@ -500,6 +541,55 @@ def ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size, nodata_val
         'nodata_value': nodata_value
     }
     return dc
+
+
+def grid_definition_from_ascii(filepath):
+    dc = {}
+    with open(filepath, 'r') as fh:
+        for _ in range(6):
+            line = fh.readline()
+            line = line.rstrip().split()
+            if line[0] in ['ncols', 'nrows']:
+                dc[line[0]] = int(line[1])
+            else:
+                dc[line[0]] = float(line[1])
+    return dc
+
+
+def define_grid_extent(catchments, cell_size, dem):
+    """
+    Identify grid extent that fits in catchments and aligns with DEM if present.
+
+    """
+    xmin, ymin, xmax, ymax = geodataframe_bounding_box(catchments, round_extent=False)
+    if dem is not None:
+        dem_cell_size = dem.x.values[1] - dem.x.values[0]
+        new_xmin = dem.x.values[0] - dem_cell_size / 2.0
+        new_ymin = dem.y.values[-1] - dem_cell_size / 2.0
+        x_offset = new_xmin - round_down(xmin, cell_size)
+        y_offset = new_ymin - round_down(ymin, cell_size)
+        new_xmax = round_up(xmax, cell_size) - (cell_size - x_offset)
+        new_ymax = round_up(ymax, cell_size) - (cell_size - y_offset)
+        if new_xmax < xmax:
+            xmax = new_xmax + cell_size
+        else:
+            xmax = new_xmax
+        if new_ymax < ymax:
+            ymax = new_ymax + cell_size
+        else:
+            ymax = new_ymax
+        xmin = new_xmin
+        ymin = new_ymin
+    grid = ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size)
+    return grid
+
+
+def grid_limits(grid):
+    xmin = grid['xllcorner']
+    ymin = grid['yllcorner']
+    xmax = xmin + grid['ncols'] * grid['cellsize']
+    ymax = ymin + grid['nrows'] * grid['cellsize']
+    return xmin, ymin, xmax, ymax
 
 
 def catchment_weights(
