@@ -37,7 +37,12 @@ def main(
         start_year,
         calendar,
         random_seed,
-        additional_output  # TODO: Make this output mandatory?
+        default_block_size,
+        check_block_size,
+        minimum_block_size,
+        check_available_memory,
+        maximum_memory_percentage,
+        block_subset_size,
 ):
     print('  - Initialising')
 
@@ -51,6 +56,10 @@ def main(
         seed_sequence = np.random.SeedSequence()
     else:
         seed_sequence = np.random.SeedSequence(random_seed)
+
+    # Possible that 32-bit floats could be used in places, but times need to be tracked with 64-bit floats in the case
+    # of long simulations for example. So fixed precision currently, as care needed if deviating from 64-bit
+    float_precision = 64
 
     # Most of the preparation needed for simulation is only for a spatial model  # TODO: Check each case
     if spatial_model:
@@ -84,12 +93,16 @@ def main(
     datetime_helper = utils.make_datetime_helper(start_year, end_year, timestep_length, calendar)
 
     # Identify block size needed to avoid memory issues
-    block_size = identify_block_size(
-        datetime_helper, season_definitions, timestep_length, discretisation_metadata,
-        seed_sequence, simulation_length,
-        spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
-        discretisation_method, output_types, points, catchments
-    )  # TODO: Consider making this an optional step
+    if check_block_size:
+        block_size = identify_block_size(
+            datetime_helper, season_definitions, timestep_length, discretisation_metadata,
+            seed_sequence, simulation_length,
+            spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
+            discretisation_method, output_types, points, catchments,
+            float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
+        )
+    else:
+        block_size = default_block_size
 
     # Do simulation
     rng = np.random.default_rng(seed_sequence)
@@ -98,13 +111,15 @@ def main(
             simulate_realisation(
                 realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
                 discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
+                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
+                block_subset_size
             )
         elif discretisation_method == 'event_totals':
             df = simulate_realisation(
                 realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
                 discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
+                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
+                block_subset_size
             )
 
     # TODO: Implement additional output - phi, catchment weights, random seed
@@ -427,11 +442,12 @@ def identify_block_size(
         datetime_helper, season_definitions, timestep_length, discretisation_metadata,
         seed_sequence, number_of_years,
         spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
-        discretisation_method, output_types, points, catchments
+        discretisation_method, output_types, points, catchments,
+        float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
 ):
     """Identify size of blocks (number of years) needed to avoid potential memory issues in simulations."""
     # TODO: Allow for varying data types (floating point precision)
-    block_size = min(number_of_years, 1000)  # TODO: Reasonable starting/default choice? 500? Full simulation length?
+    block_size = min(number_of_years, default_block_size)
     found_block_size = False
     while not found_block_size:
 
@@ -458,11 +474,11 @@ def identify_block_size(
         working_memory = 0
         if 'point' in output_types:
             if spatial_model:
-                working_memory += int(nt * points.shape[0] * (64 / 8))  # assuming np.float64
+                working_memory += int(nt * points.shape[0] * (float_precision / 8))
             else:
-                working_memory += int(nt * (64 / 8))  # assuming np.float64
+                working_memory += int(nt * (float_precision / 8))
         if ('catchment' in output_types) or ('grid' in output_types):
-            working_memory += int(nt * discretisation_metadata[('grid', 'x')].shape[0] * (64 / 8))  # np.float64
+            working_memory += int(nt * discretisation_metadata[('grid', 'x')].shape[0] * (float_precision / 8))
 
         # Estimate memory requirements of point/catchment output arrays for one block
         # - assuming that timing in relation to leap years will not matter (i.e. small effect)
@@ -481,31 +497,31 @@ def identify_block_size(
                     n_points = catchments.shape[0]
             else:
                 n_points = 1
-            output_memory = int((n_timesteps * n_points) * (16 / 8))  # assuming np.float16
+            output_memory = int((n_timesteps * n_points) * (16 / 8))  # assuming np.float16 for output arrays only
         elif discretisation_method == 'event_totals':
             raise NotImplementedError
 
-        # Compare total memory estimate with free memory - accept block size if headroom maintained
+        # Accept block size if estimated total memory is below maximum RAM percentage to use
         required_total = nsrp_memory + working_memory + output_memory
-        system_used = psutil.virtual_memory().used
-        system_available = psutil.virtual_memory().available
         system_total = psutil.virtual_memory().total
-        if required_total < system_available:
-            estimated_percent_use = (system_used + required_total) / system_total * 100
-            percent_headroom = 10  # TODO: Move to input
-            if estimated_percent_use < (100 - percent_headroom):
-                found_block_size = True
+        estimated_percent_use = required_total / system_total * 100
+        if check_available_memory:
+            system_percent_available = psutil.virtual_memory().available / system_total * 100
+            memory_limit = min(maximum_memory_percentage, system_percent_available)
+        else:
+            memory_limit = maximum_memory_percentage
+        if estimated_percent_use < memory_limit:
+            found_block_size = True
 
         # If need to try a smaller block size then ensure it stays bigger than some minimum. Currently four years is
         # used to fit in with the buffer added in the NSRP storm process.
         # TODO: Change the NSRP process so that it can work if only one year of simulation is requested
         if not found_block_size:
-            if block_size == 4:
-                raise RuntimeError('Block size is at its minimum (four years) but memory availability appears to be'
-                                   'insufficient.')
+            if block_size == minimum_block_size:
+                raise RuntimeError('Block size is at its minimum but memory availability appears to be insufficient.')
             else:
                 new_block_size = int(np.floor(block_size / 2))
-                block_size = max(new_block_size, 4)
+                block_size = max(new_block_size, minimum_block_size)
 
     return block_size
 
@@ -513,7 +529,7 @@ def identify_block_size(
 def simulate_realisation(
         realisation_id, datetime_helper, number_of_years, timestep_length, season_definitions,
         discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments, parameters,
-        intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size
+        intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size, block_subset_size
 ):
     """
     Simulate realisation of NSRP process.
@@ -561,7 +577,7 @@ def simulate_realisation(
                 ],
                 season_definitions, df, output_types, timestep_length,
                 discrete_rainfall,
-                discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, n_blocks
+                discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, block_subset_size
             )
             # TODO: Check that slice of datetime_helper is correct
         elif discretisation_method == 'event_totals':
@@ -572,25 +588,6 @@ def simulate_realisation(
     # Assuming that event totals etc are not being written to file but should be returned for shuffling etc
     if discretisation_method == 'event_totals':
         return events_df
-
-
-def get_datetime_helper(start_year, number_of_years, timestep_length, season_definitions, calendar):
-    # Get datetime series and end year
-    end_year = start_year + number_of_years - 1
-    datetimes = utils.datetime_series(start_year, end_year, timestep_length, season_definitions, calendar)
-
-    # Helper dataframe with month end timesteps and times
-    datetime_helper = datetimes.groupby(['year', 'month'])['hour'].agg('size')
-    datetime_helper = datetime_helper.to_frame('n_timesteps')
-    datetime_helper.reset_index(inplace=True)
-    datetime_helper['end_timestep'] = datetime_helper['n_timesteps'].cumsum()  # beginning timestep of next month
-    datetime_helper['start_timestep'] = datetime_helper['end_timestep'].shift()
-    datetime_helper.iloc[0, datetime_helper.columns.get_loc('start_timestep')] = 0
-    datetime_helper['start_time'] = datetime_helper['start_timestep'] * timestep_length
-    datetime_helper['end_time'] = datetime_helper['end_timestep'] * timestep_length
-    datetime_helper['n_hours'] = datetime_helper['end_time'] - datetime_helper['start_time']
-
-    return datetimes, datetime_helper
 
 
 def initialise_discrete_rainfall_arrays(spatial_model, output_types, discretisation_metadata, points, nt):
@@ -607,7 +604,7 @@ def initialise_discrete_rainfall_arrays(spatial_model, output_types, discretisat
 
 def discretise_by_point(
         spatial_model, datetime_helper, season_definitions, df, output_types, timestep_length, discrete_rainfall,
-        discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, n_blocks
+        discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, block_subset_size
 ):
     # TODO: Expecting datetime_helper just for block - check that correctly subset before argument passed
 
@@ -620,8 +617,8 @@ def discretise_by_point(
         print_helper.append(datetime_helper.shape[0])
 
     # Use sub-blocks to speed up month-wise loop, as selection/subsetting of raincells for a given month is much faster
-    # with smaller arrays. Trying 50 years as a reasonable compromise
-    subset_n_years = min(int(datetime_helper.shape[0] / 12), 50)
+    # with smaller arrays
+    subset_n_years = min(int(datetime_helper.shape[0] / 12), block_subset_size)
     subset_start_idx = 0
     while subset_start_idx < datetime_helper.shape[0]:
         subset_end_idx = min(subset_start_idx + subset_n_years * 12 - 1, datetime_helper.shape[0] - 1)

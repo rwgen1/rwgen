@@ -15,7 +15,7 @@ def main(
         xmin,
         xmax,
         ymin,
-        ymax
+        ymax,
 ):
     """
     Args:

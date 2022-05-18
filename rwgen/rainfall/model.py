@@ -69,6 +69,52 @@ class Model:
         #: pandas.DataFrame: Parameters for time series simulation.
         self.parameters = None
 
+        #: dict: Configuration settings for advanced use (see `update_config()` method).
+        self.config_settings = dict(
+            default_block_size=1000,
+            check_block_size=True,
+            minimum_block_size=10,
+            check_available_memory=True,
+            maximum_memory_percentage=75,
+            block_subset_size=50,
+        )
+
+    def update_config(
+            self,
+            default_block_size=1000,
+            check_block_size=True,
+            minimum_block_size=10,
+            check_available_memory=True,
+            maximum_memory_percentage=75,
+            block_subset_size=50,
+    ):
+        """
+        Update advanced configuration settings.
+
+        Args:
+            default_block_size (int): Number of years (maximum) to simulate at once to avoid memory issues.
+            check_block_size (bool): Flag to indicate whether code should automatically check whether the
+                default_block_size (probably) needs to be reduced to avoid memory issues (see
+                `check_available_memory` and `maximum_memory_percentage`).
+            minimum_block_size (int): Minimum number of years to simulate at once.
+            check_available_memory (bool): Flag to indicate whether current system memory usage should be checked to
+                limit the maximum amount of memory assigned in simulation.
+            maximum_memory_percentage (int or float): Maximum percentage of system memory that may be assigned by a
+                simulation. If estimated memory usage exceeds this percentage then a smaller block size will be tried
+                until the `minimum_block_size` is reached.
+            block_subset_size (int): Block subset size (number of years) for internal use in discretisation (as it is
+                much faster to discretise subsets of each block).
+
+        """
+        self.config_settings = dict(
+            default_block_size=default_block_size,
+            check_block_size=check_block_size,
+            minimum_block_size=minimum_block_size,
+            check_available_memory=check_available_memory,
+            maximum_memory_percentage=maximum_memory_percentage,
+            block_subset_size=block_subset_size,
+        )
+
     def preprocess(
             self,
             output_folder,
@@ -368,7 +414,6 @@ class Model:
             start_year=2000,
             calendar='gregorian',
             random_seed=None,
-            additional_output=True,
     ):
         """
         Simulate realisation(s) of NSRP process.
@@ -412,8 +457,6 @@ class Model:
             calendar (str): Flag to indicate whether `gregorian` (default accounting for leap years) or `365-day`
                 calendar should be used.
             random_seed (int): Seed to use in random number generation.
-            additional_output (bool): Flag to write additional output files to output_folder. These files are
-                catchment weights as ascii rasters and phi grid as ascii raster.
             # TODO: Implement additional output and include also random seed (entropy attribute of SeedSequence)
 
         Notes:
@@ -515,7 +558,12 @@ class Model:
             start_year=start_year,
             calendar=calendar,
             random_seed=random_seed,
-            additional_output=additional_output
+            default_block_size=self.config_settings['default_block_size'],
+            check_block_size=self.config_settings['check_block_size'],
+            minimum_block_size=self.config_settings['minimum_block_size'],
+            check_available_memory=self.config_settings['check_available_memory'],
+            maximum_memory_percentage=self.config_settings['maximum_memory_percentage'],
+            block_subset_size=self.config_settings['block_subset_size'],
         )
 
     @property
