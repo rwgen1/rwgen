@@ -489,8 +489,9 @@ class Model:
                 output_subfolders = dict(point='')
         if isinstance(output_subfolders, dict):
             for output_type, output_subfolder in output_subfolders.items():
-                if not os.path.exists(os.path.join(output_folder, output_subfolder)):
-                    os.mkdir(os.path.join(output_folder, output_subfolder))
+                if output_type in output_types:
+                    if not os.path.exists(os.path.join(output_folder, output_subfolder)):
+                        os.mkdir(os.path.join(output_folder, output_subfolder))
 
         # Ensure valid output types
         # TODO: Expand checks on user input arguments

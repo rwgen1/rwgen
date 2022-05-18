@@ -613,8 +613,8 @@ def discretise_by_point(
 
     # Month indices to use for printing progress
     print_helper = list(range(0, datetime_helper.shape[0], int(datetime_helper.shape[0] / 10)))
-    if print_helper[-1] != datetime_helper.shape[0]:
-        print_helper.append(datetime_helper.shape[0])
+    if print_helper[-1] != (datetime_helper.shape[0] - 1):
+        print_helper.append(datetime_helper.shape[0] - 1)
 
     # Use sub-blocks to speed up month-wise loop, as selection/subsetting of raincells for a given month is much faster
     # with smaller arrays
@@ -630,7 +630,7 @@ def discretise_by_point(
         for month_idx in range(subset_start_idx, subset_end_idx+1):  # range(datetime_helper.shape[0]):
 
             if month_idx in print_helper:
-                print('    - Discretising -', str(print_helper.index(month_idx) * 10) + '%')
+                print('    - Discretising:', str(print_helper.index(month_idx) * 10) + '%')
 
             year = datetime_helper['year'].values[month_idx]
             month = datetime_helper['month'].values[month_idx]
