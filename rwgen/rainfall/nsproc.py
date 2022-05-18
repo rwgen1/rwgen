@@ -278,8 +278,9 @@ def merge_parameters(df, month_lengths, simulation_length, parameters):
 
     """
     df['month'] = lookup_months(month_lengths, simulation_length, df['storm_arrival'].values)
-    parameters_subset = parameters.drop(
-        ['converged', 'objective_function', 'iterations', 'function_evaluations'], axis=1
+    parameters_subset = parameters.loc[parameters['fit_stage'] == 'final'].copy()
+    parameters_subset = parameters_subset.drop(
+        ['fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations'], axis=1
     )
     df = pd.merge(df, parameters_subset, how='left', on='month')
     return df

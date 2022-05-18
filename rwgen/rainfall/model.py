@@ -21,6 +21,7 @@ class Model:
     # - e.g. pre-processing for NSRP fitting, NSRP simulation, SARIMA fitting, etc
     # - plus e.g. simulation constructing output paths, doing normal vs shuffling simulations
     # - any value in setting more stuff as attributes to allow calling etc from different places?
+    # TODO: Swap order of precedence so that input arguments are given precedence over existing model attributes
 
     def __init__(
             self,
@@ -404,7 +405,7 @@ class Model:
             phi (pandas.DataFrame or str): Dataframe containing phi scale factor at point locations
                 (from self.preprocessing() method). Path to phi file can be passed. If self.phi is not None (i.e.
                 preprocessing method has been run) then self.phi is given precedence.
-            simulation_length (int): Number of years to simulate in one realisation.
+            simulation_length (int): Number of years to simulate in one realisation. Minimum of 10 currently.
             number_of_realisations (int): Number of realisations to simulate.
             timestep_length (int): Timestep of output [hr]. Default is 1 (hour).
             start_year (int): Start year of simulation.
@@ -454,6 +455,7 @@ class Model:
             output_types = ['point']
 
         # Get parameters if required
+        # TODO: Swap order so that input arguments are given precedence over existing model attributes
         if self.parameters is not None:
             parameters = self.parameters
         elif isinstance(parameters, str):
@@ -485,6 +487,9 @@ class Model:
                 phi = self.phi
             elif isinstance(phi, str):
                 phi = utils.read_csv_(phi)
+
+        # Check simulation length is long enough  # TODO: Remove constraint caused by NSRP buffer period
+        simulation_length = max(simulation_length, 10)
 
         # Do simulation
         simulation.main(
