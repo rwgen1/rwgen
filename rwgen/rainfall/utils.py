@@ -762,6 +762,7 @@ def autocorrelation(lag=1):
 
 
 # -----------------------------------------------------------------------------
+# TODO: Remove discretisation functions as now part of simulation module
 
 @numba.jit(nopython=True)
 def discretise_point(
@@ -847,3 +848,88 @@ def discretise_multiple_points(
     # print()
     # print(t5-t1)
     # sys.exit()
+
+# -----------------------------------------------------------------------------
+
+def define_parameter_bounds(parameter_bounds, fixed_parameters, required_parameters, default_bounds, unique_seasons):
+    """
+    Set up required parameter name lists and bounds.
+
+    """
+    # Prepare parameter bounds dataframe for internal use
+    if parameter_bounds is not None:
+        df = parameter_bounds.copy()
+    else:
+        df = pd.DataFrame({'season': [], 'parameter': []})
+    df.columns = [column_name.lower() for column_name in df.columns.tolist()]
+    df.rename(columns={'month': 'season'}, inplace=True)
+    df['parameter'] = df['parameter'].apply(lambda x: x.lower())
+    df['season'] = df['season'].apply(lambda x: -1 if x in ['All', 'all'] else int(x))  # lambda x: f(x)
+    df.loc[(df['parameter'] == 'lambda') | (df['parameter'] == 'lamda'), 'parameter'] = 'lamda'
+
+    # Prepare fixed parameters dataframe for internal use
+    if fixed_parameters is not None:
+        df1 = fixed_parameters.copy()
+    else:
+        df1 = pd.DataFrame({'season': []})
+    df1.columns = [column_name.lower() for column_name in df1.columns.tolist()]
+    df1.rename(columns={'month': 'season', 'lambda': 'lamda'}, inplace=True)
+    df1['season'] = df1['season'].apply(lambda x: -1 if x in ['All', 'all'] else int(x))  # lambda x: f(x)
+
+    # Give fixed values precedence in the event that both fixed values and bounds have been provided
+    fixed_parameter_names = [name for name in df1.columns.tolist() if name != 'season']
+    df = df.loc[~df['parameter'].isin(fixed_parameter_names)]
+
+    # Reshape fixed parameters df so that it can be merged with bounds df
+    df1 = pd.melt(df1, id_vars='season', var_name='parameter', value_name='fixed_value')
+    df = pd.merge(df, df1, how='outer', on=['season', 'parameter'])
+
+    # Parameters to fit (and their bounds) need to be ordered for optimisation (more flexibility on fixed parameters)
+    fixed_parameters = {}  # key = tuple (season, parameter), values = parameter value
+    parameters_to_fit = []  # list of parameters that need to be fitted
+    parameter_bounds = {}  # key = season, values = list of tuples (lower bound, upper bound)
+    for season in unique_seasons:
+        parameter_bounds[season] = []
+
+    # Keep in required order in loop
+    for parameter in required_parameters:
+        df1 = df.loc[df['parameter'] == parameter]
+
+        # Use default bounds if no entry for parameter in df
+        if df1.shape[0] == 0:
+            parameters_to_fit.append(parameter)
+            for season in unique_seasons:
+                parameter_bounds[season].append((
+                    default_bounds.loc[default_bounds['parameter'] == parameter, 'lower_bound'].values[0],
+                    default_bounds.loc[default_bounds['parameter'] == parameter, 'upper_bound'].values[0]
+                ))
+        else:
+            for season in unique_seasons:
+                if df1.shape[0] == 1:
+                    if ('fixed_value' in df1.columns) and np.isfinite(df1['fixed_value'].values[0]):
+                        fixed_value = df1['fixed_value'].values[0]
+                    else:
+                        fixed_value = np.nan
+                        lower_bound = df1['lower_bound'].values[0]
+                        upper_bound = df1['upper_bound'].values[0]
+                else:
+                    if ('fixed_value' in df1.columns) and np.isfinite(df1['fixed_value'].values[0]):
+                        fixed_value = df1.loc[df1['season'] == season, 'fixed_value'].values[0]
+                    else:
+                        fixed_value = np.nan
+                        lower_bound = df1.loc[df1['season'] == season, 'lower_bound'].values[0]
+                        upper_bound = df1.loc[df1['season'] == season, 'upper_bound'].values[0]
+
+                if np.isfinite(fixed_value):
+                    fixed_parameters[(season, parameter)] = fixed_value
+                else:
+                    if season == unique_seasons[0]:
+                        parameters_to_fit.append(parameter)
+                    parameter_bounds[season].append((lower_bound, upper_bound))
+
+    # print(parameters_to_fit)
+    # print(parameter_bounds)
+    # print(fixed_parameters)
+
+    return parameters_to_fit, fixed_parameters, parameter_bounds
+

@@ -22,6 +22,9 @@ class Model:
     # - plus e.g. simulation constructing output paths, doing normal vs shuffling simulations
     # - any value in setting more stuff as attributes to allow calling etc from different places?
     # TODO: Swap order of precedence so that input arguments are given precedence over existing model attributes
+    # TODO: Move defaults into a config.py, as it will be easier for users to edit?
+    # TODO: Check use of lambda vs lamda now - only referred to in dataframes?
+    # TODO: Check switch from xi to theta throughout
 
     def __init__(
             self,
@@ -49,8 +52,6 @@ class Model:
                   give quarterly seasons beginning in December.
 
         """
-        print()
-
         if season_definitions is not None:
             self.season_definitions = utils.parse_season_definitions(season_definitions)
         else:
@@ -263,7 +264,8 @@ class Model:
             reference_statistics=None,
             reference_point_statistics_path=None,
             reference_cross_correlations_path=None,
-            parameter_bounds=None,  # TODO: Use a dictionary to remove dependence on list order
+            parameter_bounds=None,
+            fixed_parameters=None,
             n_workers=1,
             output_parameters_filename='parameters.csv',
             output_point_statistics_filename='fitted_point_statistics.csv',
@@ -282,9 +284,11 @@ class Model:
             reference_statistics (pandas.DataFrame): Statistics for fitting model parameters.
             reference_point_statistics_path (str): Path to file containing point statistics.
             reference_cross_correlations_path (str): Path to file containing cross-correlation statistics.
-            parameter_bounds (list or dict): List of tuples of upper and lower parameter bounds in order required by
-                model. If these bounds should vary seasonally then a dictionary of lists can be passed, with each key
-                corresponding with a season identifier.
+            parameter_bounds (dict or str or pandas.DataFrame): Dictionary containing tuples of upper and lower
+                parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
+                dataframe (see Notes).
+            fixed_parameters (dict or str or pandas.DataFrame): Dictionary containing fixed parameter values by
+                parameter name. Alternatively the path to a parameters file or an equivalent dataframe (see Notes).
             n_workers (int): Number of workers (cores/processes) to use in fitting. Default is 1.
             output_parameters_filename (str): Name of output parameters file.
             output_point_statistics_filename (str): Name of output point statistics file.
@@ -310,6 +314,8 @@ class Model:
 
             Empirical smoothing.  # TODO: Explain method so far
 
+            Parameter bounds setting / file and fixed parameters setting / file.  # TODO: Expand
+
         """
         print('Fitting')
 
@@ -325,46 +331,51 @@ class Model:
             # )
             raise NotImplementedError
 
-        # If bounds are passed as a list assume that they should be applied to each season
-        if parameter_bounds is not None:
-            if isinstance(parameter_bounds, list):
-                dc = {}
-                for season in self.unique_seasons:
-                    dc[season] = parameter_bounds
-                parameter_bounds = dc
+        # Get parameter bounds into a dataframe
+        if isinstance(parameter_bounds, dict):
+            dc = {key.lower(): value for key, value in parameter_bounds.items()}
+            parameter_bounds = pd.DataFrame.from_dict(dc, orient='index', columns=['lower_bound', 'upper_bound'])
+            parameter_bounds.reset_index(inplace=True)
+            parameter_bounds.rename(columns={'index': 'parameter'}, inplace=True)
+            parameter_bounds['season'] = -1
+            parameter_bounds.loc[parameter_bounds['parameter'] == 'lambda', 'parameter'] = 'lamda'
+        elif isinstance(parameter_bounds, str):
+            parameter_bounds = pd.read_csv(parameter_bounds)
 
-        # Identify relevant parameters and set default bounds by season if required
+        # Get fixed parameters into a dataframe
+        if isinstance(fixed_parameters, dict):
+            dc = {key.lower(): value for key, value in fixed_parameters.items()}
+            dc1 = {}
+            for key, value in dc.items():
+                if isinstance(value, list):
+                    dc1[key] = value
+                else:
+                    dc1[key] = [value]
+            fixed_parameters = pd.DataFrame.from_dict(dc1)
+            fixed_parameters['season'] = -1
+            fixed_parameters.rename(columns={'lambda': 'lamda'}, inplace=True)
+        elif isinstance(fixed_parameters, str):
+            fixed_parameters = pd.read_csv(fixed_parameters)
+
+        # Default bounds if required
         if not self.spatial_model:
-            parameter_names = ['lamda', 'beta', 'nu', 'eta']
-            if parameter_bounds is None:
-                parameter_bounds = {}
-                for season in self.unique_seasons:
-                    parameter_bounds[season] = [
-                        (0.00001, 0.02),    # lamda
-                        (0.02, 1.0),        # beta
-                        (0.1, 30),          # nu
-                        (0.1, 60.0),        # eta
-                    ]
-            if self.intensity_distribution == 'exponential':
-                parameter_names.append('xi')
-                for season in self.unique_seasons:
-                    parameter_bounds[season].append((0.01, 4.0))  # xi
+            default_bounds = pd.DataFrame.from_dict({
+                'lamda': (0.00001, 0.02), 'beta': (0.02, 1.0), 'nu': (0.1, 30), 'eta': (0.1, 60.0),  # 'xi': (0.01, 4.0)
+                'theta': (0.25, 100), 'iota': (0.5, 1.0), 'kappa1': (0.5, 1.0), 'kappa2': (0.5, 1.0)
+            }, orient='index', columns=['lower_bound', 'upper_bound'])
         else:
-            parameter_names = ['lamda', 'beta', 'rho', 'eta', 'gamma']  # ! ORDER OF gamma AND xi SWAPPED HERE !
-            if parameter_bounds is None:
-                parameter_bounds = {}
-                for season in self.unique_seasons:
-                    parameter_bounds[season] = [
-                        (0.001, 0.05),      # lamda
-                        (0.02, 0.5),        # beta
-                        (0.0001, 2.0),      # rho
-                        (0.1, 12.0),        # eta
-                        (0.01, 500.0)       # gamma
-                    ]
-            if self.intensity_distribution == 'exponential':
-                parameter_names.append('xi')
-                for season in self.unique_seasons:
-                    parameter_bounds[season].append((0.01, 4.0))  # xi
+            default_bounds = pd.DataFrame.from_dict({
+                'lamda': (0.001, 0.05), 'beta': (0.02, 0.5), 'rho': (0.0001, 2.0), 'eta': (0.1, 12.0),
+                'gamma': (0.01, 500.0),
+                'theta': (0.25, 100), 'iota': (0.5, 1.0), 'kappa1': (0.5, 1.0), 'kappa2': (0.5, 1.0)
+            }, orient='index', columns=['lower_bound', 'upper_bound'])
+        default_bounds.reset_index(inplace=True)
+        default_bounds.rename(columns={'index': 'parameter'}, inplace=True)
+
+        # Identify parameters to fit (or not fit) set parameter bounds
+        parameters_to_fit, fixed_parameters, parameter_bounds = utils.define_parameter_bounds(
+            parameter_bounds, fixed_parameters, self.parameter_names, default_bounds, self.unique_seasons
+        )
 
         # Construct output paths
         output_parameters_path = os.path.join(output_folder, output_parameters_filename)
@@ -381,8 +392,10 @@ class Model:
             intensity_distribution=self.intensity_distribution,
             fitting_method=fitting_method,
             reference_statistics=reference_statistics,
-            parameter_names=parameter_names,
-            parameter_bounds=parameter_bounds,
+            all_parameter_names=self.parameter_names,  # RENAMED
+            parameters_to_fit=parameters_to_fit,  # NEW
+            parameter_bounds=parameter_bounds,  # SAME
+            fixed_parameters=fixed_parameters,  # NEW
             n_workers=n_workers,
             output_parameters_path=output_parameters_path,
             output_point_statistics_path=output_point_statistics_path,
@@ -396,7 +409,7 @@ class Model:
     def simulate(
             self,
             discretisation_method='default',  # TODO: Probably more like simulation_type
-            output_types=None,
+            output_types='point',
             output_folder=None,
             output_subfolders='default',
             output_format='txt',
@@ -422,7 +435,7 @@ class Model:
             discretisation_method (str): Flag indicating whether to discretise rainfall series for output (`default`)
                 or to calculate total depth for each event (`event_totals`), as required by Kim and Onof (2020)
                 shuffling method (not yet fully implemented).
-            output_types (list of str): Types of output (discretised) rainfall required. Options are `point`,
+            output_types (str or list of str): Types of output (discretised) rainfall required. Options are `point`,
                 `catchment` and `grid`.
             output_folder (str): Path to folder in which output files should be written.
             output_subfolders (str or dict): Sub-folder in which to place each output type. If `default` then the
@@ -487,6 +500,8 @@ class Model:
                 output_subfolders = dict(point='point', catchment='catchment', grid='grid')
             else:
                 output_subfolders = dict(point='')
+        if isinstance(output_types, str):
+            output_types = [output_types]
         if isinstance(output_subfolders, dict):
             for output_type, output_subfolder in output_subfolders.items():
                 if output_type in output_types:
@@ -566,6 +581,20 @@ class Model:
             maximum_memory_percentage=self.config_settings['maximum_memory_percentage'],
             block_subset_size=self.config_settings['block_subset_size'],
         )
+
+    @property
+    def parameter_names(self):
+        if self.spatial_model:
+            parameter_names = ['lamda', 'beta', 'rho', 'eta', 'gamma']
+        else:
+            parameter_names = ['lamda', 'beta', 'nu', 'eta']
+        if self.intensity_distribution == 'exponential':
+            parameter_names.append('theta')  # theta = 1 / xi
+        elif self.intensity_distribution == 'weibull':
+            parameter_names.extend(['theta', 'iota'])
+        elif self.intensity_distribution == 'generalised_gamma':
+            parameter_names.extend(['theta', 'kappa1', 'kappa2'])
+        return parameter_names
 
     @property
     def unique_seasons(self):

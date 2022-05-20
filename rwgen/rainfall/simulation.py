@@ -637,8 +637,8 @@ def discretise_by_point(
             season = season_definitions[month]
 
             # Perform temporal subset before discretising points (much more efficient for spatial model)
-            start_time = datetime_helper['start_time'][month_idx]
-            end_time = datetime_helper['end_time'][month_idx]
+            start_time = datetime_helper['start_time'].values[month_idx]
+            end_time = datetime_helper['end_time'].values[month_idx]
             temporal_mask = (df1['raincell_arrival'].values < end_time) & (df1['raincell_end'].values > start_time)
             raincell_arrival_times = df1['raincell_arrival'].values[temporal_mask]
             raincell_end_times = df1['raincell_end'].values[temporal_mask]
