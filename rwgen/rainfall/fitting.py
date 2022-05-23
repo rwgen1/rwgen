@@ -307,10 +307,10 @@ def calculate_analytical_properties(
 
     # Shape parameters are only relevant to non-exponential intensity distributions
     if intensity_distribution == 'weibull':
-        iota = parameters_dict['iota']
+        kappa = parameters_dict['kappa']
     elif intensity_distribution == 'generalised_gamma':
-        kappa1 = parameters_dict['kappa1']
-        kappa2 = parameters_dict['kappa2']
+        kappa_1 = parameters_dict['kappa_1']
+        kappa_2 = parameters_dict['kappa_2']
 
     # Calculate raw moments (1-3) of intensity distribution
     moments = []
@@ -321,9 +321,9 @@ def calculate_analytical_properties(
             # mu_3 = 6.0 / (1.0 / theta) ** 3.0
             moments.append(scipy.stats.expon.moment(n, scale=theta))
         elif intensity_distribution == 'weibull':
-            moments.append(scipy.stats.weibull_min.moment(n, c=iota, scale=theta))
+            moments.append(scipy.stats.weibull_min.moment(n, c=kappa, scale=theta))
         elif intensity_distribution == 'generalised_gamma':
-            moments.append(scipy.stats.gengamma.moment(n, a=(kappa1 / kappa2), c=kappa2, scale=theta))
+            moments.append(scipy.stats.gengamma.moment(n, a=(kappa_1 / kappa_2), c=kappa_2, scale=theta))
     mu_1, mu_2, mu_3 = moments
 
     # Main loop to get each required statistic

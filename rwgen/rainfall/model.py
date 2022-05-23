@@ -361,13 +361,13 @@ class Model:
         if not self.spatial_model:
             default_bounds = pd.DataFrame.from_dict({
                 'lamda': (0.00001, 0.02), 'beta': (0.02, 1.0), 'nu': (0.1, 30), 'eta': (0.1, 60.0),  # 'xi': (0.01, 4.0)
-                'theta': (0.25, 100), 'iota': (0.5, 1.0), 'kappa1': (0.5, 1.0), 'kappa2': (0.5, 1.0)
+                'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
         else:
             default_bounds = pd.DataFrame.from_dict({
                 'lamda': (0.001, 0.05), 'beta': (0.02, 0.5), 'rho': (0.0001, 2.0), 'eta': (0.1, 12.0),
                 'gamma': (0.01, 500.0),
-                'theta': (0.25, 100), 'iota': (0.5, 1.0), 'kappa1': (0.5, 1.0), 'kappa2': (0.5, 1.0)
+                'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
         default_bounds.reset_index(inplace=True)
         default_bounds.rename(columns={'index': 'parameter'}, inplace=True)
@@ -591,9 +591,9 @@ class Model:
         if self.intensity_distribution == 'exponential':
             parameter_names.append('theta')  # theta = 1 / xi
         elif self.intensity_distribution == 'weibull':
-            parameter_names.extend(['theta', 'iota'])
+            parameter_names.extend(['theta', 'kappa'])
         elif self.intensity_distribution == 'generalised_gamma':
-            parameter_names.extend(['theta', 'kappa1', 'kappa2'])
+            parameter_names.extend(['theta', 'kappa_1', 'kappa_2'])
         return parameter_names
 
     @property
