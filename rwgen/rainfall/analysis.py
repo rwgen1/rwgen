@@ -99,10 +99,10 @@ def calculate_point_statistics(statistic_definitions, dfs):
             values = dfs[duration].groupby('season')['value'].agg(statistic_functions[statistic_name])
         elif statistic_name == 'probability_dry':
             threshold = row['threshold']
-            values = dfs[duration].groupby('season')['value'].agg(utils.probability_dry(threshold))
+            values = dfs[duration].groupby('season')['value'].agg(probability_dry(threshold))
         elif statistic_name == 'autocorrelation':
             lag = row['lag']
-            values = dfs[duration].groupby('season')['value'].agg(utils.autocorrelation(lag))
+            values = dfs[duration].groupby('season')['value'].agg(autocorrelation(lag))
 
         values = values.to_frame('value')
         values.reset_index(inplace=True)
@@ -181,3 +181,16 @@ def calculate_cross_correlations(metadata, statistic_definitions, unique_seasons
     cross_correlations['name'] = 'cross-correlation'
 
     return cross_correlations
+
+
+def probability_dry(threshold=0.0):
+    def _probability_dry(x):
+        return x[x < threshold].shape[0] / x.shape[0]
+    return _probability_dry
+
+
+def autocorrelation(lag=1):
+    def _autocorrelation(x):
+        r, p = scipy.stats.pearsonr(x[lag:], x.shift(lag)[lag:])
+        return r
+    return _autocorrelation

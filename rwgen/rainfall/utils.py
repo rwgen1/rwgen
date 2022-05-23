@@ -748,19 +748,6 @@ def clip_array(max_relative_difference, max_clips):
     return f
 
 
-def probability_dry(threshold=0.0):
-    def _probability_dry(x):
-        return x[x < threshold].shape[0] / x.shape[0]
-    return _probability_dry
-
-
-def autocorrelation(lag=1):
-    def _autocorrelation(x):
-        r, p = scipy.stats.pearsonr(x[lag:], x.shift(lag)[lag:])
-        return r
-    return _autocorrelation
-
-
 # -----------------------------------------------------------------------------
 # TODO: Remove discretisation functions as now part of simulation module
 
