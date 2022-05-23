@@ -89,7 +89,12 @@ def main(
 
     # Step 5 - Simulate raincell intensities
     if intensity_distribution == 'exponential':
-        df['raincell_intensity'] = rng.exponential(1.0 / df['xi'])
+        df['raincell_intensity'] = rng.exponential(df['theta'])  # rng.exponential(1.0 / df['xi'])
+    elif intensity_distribution == 'weibull':
+        df['raincell_intensity'] = scipy.stats.weibull_min.rvs(c=df['iota'], scale=df['theta'], random_state=rng)
+    elif intensity_distribution == 'generalised_gamma':
+        df['raincell_intensity'] = scipy.stats.gengamma.rvs(
+            a=(df['kappa1'] / df['kappa2']), c=df['kappa2'], scale=df['theta'], random_state=rng)
 
     return df
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.optimize
+import scipy.stats
 
 from . import properties
 from . import utils
@@ -12,8 +13,10 @@ def main(
         intensity_distribution,
         fitting_method,
         reference_statistics,
-        parameter_names,
-        parameter_bounds,
+        all_parameter_names,  # RENAMED
+        parameters_to_fit,  # NEW
+        parameter_bounds,  # SAME
+        fixed_parameters,  # NEW
         n_workers,
         output_parameters_path,
         output_point_statistics_path,
@@ -36,7 +39,7 @@ def main(
     # Derived helper variables
     unique_seasons = list(set(season_definitions.values()))
     parameter_output_columns = ['fit_stage', 'season']
-    for parameter_name in parameter_names:
+    for parameter_name in all_parameter_names:
         parameter_output_columns.append(parameter_name)
     parameter_output_columns.extend([
         'fit_success', 'objective_function', 'number_of_iterations', 'number_of_evaluations'
@@ -45,17 +48,18 @@ def main(
     # Select and run fitting method
     if fitting_method == 'default':
         parameters, fitted_statistics = fit_by_season(
-            unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-            parameter_names
+            unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+            all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters
         )
     elif fitting_method == 'empirical_smoothing':
         parameters, fitted_statistics = fit_with_empirical_smoothing(
-            unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-            parameter_names, initial_parameters, initial_parameters_path, smoothing_tolerance
+            unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+            all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, initial_parameters,
+            initial_parameters_path, smoothing_tolerance
         )
 
     # Write outputs
-    df = parameters[parameter_output_columns]
+    df = parameters[parameter_output_columns]  # TODO: Check that fixed parameters are present by this point
     utils.write_csv_(df, output_parameters_path, season_definitions, parameter_output_renaming)
     utils.write_statistics(
         fitted_statistics, output_point_statistics_path, season_definitions, output_cross_correlation_path,
@@ -66,8 +70,8 @@ def main(
 
 
 def fit_by_season(
-        unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-        parameter_names, stage='final'
+        unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+        all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, stage='final'
 ):
     """
     Optimise parameters for each season independently.
@@ -96,7 +100,11 @@ def fit_by_season(
                 fitting_data,
                 ref,
                 weights,
-                gs
+                gs,
+                all_parameter_names,
+                parameters_to_fit,
+                fixed_parameters,
+                season
             ),
             tol=0.001,
             updating='deferred',
@@ -104,8 +112,8 @@ def fit_by_season(
         )
 
         # Store optimisation results for season
-        for idx in range(len(parameter_names)):
-            results[(parameter_names[idx], season)] = result.x[idx]
+        for idx in range(len(parameters_to_fit)):
+            results[(parameters_to_fit[idx], season)] = result.x[idx]
         results[('fit_success', season)] = result.success
         results[('objective_function', season)] = result.fun
         results[('number_of_iterations', season)] = result.nit
@@ -113,11 +121,17 @@ def fit_by_season(
 
         # Get and store statistics associated with optimised parameters
         dfs = []
-        parameters = []
-        for parameter in parameter_names:
-            parameters.append(results[(parameter, season)])
+        # parameters = []
+        # for parameter in parameters_to_fit:
+        #     parameters.append(results[(parameter, season)])
+        parameters_dict = {}
+        for parameter_name in all_parameter_names:
+            if parameter_name in parameters_to_fit:
+                parameters_dict[parameter_name] = results[(parameter_name, season)]
+            else:
+                parameters_dict[parameter_name] = fixed_parameters[(season, parameter_name)]
         mod_stats = calculate_analytical_properties(
-            spatial_model, intensity_distribution, parameters, statistic_ids, fitting_data
+            spatial_model, intensity_distribution, parameters_dict, statistic_ids, fitting_data
         )
         for statistic_id in statistic_ids:
             tmp = fitting_data[(statistic_id, 'df')].copy()
@@ -128,7 +142,7 @@ def fit_by_season(
         fitted_statistics.append(df)
 
     # Format results for output
-    parameters = format_results(results)
+    parameters = format_results(results, all_parameter_names, parameters_to_fit, fixed_parameters, unique_seasons)
     fitted_statistics = pd.concat(fitted_statistics)
     parameters['fit_stage'] = stage
     fitted_statistics['fit_stage'] = stage
@@ -136,9 +150,11 @@ def fit_by_season(
     return parameters, fitted_statistics
 
 
+# TODO: Update with modifications to fit_by_season (i.e. signature) to allow for fixed parameters
 def fit_with_empirical_smoothing(
-        unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-        parameter_names, initial_parameters, initial_parameters_path, smoothing_tolerance
+        unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+        all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters,
+        initial_parameters, initial_parameters_path, smoothing_tolerance
 ):
     """
     Optimise parameters by season but with an empirical smoothing step.
@@ -161,7 +177,7 @@ def fit_with_empirical_smoothing(
     else:
         initial_parameters, _ = fit_by_season(
             unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-            parameter_names, stage='interim'
+            parameters_to_fit, stage='interim'
         )
 
     # Step 2 - Smooth the parameter values using a +/-1 season weighted moving average
@@ -186,8 +202,8 @@ def fit_with_empirical_smoothing(
     new_parameter_bounds = {}
     for season in unique_seasons:
         new_parameter_bounds[season] = []
-        for parameter in parameter_names:
-            parameter_idx = parameter_names.index(parameter)
+        for parameter in parameters_to_fit:
+            parameter_idx = parameters_to_fit.index(parameter)
             parameter_mean = df1[parameter].mean()
             offset = parameter_mean * smoothing_tolerance
             smoothed_initial_value = df1.loc[df1['season'] == season, parameter].values[0]
@@ -198,26 +214,48 @@ def fit_with_empirical_smoothing(
     # Step 3 - Refit by season with refined bounds
     parameters, fitted_statistics = fit_by_season(
         unique_seasons, reference_statistics, new_parameter_bounds, spatial_model, intensity_distribution, n_workers,
-        parameter_names, stage='final'
+        parameters_to_fit, stage='final'
     )
 
     return parameters, fitted_statistics
 
 
-def format_results(results):
-    df = pd.DataFrame.from_dict(results, orient='index', columns=['value'])
+def format_results(results, all_parameter_names, parameters_to_fit, fixed_parameters, unique_seasons):
+    # Insert fixed parameters into results dictionary
+    dc = results.copy()
+    for parameter_name in all_parameter_names:
+        if parameter_name in parameters_to_fit:
+            pass
+        else:
+            for season in unique_seasons:
+                dc[(parameter_name, season)] = fixed_parameters[(season, parameter_name)]
+
+    # Format as dataframe for output
+    df = pd.DataFrame.from_dict(dc, orient='index', columns=['value'])
     df.index = pd.MultiIndex.from_tuples(df.index, names=['field', 'season'])
     df.reset_index(inplace=True)
     df = df.pivot(index='season', columns='field', values='value')
+    df.sort_index(inplace=True)
     df.reset_index(inplace=True)
     return df
 
 
 def fitting_wrapper(
-        parameters, spatial_model, intensity_distribution, statistic_ids, fitting_data, ref_stats, weights, gs
+        parameters, spatial_model, intensity_distribution, statistic_ids, fitting_data, ref_stats, weights, gs,
+        all_parameter_names, parameters_to_fit, fixed_parameters, season
 ):
+    # List of parameters from optimisation can be converted to a dictionary for easier comprehension in analytical
+    # property calculations. Fixed parameters can also be included
+    parameters_dict = {}
+    for parameter_name in all_parameter_names:
+        if parameter_name in parameters_to_fit:
+            parameters_dict[parameter_name] = parameters[parameters_to_fit.index(parameter_name)]
+        else:
+            parameters_dict[parameter_name] = fixed_parameters[(season, parameter_name)]
+
+    # Calculate properties and objective function
     mod_stats = calculate_analytical_properties(
-        spatial_model, intensity_distribution, parameters, statistic_ids, fitting_data
+        spatial_model, intensity_distribution, parameters_dict, statistic_ids, fitting_data
     )
     obj_fun = calculate_objective_function(ref_stats, mod_stats, weights, gs)
     return obj_fun
@@ -250,20 +288,45 @@ def prepare(statistics):
     return statistic_ids, fitting_data, reference_statistics, weights, gs
 
 
-def calculate_analytical_properties(spatial_model, intensity_distribution, parameters, statistic_ids, fitting_data):
+def calculate_analytical_properties(
+        spatial_model, intensity_distribution, parameters_dict, statistic_ids, fitting_data
+):
+    # Unpack parameter values common to point and spatial models
+    lamda = parameters_dict['lamda']
+    beta = parameters_dict['beta']
+    eta = parameters_dict['eta']
+    theta = parameters_dict['theta']
+
+    # Get or calculate nu (rho and gamma then no longer needed)
     if not spatial_model:
-        if intensity_distribution == 'exponential':
-            lamda, beta, nu, eta, xi = parameters
+        nu = parameters_dict['nu']
     else:
-        if intensity_distribution == 'exponential':
-            lamda, beta, rho, eta, gamma, xi = parameters  # ! ORDER OF gamma AND xi SWAPPED HERE !
+        rho = parameters_dict['rho']
+        gamma = parameters_dict['gamma']
         nu = 2.0 * np.pi * rho / gamma ** 2.0
 
-    if intensity_distribution == 'exponential':
-        mu_1 = 1.0 / xi
-        mu_2 = 2.0 / xi ** 2.0
-        mu_3 = 6.0 / xi ** 3.0
+    # Shape parameters are only relevant to non-exponential intensity distributions
+    if intensity_distribution == 'weibull':
+        iota = parameters_dict['iota']
+    elif intensity_distribution == 'generalised_gamma':
+        kappa1 = parameters_dict['kappa1']
+        kappa2 = parameters_dict['kappa2']
 
+    # Calculate raw moments (1-3) of intensity distribution
+    moments = []
+    for n in [1, 2, 3]:
+        if intensity_distribution == 'exponential':
+            # mu_1 = 1.0 / (1.0 / theta)
+            # mu_2 = 2.0 / (1.0 / theta) ** 2.0
+            # mu_3 = 6.0 / (1.0 / theta) ** 3.0
+            moments.append(scipy.stats.expon.moment(n, scale=theta))
+        elif intensity_distribution == 'weibull':
+            moments.append(scipy.stats.weibull_min.moment(n, c=iota, scale=theta))
+        elif intensity_distribution == 'generalised_gamma':
+            moments.append(scipy.stats.gengamma.moment(n, a=(kappa1 / kappa2), c=kappa2, scale=theta))
+    mu_1, mu_2, mu_3 = moments
+
+    # Main loop to get each required statistic
     statistic_arrays = []
     for statistic_id in statistic_ids:
         name = fitting_data[(statistic_id, 'name')]
