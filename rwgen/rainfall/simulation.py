@@ -606,7 +606,18 @@ def discretise_by_point(
         spatial_model, datetime_helper, season_definitions, df, output_types, timestep_length, discrete_rainfall,
         discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, block_subset_size
 ):
+    print('    - Discretising = ', end='')  # TEMPORARY
     # TODO: Expecting datetime_helper just for block - check that correctly subset before argument passed
+
+    # Adjust datetime helper so that its times and timesteps are set with reference to the beginning of the block
+    # rather than the beginning of the simulation
+    datetime_helper = datetime_helper.copy()
+    initial_start_time = datetime_helper['start_time'].values[0]
+    initial_start_timestep = datetime_helper['start_timestep'].values[0]
+    datetime_helper['start_time'] -= initial_start_time
+    datetime_helper['end_time'] -= initial_start_time
+    datetime_helper['start_timestep'] -= initial_start_timestep
+    datetime_helper['end_timestep'] -= initial_start_timestep
 
     # Prepare to store realisation output for block (point and catchment output only)
     output_arrays = {}
@@ -630,7 +641,11 @@ def discretise_by_point(
         for month_idx in range(subset_start_idx, subset_end_idx+1):  # range(datetime_helper.shape[0]):
 
             if month_idx in print_helper:
-                print('    - Discretising:', str(print_helper.index(month_idx) * 10) + '%')
+                # print('    - Discretising:', str(print_helper.index(month_idx) * 10) + '%')
+                if month_idx == print_helper[-1]:
+                    print(str(print_helper.index(month_idx) * 10) + '%')
+                else:
+                    print(str(print_helper.index(month_idx) * 10) + '%', end=' ')
 
             year = datetime_helper['year'].values[month_idx]
             month = datetime_helper['month'].values[month_idx]
