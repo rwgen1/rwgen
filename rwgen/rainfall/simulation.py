@@ -551,14 +551,16 @@ def simulate_realisation(
         print('  - Realisation =', realisation_id, '[Block =', str(block_id + 1) + '/' + str(n_blocks) + ']')
         print('    - Sampling')
 
-        # NSRP process simulation
+        # NSRP process simulation - allow for the final block to be less than the full block size
         block_start_year = datetime_helper['year'].values[0] + block_id * block_size
         block_end_year = block_start_year + block_size - 1
+        block_end_year = min(block_end_year, datetime_helper['year'].values[-1])
+        actual_block_size = min(block_size, block_end_year - block_start_year + 1)
         month_lengths = datetime_helper.loc[
             (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year),
             'n_hours'].values
         df = nsproc.main(
-            spatial_model, parameters, block_size, month_lengths, season_definitions, intensity_distribution,
+            spatial_model, parameters, actual_block_size, month_lengths, season_definitions, intensity_distribution,
             rng, xmin, xmax, ymin, ymax
         )
 
@@ -642,10 +644,12 @@ def discretise_by_point(
 
             if month_idx in print_helper:
                 # print('    - Discretising:', str(print_helper.index(month_idx) * 10) + '%')
-                if month_idx == print_helper[-1]:
-                    print(str(print_helper.index(month_idx) * 10) + '%')
-                else:
-                    print(str(print_helper.index(month_idx) * 10) + '%', end=' ')
+                percent_complete = print_helper.index(month_idx) * 10
+                if percent_complete <= 100:
+                    if percent_complete == 100:
+                        print(str(percent_complete) + '%')
+                    else:
+                        print(str(percent_complete) + '%', end=' ')
 
             year = datetime_helper['year'].values[month_idx]
             month = datetime_helper['month'].values[month_idx]

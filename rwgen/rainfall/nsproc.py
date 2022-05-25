@@ -113,8 +113,10 @@ def simulate_storms(month_lengths, simulation_length, parameters, rng):
 
         # Set up simulation_length and month_lengths with buffer applied
         simulation_length += 4
-        idx = 4 * 12  # i.e. 4-year buffer
-        month_lengths = np.concatenate([month_lengths, month_lengths[-idx:]])
+        # idx = 4 * 12  # i.e. 4-year buffer
+        # month_lengths = np.concatenate([month_lengths, month_lengths[-idx:]])
+        for _ in range(4):
+            month_lengths = np.concatenate([month_lengths, month_lengths[-12:]])
 
         # Repeat each set of monthly lamda values for each year in simulation
         lamda = np.tile(parameters['lamda'].values, simulation_length)
