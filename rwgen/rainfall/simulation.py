@@ -818,7 +818,7 @@ def write_output(output_arrays, output_paths, write_new_files):
                 fh.writelines(output_lines)
         else:
             with open(output_path, 'a') as fh:
-                fh.writelines(output_lines)
+                fh.writelines('\n' + output_lines)
         # TODO: Implement other text file output options
 
 
