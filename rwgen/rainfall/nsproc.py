@@ -337,14 +337,51 @@ def simulate_raincells_for_month(rho, gamma, number_of_storms, xmin, xmax, ymin,
     quantiles = rng.uniform(min_quantiles, np.ones(min_quantiles.shape[0]))
     outer_radii = scipy.stats.expon.ppf(quantiles, scale=(1.0 / gamma))
 
-    # Combiner inner and outer region raincells (concatenate arrays)
-    # - what about ordering? -- no need to worry because all independent sampling? -- check this
-    number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
-    raincell_x_coords = np.concatenate([inner_x_coords, outer_x_coords])
-    raincell_y_coords = np.concatenate([inner_y_coords, outer_y_coords])
-    raincell_radii = np.concatenate([inner_radii, outer_radii])
+    # Combine inner and outer region raincells
+    # number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
+    # raincell_x_coords = np.concatenate([inner_x_coords, outer_x_coords])
+    # raincell_y_coords = np.concatenate([inner_y_coords, outer_y_coords])
+    # raincell_radii = np.concatenate([inner_radii, outer_radii])
+    number_of_raincells_by_storm, raincell_x_coords, raincell_y_coords, raincell_radii = combine_inner_outer_raincells(
+        inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
+        inner_y_coords, outer_y_coords, inner_radii, outer_radii
+    )
 
     return number_of_raincells_by_storm, raincell_x_coords, raincell_y_coords, raincell_radii
+
+
+def combine_inner_outer_raincells(
+        inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
+        inner_y_coords, outer_y_coords, inner_radii, outer_radii
+):
+    number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
+    n_storms = number_of_raincells_by_storm.shape[0]
+
+    total_raincells = np.sum(number_of_raincells_by_storm)
+    x = np.zeros(total_raincells)
+    y = np.zeros(total_raincells)
+    radius = np.zeros(total_raincells)
+
+    i = 0
+    inner_rc_idx = 0
+    outer_rc_idx = 0
+    for storm_idx in range(n_storms):
+        n_inner = inner_number_of_raincells_by_storm[storm_idx]
+        n_outer = outer_number_of_raincells_by_storm[storm_idx]
+        for _ in range(n_inner):
+            x[i] = inner_x_coords[inner_rc_idx]
+            y[i] = inner_y_coords[inner_rc_idx]
+            radius[i] = inner_radii[inner_rc_idx]
+            inner_rc_idx += 1
+            i += 1
+        for _ in range(n_outer):
+            x[i] = outer_x_coords[outer_rc_idx]
+            y[i] = outer_y_coords[outer_rc_idx]
+            radius[i] = outer_radii[outer_rc_idx]
+            outer_rc_idx += 1
+            i += 1
+
+    return number_of_raincells_by_storm, x, y, radius
 
 
 def outer_raincells_cdf(x, gamma, xrange, yrange, q=0):
