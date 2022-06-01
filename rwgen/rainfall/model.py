@@ -742,16 +742,6 @@ class Model:
             write_output=True,
         )
 
-    # TODO: Implement method
-    def plot(
-            self,
-            plot_type='annual_cycle',  # 'cross-correlation', 'amax'
-            include_reference=True,
-            include_fitted=True,
-            include_simulated=True,
-    ):
-        raise NotImplementedError
-
     def set_statistics(
             self,
             point_metadata=None,
@@ -886,6 +876,20 @@ class Model:
             self.simulation_config = simulation_config
         else:
             return simulation_config
+
+    # TODO: Implement method
+    def plot_statistics(
+            self,
+            plot_type='annual_cycle',  # 'cross-correlation'
+            include_reference=True,
+            include_fitted=True,
+            include_simulated=True,
+    ):
+        raise NotImplementedError
+
+    # TODO: Implement method - what is the most useful plot(s) for AMAX/DDF? Include external reference
+    def plot_amax(self):
+        raise NotImplementedError
 
     @property
     def parameter_names(self):
