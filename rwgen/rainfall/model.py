@@ -1,10 +1,11 @@
 import os
+import datetime
 
 import numpy as np
 import pandas as pd
 import geopandas
 
-from . import preprocessing
+from . import analysis
 from . import fitting
 from . import simulation
 from . import utils
@@ -12,7 +13,12 @@ from . import utils
 
 class Model:
     """
-    Pre-processing, fitting and simulation of point and spatial Neyman-Scott Rectangular Pulse (NSRP) models.
+    Point and spatial Neyman-Scott Rectangular Pulse models.
+
+    This class contains methods for data pre-processing, model fitting, simulation and post-processing.
+
+    Attributes:
+
 
     """
 
@@ -22,164 +28,81 @@ class Model:
     # - plus e.g. simulation constructing output paths, doing normal vs shuffling simulations
     # - any value in setting more stuff as attributes to allow calling etc from different places?
     # TODO: Swap order of precedence so that input arguments are given precedence over existing model attributes
+    # - should e.g. reference statistics passed into fitting be used to update reference statistics and statistics
+    # definitions? - this would probably make sense
     # TODO: Move defaults into a config.py, as it will be easier for users to edit?
     # TODO: Check use of lambda vs lamda now - only referred to in dataframes?
     # TODO: Check switch from xi to theta throughout
+    # TODO: Flag in metadata (points) file to indicate whether to use in fitting or just simulation
+    # TODO: Put attributes in class docstring once decided on how to get relevant defaults to post-processing etc
+    # TODO: Check consistency of cross-correlation vs cross-correlations, especially in user-related arguments
+    # TODO: Ensure only final stage parameters are used in simulation
 
     def __init__(
             self,
-            season_definitions=None,
+            season_definitions='monthly',
             spatial_model=False,
-            intensity_distribution='exponential'
+            intensity_distribution='exponential',
+            output_folder='./output',
+            statistic_definitions=None,
+            point_metadata=None,
+            project_name=None,
     ):
         """
         Args:
             season_definitions (str, list or dict): The model works on a monthly basis by default, but this argument
                 allows for user-defined seasons. The seasons can be specified in several ways (see Notes).
-            spatial_model (bool): Flag to indicate whether point or spatial model. Default is False (point model).
+            spatial_model (bool): Flag to indicate whether point or spatial model. Default is ``False`` (point model).
             intensity_distribution (str): Flag to indicate the type of probability distribution for raincell
-                intensities. Defaults to exponential (only option currently).
+                intensities. Defaults to ``'exponential'`` (with ``weibull`` also available currently).
+            output_folder (str): Root folder for model output.
+            statistic_definitions (pandas.DataFrame or str): Definitions (descriptions) of statistics to calculate or
+                path to file of definitions. See Notes for explanation of DataFrame contents and file format.
+            point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point locations for which
+                preprocessing should be carried out for a spatial model (or path to metadata file). The dataframe should
+                contain identifiers (integers) and coordinates - see Notes.
+            project_name (str): A name for e.g. the gauge/site location or catchment may be specified (optional). If
+                given this name will be used in the file names of point simulations (i.e. when ``spatial_model`` is set
+                to ``False``).
 
         Notes:
             Seasons can be specified through the season_definitions argument in several ways:
-                * As descriptive strings (monthly, quarterly, half-years, annual), optionally specifying the first month
-                  of one of the quarterly or half-years seasons (e.g. quarterly_dec would make Dec-Jan-Feb the first
-                  season and so on). Specifying annual will lead to the whole year being considered together, i.e.
-                  no seasonality.
-                * As a list of strings indicating season abbreviations, e.g. ['DJF', 'MAM', 'JJA', 'SON'].
+                * As descriptive strings (``'monthly'``, ``'quarterly'``, ``'half-years'``, ``'annual'``). Further
+                  control can be gained using e.g. ``'quarterly_dec'`` to make Dec-Jan-Feb the first season and so on).
+                  Specifying annual will lead to the whole year being considered together, i.e. no seasonality.
+                * As a list of strings indicating season abbreviations, e.g. ``['DJF', 'MAM', 'JJA', 'SON']``.
                 * As a dictionary whose keys are the months of the year (integers 1-12) and whose values represent a
-                  season identifier, e.g. dict(12=1, 1=1, 2=1, 3=2, 4=2, 5=2, 6=3, 7=3, 8=3, 9=4, 10=4, 11=4) would
+                  season identifier, e.g. ``dict(12=1, 1=1, 2=1, 3=2, 4=2, 5=2, 6=3, 7=3, 8=3, 9=4, 10=4, 11=4)`` would
                   give quarterly seasons beginning in December.
 
-        """
-        if season_definitions is not None:
-            self.season_definitions = utils.parse_season_definitions(season_definitions)
-        else:
-            self.season_definitions = {}
-            for month in range(1, 12 + 1):
-                self.season_definitions[month] = month
-        self.spatial_model = spatial_model
-        self.intensity_distribution = intensity_distribution
-
-        #: pandas.DataFrame: Statistics for fitting model parameters or evaluating model fit / simulated statistics.
-        self.reference_statistics = None
-
-        #: pandas.DataFrame: Scale factor phi at point locations (used in spatial model simulation).
-        self.phi = None
-
-        #: pandas.DataFrame: Parameters for time series simulation.
-        self.parameters = None
-
-        #: dict: Configuration settings for advanced use (see `update_config()` method).
-        self.config_settings = dict(
-            default_block_size=1000,
-            check_block_size=True,
-            minimum_block_size=10,
-            check_available_memory=True,
-            maximum_memory_percentage=75,
-            block_subset_size=50,
-        )
-
-    def update_config(
-            self,
-            default_block_size=1000,
-            check_block_size=True,
-            minimum_block_size=10,
-            check_available_memory=True,
-            maximum_memory_percentage=75,
-            block_subset_size=50,
-    ):
-        """
-        Update advanced configuration settings.
-
-        Args:
-            default_block_size (int): Number of years (maximum) to simulate at once to avoid memory issues.
-            check_block_size (bool): Flag to indicate whether code should automatically check whether the
-                default_block_size (probably) needs to be reduced to avoid memory issues (see
-                `check_available_memory` and `maximum_memory_percentage`).
-            minimum_block_size (int): Minimum number of years to simulate at once.
-            check_available_memory (bool): Flag to indicate whether current system memory usage should be checked to
-                limit the maximum amount of memory assigned in simulation.
-            maximum_memory_percentage (int or float): Maximum percentage of system memory that may be assigned by a
-                simulation. If estimated memory usage exceeds this percentage then a smaller block size will be tried
-                until the `minimum_block_size` is reached.
-            block_subset_size (int): Block subset size (number of years) for internal use in discretisation (as it is
-                much faster to discretise subsets of each block).
-
-        """
-        self.config_settings = dict(
-            default_block_size=default_block_size,
-            check_block_size=check_block_size,
-            minimum_block_size=minimum_block_size,
-            check_available_memory=check_available_memory,
-            maximum_memory_percentage=maximum_memory_percentage,
-            block_subset_size=block_subset_size,
-        )
-
-    def preprocess(
-            self,
-            output_folder,
-            statistic_definitions=None,
-            statistic_definitions_path=None,
-            timeseries_format='csv',
-            timeseries_path=None,
-            timeseries_folder=None,
-            metadata=None,
-            metadata_path=None,
-            calculation_period=None,
-            completeness_threshold=0.0,
-            output_point_statistics_filename='reference_point_statistics.csv',
-            output_cross_correlations_filename='reference_cross_correlations.csv',
-            output_phi_filename='phi.csv',
-            outlier_method=None,
-            maximum_relative_difference=2.0,
-            maximum_alterations=5
-    ):
-        """
-        Prepare reference statistics, weights and scale factors for use in model fitting.
-
-        # TODO: Document each item calculated (e.g. definitions of scale factors)
-
-        Args:
-            output_folder (str): Path to folder in which output statistics (and scale factors) should be written.
-            statistic_definitions (pandas.DataFrame): Definitions (descriptions) of statistics to calculate. See Notes
-                for explanation of DataFrame contents.
-            statistic_definitions_path (str): Path to file containing statistic definitions (see Notes for details).
-            timeseries_format (str): Flag indicating format of timeseries inputs. Use `csv` for now.
-            timeseries_path (str): Path to file containing timeseries data (only required for point model).
-            timeseries_folder (str): Path to folder containing timeseries data files (only required for spatial model).
-            metadata (pandas.DataFrame): Metadata on point locations for which preprocessing should be carried out for
-                a spatial model. The dataframe should contain identifiers (integers) and coordinates - see Notes.
-            metadata_path (str): Path to file containing metadata for a spatial model.
-            calculation_period (list of int): Start year and end year of calculation period. If not specified then all
-                available data will be used in statistics calculations.
-            completeness_threshold (float): Percentage completeness for a month or season to be included in statistics
-                calculations. Default is 0.0, i.e. any completeness (or missing data) percentage is acceptable.
-            output_point_statistics_filename (str): Name of output file for point statistics.
-            output_cross_correlations_filename (str): Name of output file for cross-correlations (spatial model only).
-            output_phi_filename (str): Name of output file for phi scale factors (spatial model only).
-            outlier_method (str): Flag indicating which (if any) method should be to reduce the influence of outliers.
-                Options are None (default), 'trim' (remove outliers) or 'clip' (Winsorise). See Notes for details.
-            maximum_relative_difference (float): Maximum relative difference to allow between the two largest values
-                in a timeseries. Used only if outlier_method is not None.
-            maximum_alterations (int): Maximum number of trimming or clipping alterations permitted. Used only if
-                outlier_method is not None.
-
-        Notes:  # TODO: Expand notes
             statistic_definitions
 
-            metadata
-
-            outlier_method
+            point_metadata - Useful to include points relevant to fitting and simulation if want to calculate
+                reference statistics for those points (e.g. for use in evaluation).
 
         """
-        print('Preprocessing')
+        self.season_definitions = utils.parse_season_definitions(season_definitions)
+        self.spatial_model = spatial_model
+        self.intensity_distribution = intensity_distribution
+        self.output_folder = output_folder
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        self.project_name = project_name
 
-        # Set default statistic definitions (and weights) if needed (taken largely from RainSim V3.1 documentation)
+        # Spatial model requires a table of metadata for points
+        if self.spatial_model:
+            if isinstance(point_metadata, pd.DataFrame):
+                self.point_metadata = point_metadata
+            elif isinstance(point_metadata, str):
+                self.point_metadata = utils.read_csv_(point_metadata)
+        else:
+            self.point_metadata = None
+
+        # Default statistic definitions (and weights) are taken largely from RainSim V3.1 documentation
         if statistic_definitions is not None:
-            pass
-        elif statistic_definitions_path is not None:
-            statistic_definitions = utils.read_statistic_definitions(statistic_definitions_path)
+            self.statistic_definitions = statistic_definitions
+        elif isinstance(statistic_definitions, str):
+            self.statistic_definitions = utils.read_statistic_definitions(statistic_definitions)
         else:
             if self.spatial_model:
                 dc = {
@@ -206,111 +129,197 @@ class Model:
                 }
             id_name = 'statistic_id'
             non_id_columns = ['name', 'duration', 'lag', 'threshold', 'weight']
-            statistic_definitions = utils.nested_dictionary_to_dataframe(dc, id_name, non_id_columns)
+            self.statistic_definitions = utils.nested_dictionary_to_dataframe(dc, id_name, non_id_columns)
 
         # Check that statistics include 24hr mean, as it is currently required for calculating phi (add in if absent)
-        includes_24hr_mean = statistic_definitions.loc[
-            (statistic_definitions['name'] == 'mean') & (statistic_definitions['duration'] == 24)
-        ].shape[0]
+        includes_24hr_mean = self.statistic_definitions.loc[
+            (self.statistic_definitions['name'] == 'mean') & (self.statistic_definitions['duration'] == 24)
+            ].shape[0]
         if not includes_24hr_mean:
             df = pd.DataFrame({
                 'statistic_id': [int(np.max(statistic_definitions['statistic_id'])) + 1], 'weight': [0],
                 'duration': [24], 'name': ['mean'], 'lag': ['NA'], 'threshold': ['NA']
             })
-            statistic_definitions = pd.concat([statistic_definitions, df])
+            self.statistic_definitions = pd.concat([statistic_definitions, df])
 
-        # Spatial model requires a table of metadata for points
+        # TODO: Rationalise config and args - only needed for simulation?
+
+        # Default configuration settings for simulation (primarily memory management) - see
+        # ``update_preprocessing_config()`` method docstring
+        self.simulation_config = self.update_simulation_config()
+
+        # For sharing simulation arguments with post-processing method
+        self.simulation_args = None
+
+        # Calculated during model use and relevant across more than one method
+        self.reference_statistics = None
+        self.phi = None  # TODO: When phi is needed figure it out from reference_statistics?
+        self.parameters = None
+        self.fitted_statistics = None
+        self.simulated_statistics = None
+
+    def preprocess(
+            self,
+            input_timeseries,
+            calculation_period='full_record',
+            completeness_threshold=0.0,
+            outlier_method=None,
+            maximum_relative_difference=2.0,
+            maximum_alterations=5,
+            amax_durations=None,
+            output_filenames='default',
+    ):
+        """
+        Prepare reference statistics, weights and scale factors for use in model fitting and evaluation.
+
+        Updates ``self.reference_statistics`` and ``self.phi``attributes.
+
+        Args:
+            input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
+                timeseries data files (for spatial model).
+            calculation_period (str or list of int): Start year and end year of calculation period as list. If
+                string ``'full_record'`` is passed (default) then all available data will be used.
+            completeness_threshold (float): Percentage completeness for a month or season to be included in statistics
+                calculations. Default is 0.0, i.e. any completeness (or missing data) percentage is acceptable.
+            outlier_method (str): Flag indicating which (if any) method should be to reduce the influence of outliers.
+                Options are None (default), ``'trim'`` (remove outliers) or ``'clip'`` (Winsorise). See Notes.
+            maximum_relative_difference (float): Maximum relative difference to allow between the two largest values
+                in a timeseries. Used only if ``outlier_method`` is not None.
+            maximum_alterations (int): Maximum number of trimming or clipping alterations permitted. Used only if
+                ``outlier_method`` is not None.
+            amax_durations (int or list of int): Durations (in hours) for which annual maxima (AMAX) should be
+                identified.
+            output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
+                {'statistics': 'reference_statistics.csv', 'amax': 'reference_amax.csv'} or ``None`` to indicate that
+                no output files should be written.
+
+        Notes:
+
+            outlier_method
+
+        """
+        print('Preprocessing')
+
+        # TODO: Document each item calculated (e.g. definitions of scale factors)
+        # TODO: Expand notes section of docstring
+
+        # Infer timeseries data format
+        if not self.spatial_model:
+            timeseries_format = input_timeseries.split('.')[-1]
+        else:
+            file_names = os.listdir(input_timeseries)
+            test_file = self.point_metadata['name'].values[0]
+            for file_name in file_names:
+                file_name, extension = file_name.split('.')
+                if file_name == test_file:
+                    timeseries_format = extension
+                    break
+
+        # Input paths as required by analysis function
         if self.spatial_model:
-            if metadata is not None:
-                pass
-            else:
-                metadata = pd.read_csv(metadata_path)
-            metadata.columns = [column_name.lower() for column_name in metadata.columns]
+            timeseries_path = None
+            timeseries_folder = input_timeseries
+        else:
+            timeseries_path = input_timeseries
+            timeseries_folder = None
 
         # Construct output paths
-        output_point_statistics_path = os.path.join(output_folder, output_point_statistics_filename)
-        if 'cross-correlation' in statistic_definitions['name'].tolist():
-            output_cross_correlation_path = os.path.join(output_folder, output_cross_correlations_filename)
+        if output_filenames == 'default':
+            output_statistics_filename = 'reference_statistics.csv'
+            output_amax_filename = 'reference_amax.csv'
         else:
-            output_cross_correlation_path = None
-        if self.spatial_model:
-            output_phi_path = os.path.join(output_folder, output_phi_filename)
+            if 'statistics' in output_filenames:
+                output_statistics_filename = output_filenames['statistics']
+            if 'amax' in output_filenames:
+                output_amax_filename = output_filenames['amax']
+        output_statistics_path = os.path.join(self.output_folder, output_statistics_filename)
+        if amax_durations is not None:
+            output_amax_path = os.path.join(self.output_folder, output_amax_filename)
         else:
-            output_phi_path = None
+            output_amax_path = None
+
+        # Check (partially) that arguments are suitable for analysis call
+        if amax_durations is not None:
+            if not isinstance(amax_durations, list):
+                amax_durations = [amax_durations]
+        if output_filenames is None:
+            write_output = False
+        else:
+            write_output = True
+        if calculation_period == 'full_record':
+            calculation_period = None
 
         # Do preprocessing
-        self.reference_statistics, self.phi = preprocessing.main(
+        self.reference_statistics, self.phi = analysis.main(
             spatial_model=self.spatial_model,
             season_definitions=self.season_definitions,
-            statistic_definitions=statistic_definitions,
+            statistic_definitions=self.statistic_definitions,
             timeseries_format=timeseries_format,
+            start_date=None,
+            timestep_length=None,
+            calendar=None,
             timeseries_path=timeseries_path,
             timeseries_folder=timeseries_folder,
-            metadata=metadata,
+            point_metadata=self.point_metadata,
             calculation_period=calculation_period,
             completeness_threshold=completeness_threshold,
-            output_point_statistics_path=output_point_statistics_path,
-            output_cross_correlation_path=output_cross_correlation_path,
-            output_phi_path=output_phi_path,
+            output_statistics_path=output_statistics_path,
             outlier_method=outlier_method,
             maximum_relative_difference=maximum_relative_difference,
             maximum_alterations=maximum_alterations,
+            analysis_mode='preprocessing',
+            n_years=None,
+            n_realisations=1,
+            subset_length=None,
+            output_amax_path=output_amax_path,
+            amax_durations=amax_durations,
+            output_ddf_path=None,
+            ddf_return_periods=None,
+            write_output=write_output,
         )
 
     def fit(
             self,
-            output_folder,
             fitting_method='default',
-            reference_statistics=None,
-            reference_point_statistics_path=None,
-            reference_cross_correlations_path=None,
             parameter_bounds=None,
             fixed_parameters=None,
             n_workers=1,
-            output_parameters_filename='parameters.csv',
-            output_point_statistics_filename='fitted_point_statistics.csv',
-            output_cross_correlation_filename='fitted_cross_correlations.csv',
             initial_parameters=None,
-            initial_parameters_path=None,
-            smoothing_tolerance=0.2
+            smoothing_tolerance=0.2,
+            output_filenames='default',
     ):
         """
         Fit model parameters.
 
         Args:
-            output_folder (str): Folder in which to save output parameters and fitted statistics files.
-            fitting_method (str): Flag to indicate fitting method. Using `default` will fit each month or season
-                independently. Option for `empirical_smoothing` under development (see Notes).
-            reference_statistics (pandas.DataFrame): Statistics for fitting model parameters.
-            reference_point_statistics_path (str): Path to file containing point statistics.
-            reference_cross_correlations_path (str): Path to file containing cross-correlation statistics.
+            fitting_method (str): Flag to indicate fitting method. Using ``'default'`` will fit each month or season
+                independently. Option for ``'empirical_smoothing'`` under development (see Notes).
             parameter_bounds (dict or str or pandas.DataFrame): Dictionary containing tuples of upper and lower
                 parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
                 dataframe (see Notes).
             fixed_parameters (dict or str or pandas.DataFrame): Dictionary containing fixed parameter values by
                 parameter name. Alternatively the path to a parameters file or an equivalent dataframe (see Notes).
             n_workers (int): Number of workers (cores/processes) to use in fitting. Default is 1.
-            output_parameters_filename (str): Name of output parameters file.
-            output_point_statistics_filename (str): Name of output point statistics file.
-            output_cross_correlation_filename (str): Name of output cross-correlation statistics file.
-            initial_parameters (pandas.DataFrame): Initial parameter values to use if fitting_method is
-                empirical_smoothing. If not specified then initial parameter values will be obtained using
+            initial_parameters (pandas.DataFrame or str): Initial parameter values to use if ``fitting_method`` is
+                ``'empirical_smoothing'``. If not specified then initial parameter values will be obtained using
                 the default fitting method (for which no initial values are currently required).
-            initial_parameters_path (str): Path to file from which initial_parameters should be read if desired.
             smoothing_tolerance (float): Permitted deviation in smoothed annual cycle of parameter values (only used
-                if fitting_method is empirical_smoothing). Expressed as fraction of annual mean parameter value,
-                such that 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.
+                if ``fitting_method`` is ``'empirical_smoothing'``). Expressed as fraction of annual mean parameter
+                value, e.g. 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.
+            output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
+                {'statistics': 'fitted_statistics.csv', 'parameters': 'parameters.csv'} or ``None`` to indicate that
+                no output files should be written.
 
         Notes:
-            If `self.reference_statistics` is not None it will be given priority for use in fitting. Otherwise the
+            If ``self.reference_statistics`` is not ``None`` it will be given priority for use in fitting. Otherwise the
             reference statistics can be passed in as an argument or read from file(s).
 
             Lists of parameter bounds need to be passed in the order required by the model. For the point model this
             order is: lamda, beta, nu, eta, xi. For the spatial model this order is: lamda, beta, rho, eta, gamma,
-            xi. This approach will be replaced.
+            xi. This approach will be replaced.  # TODO: Update
 
-            Fitting can be speeded up significantly with n_workers > 1. The maximum n_workers should be less than or
-            equal to the number of cores or logical processors available.
+            Fitting can be speeded up significantly with ``n_workers > 1``. The maximum ``n_workers`` should be less
+            than or equal to the number of cores or logical processors available.
 
             Empirical smoothing.  # TODO: Explain method so far
 
@@ -319,17 +328,8 @@ class Model:
         """
         print('Fitting')
 
-        # Read reference statistics if not available from preprocessing or passed directly
-        if self.reference_statistics is not None:
-            reference_statistics = self.reference_statistics
-        elif reference_statistics is not None:
-            pass
-        else:
-            # TODO: Fix read of reference statistics in utils.read_statistics (parsing of lag and threshold)
-            # reference_statistics = utils.read_statistics(
-            #     reference_point_statistics_path, reference_cross_correlations_path
-            # )
-            raise NotImplementedError
+        # TODO: Can subset to remove statistics where weight = 0
+        # TODO: Option to subset point_metadata so only flagged points are used
 
         # Get parameter bounds into a dataframe
         if isinstance(parameter_bounds, dict):
@@ -372,129 +372,130 @@ class Model:
         default_bounds.reset_index(inplace=True)
         default_bounds.rename(columns={'index': 'parameter'}, inplace=True)
 
-        # Identify parameters to fit (or not fit) set parameter bounds
+        # Identify parameters to fit (or not fit) and set parameter bounds
         parameters_to_fit, fixed_parameters, parameter_bounds = utils.define_parameter_bounds(
             parameter_bounds, fixed_parameters, self.parameter_names, default_bounds, self.unique_seasons
         )
 
+        # Initial parameters are currently only relevant to empirical smoothing method
+        if initial_parameters is not None:
+            if isinstance(initial_parameters, pd.DataFrame):
+                pass
+            elif isinstance(initial_parameters, str):
+                initial_parameters = utils.read_csv_(initial_parameters)
+
         # Construct output paths
-        output_parameters_path = os.path.join(output_folder, output_parameters_filename)
-        output_point_statistics_path = os.path.join(output_folder, output_point_statistics_filename)
-        if self.spatial_model:
-            output_cross_correlation_path = os.path.join(output_folder, output_cross_correlation_filename)
+        if output_filenames == 'default':
+            output_parameters_filename = 'parameters.csv'
+            output_statistics_filename = 'fitted_statistics.csv'
         else:
-            output_cross_correlation_path = None
+            if 'parameters' in output_filenames:
+                output_parameters_filename = output_filenames['parameters']
+            if 'statistics' in output_filenames:
+                output_statistics_filename = output_filenames['statistics']
+        output_parameters_path = os.path.join(self.output_folder, output_parameters_filename)
+        output_statistics_path = os.path.join(self.output_folder, output_statistics_filename)
+        if output_filenames is None:
+            write_output = False
+        else:
+            write_output = True
 
         # Do fitting
-        parameters, fitted_statistics = fitting.main(
+        self.parameters, self.fitted_statistics = fitting.main(
             season_definitions=self.season_definitions,
             spatial_model=self.spatial_model,
             intensity_distribution=self.intensity_distribution,
             fitting_method=fitting_method,
-            reference_statistics=reference_statistics,
+            reference_statistics=self.reference_statistics,
             all_parameter_names=self.parameter_names,  # RENAMED
             parameters_to_fit=parameters_to_fit,  # NEW
             parameter_bounds=parameter_bounds,  # SAME
             fixed_parameters=fixed_parameters,  # NEW
             n_workers=n_workers,
             output_parameters_path=output_parameters_path,
-            output_point_statistics_path=output_point_statistics_path,
-            output_cross_correlation_path=output_cross_correlation_path,
+            output_statistics_path=output_statistics_path,
             initial_parameters=initial_parameters,
-            initial_parameters_path=initial_parameters_path,
-            smoothing_tolerance=smoothing_tolerance
+            smoothing_tolerance=smoothing_tolerance,
+            write_output=write_output,  # NEW
         )
-        self.parameters = parameters
 
     def simulate(
             self,
-            discretisation_method='default',  # TODO: Probably more like simulation_type
             output_types='point',
-            output_folder=None,
             output_subfolders='default',
-            output_format='txt',
-            parameters=None,
-            points=None,
-            catchments=None,
-            grid=None,  # TODO: Consider whether to add grid_output_prefix
+            output_format='txt',  # TODO: Add in csvy functionality
+            catchment_metadata=None,
+            grid_metadata=None,
             epsg_code=None,
             cell_size=None,
             dem=None,
-            phi=None,
             simulation_length=30,
-            number_of_realisations=1,
+            n_realisations=1,
             timestep_length=1,
             start_year=2000,
             calendar='gregorian',
             random_seed=None,
+            run_simulation=True,
     ):
         """
         Simulate realisation(s) of NSRP process.
 
         Args:
-            discretisation_method (str): Flag indicating whether to discretise rainfall series for output (`default`)
-                or to calculate total depth for each event (`event_totals`), as required by Kim and Onof (2020)
-                shuffling method (not yet fully implemented).
-            output_types (str or list of str): Types of output (discretised) rainfall required. Options are `point`,
-                `catchment` and `grid`.
-            output_folder (str): Path to folder in which output files should be written.
-            output_subfolders (str or dict): Sub-folder in which to place each output type. If `default` then the
-                following dictionary is used: dict(point='point', catchment='catchment', grid='grid'). If None then
-                all output files are written to output_folder.
+            output_types (str or list of str): Types of output (discretised) rainfall required. Options are ``'point'``,
+                ``'catchment'`` and ``'grid'``.
+            output_subfolders (str or dict): Sub-folder in which to place each output type. If ``'default'`` then
+                ``dict(point='point', catchment='catchment', grid='grid')`` is used for a spatial model and
+                ``dict(point='')`` for a point model (i.e. output to ``self.output_folder``). If None then all output
+                files are written to ``self.output_folder``.
             output_format (str): Flag indicating output file format for point and catchment output. Current
-                option is `txt`. Gridded output will be written in NetCDF format.
-            parameters (pandas.DataFrame or str): Dataframe of parameters to use in simulation (or path to file
-                containing parameters). Optional, as self.parameters will be used by default (and take precedence) if it
-                is not None (i.e. if the self.fitting() method has been run).
-            points (pandas.DataFrame or str): Metadata dataframe of points for which output is required (or path to
-                file). See Notes.
-            catchments (geopandas.GeoDataFrame or str): Geodataframe containing catchments for which output is required
-                (or path to catchments shapefile).
-            grid (dict or str): Specification of output grid to use for both gridded output (if required). This grid
-                is also used to support catchment output. Dictionary keys use ascii raster header keywords, e.g.
-                dict(ncols=10, nrow=10, ...). Use xllcorner and yllcorner, as well as lowercase for each keyword.
-                If None then a grid is defined to encompass catchment locations using cell_size argument. Path to an
-                ascii raster file to use as a template for the grid can be given instead.
-            epsg_code (int): EPSG code for projected coordinate system used for domain (used explicitly if catchment or
-                grid output is required).
+                option is ``txt``. Gridded output will be written in NetCDF format.
+            catchment_metadata (geopandas.GeoDataFrame or str): Geodataframe containing catchments for which output is
+                required (or path to catchments shapefile). Optional.
+            grid_metadata (dict or str): Specification of output grid to use for both gridded output (optional). This
+                grid is also used to support catchment output. Dictionary keys use ascii raster header keywords, e.g.
+                ``dict(ncols=10, nrow=10, ...)``. Use ``xllcorner`` and ``yllcorner``, as well as lowercase for each
+                keyword. If None then a grid is defined to encompass catchment locations using the ``cell_size``
+                argument. The path to an ascii raster file to use as a template for the grid can be given instead.
+            epsg_code (int): EPSG code for projected coordinate system used for domain (required if catchment or
+                grid output is requested).
             cell_size (float): Cell size to use if grid is None but a grid is needed for gridded output and/or catchment
                 output.
             dem (xarray.DataArray or str): Digital elevation model (DEM) [m] as data array or ascii raster file path.
-            phi (pandas.DataFrame or str): Dataframe containing phi scale factor at point locations
-                (from self.preprocessing() method). Path to phi file can be passed. If self.phi is not None (i.e.
-                preprocessing method has been run) then self.phi is given precedence.
-            simulation_length (int): Number of years to simulate in one realisation. Minimum of 10 currently.
-            number_of_realisations (int): Number of realisations to simulate.
+                Optional but recommended.
+            simulation_length (int): Number of years to simulate in one realisation (minimum of 1).
+            n_realisations (int): Number of realisations to simulate.
             timestep_length (int): Timestep of output [hr]. Default is 1 (hour).
             start_year (int): Start year of simulation.
-            calendar (str): Flag to indicate whether `gregorian` (default accounting for leap years) or `365-day`
+            calendar (str): Flag to indicate whether ``gregorian`` (default accounting for leap years) or ``365-day``
                 calendar should be used.
             random_seed (int): Seed to use in random number generation.
+            run_simulation (bool): Flag for whether to run simulation. Setting to False may be used to update
+                ``self.simulation_args`` to allow ``self.postprocess()`` to be run without ``self.simulate()``
+                having been run first (i.e. reading from existing simulation output files).
             # TODO: Implement additional output and include also random seed (entropy attribute of SeedSequence)
 
         Notes:
-            Though gridded output is calculated (if output_types includes `grid`) it is not yet available to write (i.e.
-            under development).
+            Though gridded output is calculated (if ``output_types`` includes ``'grid'``) it is not yet available to
+            write (under development).
 
             Dataframe of metadata for points should contain fields (columns) for ...  # TODO: Complete description
 
             The code currently calculates catchment weights and performs interpolation of phi. Features could be added
             for these variables to be passed directly as arguments.
 
-            Point metadata dataframe assumed to have a `Point_ID` field that can be sued to identify points.
-            Catchment shapefile or geodataframe assumed to have an `ID` field that can be used to identify catchments.
-            Both point and catchment metadata are assumed to have a `Name` field for use as a prefix in file naming.
+            Point metadata dataframe assumed to have a ``Point_ID`` field that can be sued to identify points.
+            Catchment shapefile or geodataframe assumed to have an ``ID`` field that can be used to identify catchments.
+            Both point and catchment metadata are assumed to have a ``Name`` field for use as a prefix in file naming.
             Point (single site) simulations and grid output are assumed not to need a prefix.
 
+            Updates ``self.simulation_args`` in preparation for post-processing.
+
         """
-        print('Simulating')
 
         # TODO: Implement output for catchment_weights_output_folder and phi_output_path - currently not implemented
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
 
         # Make output folders if required
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
         if output_subfolders == 'default':
             if self.spatial_model:
                 output_subfolders = dict(point='point', catchment='catchment', grid='grid')
@@ -505,20 +506,13 @@ class Model:
         if isinstance(output_subfolders, dict):
             for output_type, output_subfolder in output_subfolders.items():
                 if output_type in output_types:
-                    if not os.path.exists(os.path.join(output_folder, output_subfolder)):
-                        os.mkdir(os.path.join(output_folder, output_subfolder))
+                    if not os.path.exists(os.path.join(self.output_folder, output_subfolder)):
+                        os.mkdir(os.path.join(self.output_folder, output_subfolder))
 
         # Ensure valid output types
         # TODO: Expand checks on user input arguments
         if not self.spatial_model:
             output_types = ['point']
-
-        # Get parameters if required
-        # TODO: Swap order so that input arguments are given precedence over existing model attributes
-        if self.parameters is not None:
-            parameters = self.parameters
-        elif isinstance(parameters, str):
-            parameters = utils.read_csv_(parameters)
 
         # Get DEM if required
         if isinstance(dem, str):
@@ -526,61 +520,372 @@ class Model:
 
         # Output location details (grid must be defined or derived for catchment output)
         if self.spatial_model:
-            if 'point' in output_types:
-                if isinstance(points, str):
-                    points = utils.read_csv_(points)
             if 'catchment' in output_types:
-                if isinstance(catchments, str):
-                    catchments = geopandas.read_file(catchments)
-                    catchments.columns = [column_name.lower() for column_name in catchments.columns]
+                if isinstance(catchment_metadata, str):
+                    catchment_metadata = geopandas.read_file(catchment_metadata)
+                    catchment_metadata.columns = [column_name.lower() for column_name in catchment_metadata.columns]
             if ('grid' in output_types) or ('catchment' in output_types):
-                if isinstance(grid, str):
-                    grid = utils.grid_definition_from_ascii(grid)
+                if isinstance(grid_metadata, str):
+                    grid_metadata = utils.grid_definition_from_ascii(grid_metadata)
                 else:
-                    grid = utils.define_grid_extent(catchments, cell_size, dem)
-                cell_size = grid['cellsize']
+                    grid_metadata = utils.define_grid_extent(catchment_metadata, cell_size, dem)
+                cell_size = grid_metadata['cellsize']
 
-        # Known phi values at point locations
-        if self.spatial_model:
-            if self.phi is not None:
-                phi = self.phi
-            elif isinstance(phi, str):
-                phi = utils.read_csv_(phi)
+        # Check simulation length is long enough
+        simulation_length = max(simulation_length, 1)
 
-        # Check simulation length is long enough  # TODO: Remove constraint caused by NSRP buffer period
-        simulation_length = max(simulation_length, 10)
+        # Give a default name for output if needed
+        if self.project_name is None:
+            output_name = 'simulation'
+        else:
+            output_name = self.project_name
 
-        # Do simulation
-        simulation.main(
-            spatial_model=self.spatial_model,
-            intensity_distribution=self.intensity_distribution,
-            discretisation_method=discretisation_method,
-            output_types=output_types,
-            output_folder=output_folder,
-            output_subfolders=output_subfolders,
-            output_format=output_format,
-            season_definitions=self.season_definitions,
-            parameters=parameters,
-            points=points,
-            catchments=catchments,
-            grid=grid,
-            epsg_code=epsg_code,
-            cell_size=cell_size,
-            dem=dem,
-            phi=phi,
-            simulation_length=simulation_length,
-            number_of_realisations=number_of_realisations,
-            timestep_length=timestep_length,
+        # Ensure only "final" parameters are used in simulation (in case intermediate parameters were recorded during
+        # fitting)
+        if 'fit_stage' in self.parameters.columns:
+            parameters = self.parameters.loc[self.parameters['fit_stage'] == 'final']
+        else:
+            parameters = self.parameters
+
+        # Capture simulation arguments for use in post-processing
+        self.simulation_args = dict(
+            simulation_format=output_format,
             start_year=start_year,
+            timestep_length=timestep_length,
             calendar=calendar,
-            random_seed=random_seed,
-            default_block_size=self.config_settings['default_block_size'],
-            check_block_size=self.config_settings['check_block_size'],
-            minimum_block_size=self.config_settings['minimum_block_size'],
-            check_available_memory=self.config_settings['check_available_memory'],
-            maximum_memory_percentage=self.config_settings['maximum_memory_percentage'],
-            block_subset_size=self.config_settings['block_subset_size'],
+            simulation_subfolders=output_subfolders,
+            simulation_length=simulation_length,
+            n_realisations=n_realisations,
+            simulation_name=output_name,
         )
+
+        # Stop here if only the arguments needed for post-processing (of existing files) are required
+        if run_simulation:
+            print('Simulating')
+            simulation.main(
+                spatial_model=self.spatial_model,
+                intensity_distribution=self.intensity_distribution,
+                output_types=output_types,
+                output_folder=self.output_folder,
+                output_subfolders=output_subfolders,
+                output_format=output_format,
+                season_definitions=self.season_definitions,
+                parameters=parameters,
+                point_metadata=self.point_metadata,
+                catchment_metadata=catchment_metadata,
+                grid_metadata=grid_metadata,
+                epsg_code=epsg_code,
+                cell_size=cell_size,
+                dem=dem,
+                phi=self.phi,
+                simulation_length=simulation_length,
+                number_of_realisations=n_realisations,
+                timestep_length=timestep_length,
+                start_year=start_year,
+                calendar=calendar,
+                random_seed=random_seed,
+                default_block_size=self.simulation_config['default_block_size'],
+                check_block_size=self.simulation_config['check_block_size'],
+                minimum_block_size=self.simulation_config['minimum_block_size'],
+                check_available_memory=self.simulation_config['check_available_memory'],
+                maximum_memory_percentage=self.simulation_config['maximum_memory_percentage'],
+                block_subset_size=self.simulation_config['block_subset_size'],
+                project_name=output_name
+            )
+
+    def postprocess(
+            self,
+            amax_durations=None,
+            ddf_return_periods=None,
+            subset_length=50,
+            output_filenames='default',
+            simulation_format=None,
+            start_year=None,
+            timestep_length=None,
+            calendar=None,
+            simulation_subfolders=None,
+            simulation_length=None,
+            n_realisations=None,
+            simulation_name='simulation',
+    ):
+        """
+        Post-processing to calculate statistics from simulated point output.
+
+        Calculates statistics given in ``self.statistic_definitions`` by default, with options to extract annual
+        maxima (AMAX) at multiple duration and to estimate depth-duration-frequency (DDF) statistics.
+
+        Args:
+            amax_durations (int or list of int): Durations (in hours) for which annual maxima (AMAX) should be
+                identified.
+            ddf_return_periods (int or list of int): Return periods (in years) for which depths should be estimated,
+                given the durations specified by ``amax_durations``.
+            subset_length (int): For splitting a realisation into ``subset_length`` years for calculating (seasonal)
+                statistics (e.g. mean, variance, etc.). Does not affect AMAX extraction or DDF calculations. See Notes.
+            output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
+                ``{'statistics': 'simulated_statistics.csv', 'amax': 'simulated_amax.csv', 'ddf': 'simulated_ddf.csv}``
+                or ``None`` to indicate that no output files should be written.
+            simulation_format:
+            start_year:
+            timestep_length:
+            calendar:
+            simulation_subfolders:
+            simulation_length:
+            n_realisations:
+            simulation_name:
+
+        Notes:
+            subset_length - why? Should be less than 100 (for now at least) and less than simulation_length
+
+            passing arguments vs using self.simulation_args
+
+        """
+        print('Post-processing')
+
+        # Check that either arguments of self.simulation_args are available
+        postprocessing_args = utils.get_kwargs()
+        keys_to_ignore = ['amax_durations', 'ddf_return_periods', 'subset_length', 'output_filenames']
+        for key, value in postprocessing_args.items():
+            if key not in keys_to_ignore:
+                if value is None:
+                    if self.simulation_args is None:
+                        raise ValueError(key, 'not set in self.simulation_args or provided as argument.')
+                    if key in self.simulation_args.keys():
+                        if self.simulation_args[key] is None:
+                            raise ValueError(key, 'not set in self.simulation_args or provided as argument.')
+
+        # Get simulation arguments needed for post-processing
+        if simulation_format is None:
+            simulation_format = self.simulation_args['simulation_format']
+        if start_year is None:
+            start_year = self.simulation_args['start_year']
+        if timestep_length is None:
+            timestep_length = self.simulation_args['timestep_length']
+        if calendar is None:
+            calendar = self.simulation_args['calendar']
+        if simulation_subfolders is None:
+            simulation_subfolders = self.simulation_args['simulation_subfolders']
+        if simulation_length is None:
+            simulation_length = self.simulation_args['simulation_length']
+        if n_realisations is None:
+            n_realisations = self.simulation_args['n_realisations']
+        if simulation_name is None:
+            simulation_name = self.simulation_args['simulation_name']
+
+        # Construct output paths
+        if output_filenames == 'default':
+            output_statistics_filename = 'simulated_statistics.csv'
+            output_amax_filename = 'simulated_amax.csv'
+            output_ddf_filename = 'simulated_ddf.csv'
+        else:
+            if 'statistics' in output_filenames:
+                output_statistics_filename = output_filenames['statistics']
+            if 'amax' in output_filenames:
+                output_amax_filename = output_filenames['amax']
+            if 'ddf' in output_filenames:
+                output_ddf_filename = output_filenames['ddf']
+        output_statistics_path = os.path.join(self.output_folder, output_statistics_filename)
+        if amax_durations is not None:
+            output_amax_path = os.path.join(self.output_folder, output_amax_filename)
+        else:
+            output_amax_path = None
+        if ddf_return_periods is not None:
+            output_ddf_path = os.path.join(self.output_folder, output_ddf_filename)
+        else:
+            output_ddf_path = None
+
+        # Check (partially) that arguments are suitable for analysis call
+        if amax_durations is not None:
+            if not isinstance(amax_durations, list):
+                amax_durations = [amax_durations]
+        if ddf_return_periods is not None:
+            if not isinstance(ddf_return_periods, list):
+                ddf_return_periods = [ddf_return_periods]
+
+        # Construct paths to simulation (point) output
+        if simulation_subfolders == 'default':
+            if self.spatial_model:
+                simulation_subfolders = dict(point='point', catchment='catchment', grid='grid')
+            else:
+                simulation_subfolders = dict(point='')
+        if self.spatial_model:
+            timeseries_path = None
+            timeseries_folder = os.path.join(self.output_folder, simulation_subfolders['point'])
+        else:
+            timeseries_path = os.path.join(self.output_folder, simulation_subfolders['point'], simulation_name)
+            timeseries_folder = None
+
+        self.simulated_statistics, _ = analysis.main(
+            spatial_model=self.spatial_model,
+            season_definitions=self.season_definitions,
+            statistic_definitions=self.statistic_definitions,
+            timeseries_format=simulation_format,
+            start_date=datetime.datetime(start_year, 1, 1),
+            timestep_length=timestep_length,
+            calendar=calendar,
+            timeseries_path=timeseries_path,
+            timeseries_folder=timeseries_folder,
+            point_metadata=self.point_metadata,
+            calculation_period=None,
+            completeness_threshold=0.0,
+            output_statistics_path=output_statistics_path,
+            outlier_method=None,
+            maximum_relative_difference=None,
+            maximum_alterations=None,
+            analysis_mode='postprocessing',
+            n_years=simulation_length,
+            n_realisations=n_realisations,
+            subset_length=subset_length,
+            output_amax_path=output_amax_path,
+            amax_durations=amax_durations,
+            output_ddf_path=output_ddf_path,
+            ddf_return_periods=ddf_return_periods,
+            write_output=True,
+        )
+
+    # TODO: Implement method
+    def plot(
+            self,
+            plot_type='annual_cycle',  # 'cross-correlation', 'amax'
+            include_reference=True,
+            include_fitted=True,
+            include_simulated=True,
+    ):
+        raise NotImplementedError
+
+    def set_statistics(
+            self,
+            point_metadata=None,
+            reference_statistics=None,
+            fitted_statistics=None,
+            simulated_statistics=None,
+    ):
+        """
+        Set statistics and related attributes.
+
+        Args:
+            point_metadata: Required for a spatial model.
+            reference_statistics (pandas.DataFrame or str): Reference statistics for model fitting and/or evaluation as
+                dataframe (or path to file). Optional.
+            fitted_statistics: Optional.
+            simulated_statistics: Optional.
+
+        Notes:
+            If dataframe is passed it is currently assumed that lag and threshold columns are present.
+
+            Setting statistics with this method updates the ``self.statistic_definitions``, ``self.point_metadata`` and
+            ``self.phi`` attributes, as well as the relevant statistics attribute (e.g. ``self.reference_statistics``).
+
+            No checks are currently made on the different statistics arguments or their consistency with the
+            ``point_metadata`` argument.
+
+            For identifying (updating) ``self.statistic_definitions``, order of priority is reference > fitted >
+            simulated.
+
+            Strongly recommended that ``self.reference_statistics`` is set either here or via ``self.preprocess()``, as
+            it is required for both fitting and simulation.
+
+        """
+        # Point metadata
+        if self.spatial_model and point_metadata is None:
+            raise ValueError('point_metadata must be supplied for a spatial model.')
+        if isinstance(point_metadata, pd.DataFrame):
+            self.point_metadata = point_metadata
+        elif isinstance(point_metadata, str):
+            self.point_metadata = utils.read_csv_(point_metadata)
+        if not self.spatial_model:
+            self.point_metadata = None
+
+        # Reference statistics
+        if reference_statistics is not None:
+            if isinstance(reference_statistics, pd.DataFrame):
+                self.reference_statistics = reference_statistics
+            elif isinstance(reference_statistics, str):
+                self.reference_statistics = utils.read_statistics(reference_statistics)
+
+        # Fitted statistics
+        if fitted_statistics is not None:
+            if isinstance(fitted_statistics, pd.DataFrame):
+                self.fitted_statistics = fitted_statistics
+            elif isinstance(fitted_statistics, str):
+                self.fitted_statistics = utils.read_statistics(fitted_statistics)
+
+        # Simulated statistics
+        if simulated_statistics is not None:
+            if isinstance(simulated_statistics, pd.DataFrame):
+                self.simulated_statistics = simulated_statistics
+            elif isinstance(simulated_statistics, str):
+                self.simulated_statistics = utils.read_statistics(simulated_statistics)
+
+        # Derive statistics definitions
+        columns = ['statistic_id', 'name', 'duration', 'lag', 'threshold', 'weight']
+        if self.reference_statistics is not None:
+            self.statistic_definitions = self.reference_statistics[columns].drop_duplicates(subset=columns)
+        elif self.fitted_statistics is not None:
+            self.statistic_definitions = self.fitted_statistics[columns].drop_duplicates(subset=columns)
+        elif self.simulated_statistics is not None:
+            self.statistic_definitions = self.simulated_statistics[columns].drop_duplicates(subset=columns)
+
+        # Create phi dataframe
+        if self.spatial_model and (self.reference_statistics is not None):
+            columns = ['point_id', 'season', 'phi']
+            phi = self.reference_statistics[columns].drop_duplicates(subset=columns)
+            self.phi = pd.merge(self.point_metadata, phi)
+
+    def set_parameters(self, parameters):
+        """
+        Set parameters attribute.
+
+        Args:
+            parameters:
+
+        """
+        if isinstance(parameters, pd.DataFrame):
+            self.parameters = parameters
+        elif isinstance(parameters, str):
+            self.parameters = utils.read_csv_(parameters)
+
+    def update_output_folder(self, output_folder):
+        self.output_folder = output_folder
+
+    def update_simulation_config(
+            self,
+            default_block_size=1000,
+            check_block_size=True,
+            minimum_block_size=10,
+            check_available_memory=True,
+            maximum_memory_percentage=75,
+            block_subset_size=50,
+    ):
+        """
+        Update default configuration settings for simulation.
+
+        Args:
+            default_block_size (int): Number of years (maximum) to simulate at once to avoid memory issues.
+            check_block_size (bool): Flag to indicate whether code should automatically check whether the
+                default_block_size (probably) needs to be reduced to avoid memory issues (see
+                ``check_available_memory`` and ``maximum_memory_percentage``).
+            minimum_block_size (int): Minimum number of years to simulate at once.
+            check_available_memory (bool): Flag to indicate whether current system memory usage should be checked to
+                limit the maximum amount of memory assigned in simulation.
+            maximum_memory_percentage (int or float): Maximum percentage of system memory that may be assigned by a
+                simulation. If estimated memory usage exceeds this percentage then a smaller block size will be tried
+                until the ``minimum_block_size`` is reached.
+            block_subset_size (int): Block subset size (number of years) for internal use in discretisation (as it is
+                much faster to discretise subsets of each block).
+
+        """
+        simulation_config = dict(
+            default_block_size=default_block_size,
+            check_block_size=check_block_size,
+            minimum_block_size=minimum_block_size,
+            check_available_memory=check_available_memory,
+            maximum_memory_percentage=maximum_memory_percentage,
+            block_subset_size=block_subset_size,
+        )
+        if hasattr(self, 'simulation_config'):
+            self.simulation_config = simulation_config
+        else:
+            return simulation_config
 
     @property
     def parameter_names(self):

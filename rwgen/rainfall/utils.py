@@ -1,9 +1,10 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
+import os
 import sys
 import time
 import datetime
+import inspect
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import numpy as np
 import numpy.ma as ma
@@ -13,6 +14,16 @@ import scipy.stats
 import yaml
 import geocube.api.core
 import numba
+
+
+def get_kwargs():
+    frame = inspect.currentframe().f_back
+    keys, _, _, values = inspect.getargvalues(frame)
+    kwargs = {}
+    for key in keys:
+        if key != 'self':
+            kwargs[key] = values[key]
+    return kwargs
 
 
 def parse_season_definitions(user_input):
@@ -169,6 +180,76 @@ def datetime_series(start_year, end_year, timestep, season_definitions, calendar
     return df
 
 
+# ---
+# Stuff for getting analysis working  # TODO: Tidy up
+
+def make_datetime_list(start_date, timestep, end_date=None, periods=None, calendar='gregorian'):
+    date_series = []
+    d = start_date
+    if end_date is not None:
+        while d <= end_date:
+            date_series.append(d)
+            d += datetime.timedelta(seconds=timestep * 60 * 60)
+            if (calendar == '365-day') and (d.month == 2) and (d.day == 29):
+                d = datetime.datetime(d.year, 3, 1)
+    elif periods is not None:
+        i = 1
+        while i <= periods:
+            date_series.append(d)
+            d += datetime.timedelta(seconds=timestep * 60 * 60)
+            if (calendar == '365-day') and (d.month == 2) and (d.day == 29):
+                d = datetime.datetime(d.year, 3, 1)
+            i += 1
+    return date_series
+
+
+def add_columns(df, dc):
+    for key, value in dc.items():
+        df[key] = value
+    return df
+
+
+# def make_repeating_datetime_series(
+#         start_date, timestep, end_date=None, periods=None, repeat_interval=400, calendar='gregorian'
+# ):
+#     max_date = datetime.datetime(
+#         start_date.year + repeat_interval, start_date.month, start_date.day, start_date.hour, start_date.minute,
+#         start_date.second
+#     )
+#     max_date -= datetime.timedelta(seconds=1)
+#
+#     groups = []
+#     date_series = []
+#     d = start_date
+#     group = 1
+#     if end_date is not None:
+#         while d <= end_date:
+#             groups.append(group)
+#             date_series.append(d)
+#             d += datetime.timedelta(seconds=timestep * 60 * 60)
+#             if (calendar == '365-day') and (d.month == 2) and (d.day == 29):
+#                 d = datetime.datetime(d.year, 3, 1)
+#             if d > max_date:
+#                 d = start_date
+#                 group += 1
+#     elif periods is not None:
+#         i = 1
+#         while i <= periods:
+#             groups.append(group)
+#             date_series.append(d)
+#             d += datetime.timedelta(seconds=timestep * 60 * 60)
+#             if (calendar == '365-day') and (d.month == 2) and (d.day == 29):
+#                 d = datetime.datetime(d.year, 3, 1)
+#             if d > max_date:
+#                 d = start_date
+#                 group += 1
+#             i += 1
+#
+#     return date_series, groups
+
+# ---
+
+
 def make_datetime_helper(start_year, end_year, timestep_length, calendar):
     # Construct dataframe of core date information
     unique_years = np.arange(start_year, end_year+1)
@@ -207,10 +288,11 @@ def make_datetime_helper(start_year, end_year, timestep_length, calendar):
 #     pass
 
 
-def read_statistic_definitions(filepath):
+def read_statistics(filepath):
+    # Suitable for both statistics definitions and reference statistics files
     df = pd.read_csv(filepath)
     df.columns = [column_name.lower() for column_name in df.columns.tolist()]
-    df.rename({'id': 'statistic_id'})
+    df.rename(columns={'month': 'season'}, inplace=True)
     df['threshold'] = np.nan  # 0.0
     df['lag'] = pd.NA  # 0
     for idx in range(df.shape[0]):
@@ -246,15 +328,23 @@ def read_statistic_definitions(filepath):
             if 'lag' in name:
                 lag = name.replace('cross-correlation_', '')
                 lag = lag.replace('_cross-correlation', '')
+                lag = int(lag.replace('lag', ''))
             else:
                 lag = 0
             df.iat[idx, df.columns.get_loc('lag')] = lag
-            df.iat[idx, df.columns.get_loc('name')] = 'autocorrelation'
+            df.iat[idx, df.columns.get_loc('name')] = 'cross-correlation'
     return df
 
 
 def write_statistic_definitions():
     pass
+
+
+def percentile(n):
+    def percentile_(x):
+        return x.quantile(n)
+    percentile_.__name__ = "percentile_{:d}".format(int(n * 100))  # TODO: Flexibility for non-integers
+    return percentile_
 
 
 def make_column_names_lowercase(df):
@@ -263,51 +353,74 @@ def make_column_names_lowercase(df):
     return df
 
 
-def merge_statistics(point_statistics, cross_correlations):
+def merge_statistics(point_statistics, cross_correlations, value_columns='value'):
+    # Ensure consistent columns and then merge
     point_statistics['point_id2'] = pd.NA
     point_statistics['distance'] = np.nan
     if 'phi' in cross_correlations.columns:
         point_statistics['phi2'] = np.nan
     cross_correlations['threshold'] = np.nan
     statistics = pd.concat([point_statistics, cross_correlations])
-    column_order = [
-        'point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season', 'value',
-        'lag', 'threshold'  # lag and threshold will be removed before write
-    ]
+
+    # Construct core column order
+    column_order = ['point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'weight', 'season']
+    if not isinstance(value_columns, list):
+        value_columns = list(value_columns)
+    column_order.extend(value_columns)
+    column_order.extend(['lag', 'threshold'])  # lag and threshold will be removed before write
+
+    # Additional columns relevant in some cases
     if 'gs' in point_statistics.columns:
         column_order.append('gs')
     if 'phi' in cross_correlations.columns:
         column_order.extend(['phi', 'phi2'])
+    if 'realisation_id' in statistics.columns:
+        column_order.append('realisation_id')
+    if 'subset_id' in statistics.columns:
+        column_order.append('subset_id')
+
     statistics = statistics[column_order]
+
     return statistics
 
 
-def read_statistics(point_statistics_path, cross_correlations_path=None):
-    # TODO: Fix to parse lag and threshold
-    statistics = pd.read_csv(point_statistics_path)
-    statistics = make_column_names_lowercase(statistics)
-    statistics.rename({'month': 'season'}, axis=1, inplace=True)
-    if cross_correlations_path is not None:
-        cross_correlations = pd.read_csv(cross_correlations_path)
-        cross_correlations = make_column_names_lowercase(cross_correlations)
-        cross_correlations.rename({'month': 'season'}, axis=1, inplace=True)
-        statistics = merge_statistics(statistics, cross_correlations)
-    return statistics
+# def read_statistics(point_statistics_path, cross_correlations_path=None):
+#     # TODO: Fix to parse lag and threshold
+#     statistics = pd.read_csv(point_statistics_path)
+#     statistics = make_column_names_lowercase(statistics)
+#     statistics.rename({'month': 'season'}, axis=1, inplace=True)
+#     if cross_correlations_path is not None:
+#         cross_correlations = pd.read_csv(cross_correlations_path)
+#         cross_correlations = make_column_names_lowercase(cross_correlations)
+#         cross_correlations.rename({'month': 'season'}, axis=1, inplace=True)
+#         statistics = merge_statistics(statistics, cross_correlations)
+#     return statistics
 
 
-def _columns_to_write(statistic_type, write_weights, write_gs, write_phi):
-    if statistic_type == 'point':
-        columns = ['point_id', 'statistic_id', 'name', 'duration', 'season', 'value']
-    elif statistic_type == 'cross-correlation':
-        columns = ['point_id', 'point_id2', 'distance', 'statistic_id', 'name', 'duration', 'season', 'value']
+def _columns_to_write(columns_present, write_weights, write_gs, write_phi_, value_columns):  # statistic_names,
+    if isinstance(value_columns, str):
+        value_columns = [value_columns]
+
+    # Core columns
+    # if 'cross-correlation' not in statistic_names:
+    #     columns = ['realisation_id', 'subset_id', 'point_id', 'statistic_id', 'name', 'duration', 'season']
+    # else:
+    columns = ['realisation_id', 'subset_id', 'point_id', 'statistic_id', 'name', 'duration', 'season']
+    columns.extend(value_columns)
+
+    # Additional columns relevant in some cases
     if write_weights:
         columns.append('weight')
     if write_gs:
         columns.append('gs')
-    if write_phi:
+    if write_phi_:
         columns.append('phi')
-        if statistic_type == 'cross-correlation':
-            columns.append('phi2')
+    # if 'cross-correlation' in statistic_names:
+    columns.extend(['point_id2', 'distance', 'phi2'])
+
+    # Check columns are available - realisation_id and subset_id plus cross-correlation columns
+    columns = [c for c in columns if c in columns_present]
+
     return columns
 
 
@@ -325,38 +438,68 @@ def _concise_statistic_names(df):
     return df
 
 
+# def construct_output_path(folder, filename, overwrite=False):
+#     filename_bits = filename.split('.')  # TODO: Make not dependent on not using full stops in file names
+#     versioned_filename = filename_bits[0] + '_v1' + '.' + filename_bits[1]
+#     output_path = os.path.join(folder, versioned_filename)
+#     if os.path.exists(output_path) and not overwrite:
+#         path_already_exists = True
+#         version = 1
+#         while path_already_exists:
+#             versioned_filename = versioned_filename.replace(
+#                 '_v' + str(version) + '.' + filename_bits[1], '_v' + str(version + 1) + '.' + filename_bits[1]
+#             )
+#             version += 1
+#             output_path = os.path.join(folder, versioned_filename)
+#             if not os.path.exists(output_path):
+#                 path_already_exists = False
+#     return output_path
+
+
 def write_statistics(
-        df, point_path, season_definitions, cross_correlation_path=None, write_weights=True, write_gs=True,
-        write_phi=True
+        df, output_path, season_definitions, write_weights=True, write_gs=True, write_phi_=True, value_columns='value'
 ):
+    # TODO: Rationalise into a loop to remove effectively duplicated code
     # Point statistics
-    columns = _columns_to_write('point', write_weights, write_gs, write_phi)
+    columns = _columns_to_write(df.columns, write_weights, write_gs, write_phi_, value_columns)
     df1 = df.copy()
-    df1 = df1.loc[df1['name'] != 'cross-correlation']
+    # df1 = df1.loc[df1['name'] != 'cross-correlation']
     if 'point_id' not in df1.columns:
         df1['point_id'] = 1
-    df1.sort_values(['point_id', 'statistic_id', 'season'], inplace=True)
+
+    sort_columns = ['realisation_id', 'subset_id', 'point_id', 'statistic_id', 'season']
+    sort_columns = [c for c in sort_columns if c in df1.columns]
+    df1.sort_values(sort_columns, inplace=True)
+
     df1 = _concise_statistic_names(df1)
     df1 = df1[columns]
     if max(season_definitions.values()) == 12:
         df1.rename({'season': 'month'}, axis=1, inplace=True)
     df1.columns = [name.capitalize() for name in df1.columns]
     df1.columns = [name.replace('_id', '_ID') for name in df1.columns]
-    df1.to_csv(point_path, index=False)
 
-    # Cross-correlation statistics
-    if cross_correlation_path is not None:
-        columns = _columns_to_write('cross-correlation', write_weights, write_gs, write_phi)
-        df1 = df.copy()
-        df1 = df1.loc[df1['name'] == 'cross-correlation']
-        df1.sort_values(['point_id', 'statistic_id', 'season'], inplace=True)
-        df1 = _concise_statistic_names(df1)
-        df1 = df1[columns]
-        if max(season_definitions.values()) == 12:
-            df1.rename({'season': 'month'}, axis=1, inplace=True)
-        df1.columns = [name.capitalize() for name in df1.columns]
-        df1.columns = [name.replace('_id', '_ID') for name in df1.columns]
-        df1.to_csv(cross_correlation_path, index=False)
+    df1.to_csv(output_path, index=False, na_rep='NA')
+
+    # # Cross-correlation statistics
+    # if cross_correlation_path is not None:
+    #     columns = _columns_to_write(
+    #         df.columns, 'cross-correlation', write_weights, write_gs, write_phi_, value_columns
+    #     )
+    #     df1 = df.copy()
+    #     df1 = df1.loc[df1['name'] == 'cross-correlation']
+    #
+    #     sort_columns = ['realisation_id', 'subset_id', 'point_id', 'statistic_id', 'season']
+    #     sort_columns = [c for c in sort_columns if c in df1.columns]
+    #     df1.sort_values(sort_columns, inplace=True)
+    #
+    #     df1 = _concise_statistic_names(df1)
+    #     df1 = df1[columns]
+    #     if max(season_definitions.values()) == 12:
+    #         df1.rename({'season': 'month'}, axis=1, inplace=True)
+    #     df1.columns = [name.capitalize() for name in df1.columns]
+    #     df1.columns = [name.replace('_id', '_ID') for name in df1.columns]
+    #
+    #     df1.to_csv(cross_correlation_path, index=False)
 
 
 def write_phi(df, file_path):
@@ -373,15 +516,113 @@ def write_phi(df, file_path):
     df1.to_csv(file_path, index=False)
 
 
+def write_maxima(df, output_path, analysis_mode):
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'year'}, inplace=True)
+    df = df.loc[:, ['realisation_id', 'point_id', 'duration', 'year', 'value']]
+    df.sort_values(['realisation_id', 'point_id', 'duration', 'year'], inplace=True)
+    df.columns = ['Realisation_ID', 'Point_ID', 'Duration', 'Year', 'Value']
+    if analysis_mode == 'preprocessing':
+        df.drop(columns=['Realisation_ID'], inplace=True)
+    df.to_csv(output_path, index=False)
+
+
+def write_ddf(df, output_path):
+    df = df[['point_id', 'duration', 'return_period', 'depth_gev', 'depth_empirical']]
+    df.columns = ['Point_ID', 'Duration', 'Return_Period', 'Depth_GEV', 'Depth_Empirical']
+    df.to_csv(output_path, na_rep='NA', index=False)
+
+
 def read_csv_timeseries(input_path):
-    df = pd.read_csv(
-        input_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True
-    )
+    df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True)
     df.columns = ['value']
+    df['value'] = df['value'].astype(np.float32)
     return df
 
 
+# TODO: Tidy up
+def read_txt_timeseries(input_path, start_date, timestep_length, calendar):
+    df = pd.read_csv(input_path, header=None, dtype=np.float32)  # , nrows=10*365*24)  # TEMPORARY nrows
+    df.columns = ['value']
+    if (timestep_length * 60) % 60 == 0:
+        freq_alias = str(int(timestep_length)) + 'H'
+    else:
+        freq_alias = str(int(timestep_length * 60)) + 'T'
+
+    # ValueError is raised if date_range attempts to go beyond maximum permitted datetime (end of year 9999)
+    # try:
+    #     df.index = pd.date_range(start_date, periods=df.shape[0], freq=freq_alias)
+    #     df['group'] = 1
+
+    # Choose a date range that fits with the series start date but sticks within pandas date limits
+    # except ValueError:
+    subset_end_date = datetime.datetime(
+        start_date.year + 400, start_date.month, start_date.day, start_date.hour, start_date.minute
+    )
+    subset_start_date = start_date
+    while subset_end_date.year > 9999:
+        subset_start_date = datetime.datetime(
+            subset_start_date.year - 400, subset_start_date.month, subset_start_date.day,
+            subset_start_date.hour, subset_start_date.minute
+        )
+        subset_end_date = datetime.datetime(
+            subset_start_date.year + 400, subset_start_date.month, subset_start_date.day,
+            subset_start_date.hour, subset_start_date.minute
+        )
+
+    # Number of periods depends on whether leap years are being accounted for
+    if calendar == 'gregorian':
+        periods = subset_end_date - subset_start_date
+        periods = int(
+            periods.days * 24 * (1 / timestep_length) + ((periods.seconds / 3600) / (1 / timestep_length))
+        )
+    elif calendar == '365-day':
+        periods = 400 * 365 * 24 * int(1 / timestep_length)
+
+    # Construct date series and then repeat until it covers the full data length
+    # date_series = make_datetime_list(subset_start_date, timestep_length, periods=periods, calendar=calendar)
+    date_series = pd.period_range(subset_start_date, periods=periods, freq=freq_alias)
+    n_groups = int(np.ceil(df.shape[0] / periods))
+    date_series = np.repeat(np.asarray(date_series), n_groups)
+
+    # Construct an array indicating which date group each timestep belongs to (for resampling)
+    groups = np.repeat(np.arange(n_groups, dtype=int), periods)
+
+    # Trim to match data shape (i.e. may be smaller) and set index / add group column
+    date_series = date_series[:df.shape[0]]
+    groups = groups[:df.shape[0]]
+    df.index = date_series
+    df['date_group'] = groups
+
+    return df
+
+
+def resample(df, timestep_length, duration):
+    expected_count = int(duration / timestep_length)
+    if df.shape[0] % expected_count == 0:
+        periods = int(df.shape[0] / expected_count)
+    else:
+        periods = int(df.shape[0] / expected_count) + 1
+    mask = np.repeat(np.arange(periods, dtype=int), expected_count)
+    mask = mask[:df.shape[0]]
+    df['mask'] = mask
+    # df.reset_index(inplace=True)
+    # df.rename(columns={'index': 'datetime'}, inplace=True)
+    df1 = df.groupby(['mask']).agg({'datetime': 'min', 'value': 'sum'})
+    # df1.set_index('datetime', inplace=True)
+    df1.index = pd.PeriodIndex(df1['datetime'])
+    df1.drop(columns='datetime', inplace=True)
+
+    # print(df1)
+    # print(isinstance(df1.index, pd.PeriodIndex))
+    # print(df1.index.month)
+    # sys.exit()
+
+    return df1
+
+
 def read_csvy_timeseries(input_path):
+    # TODO: Introduce ability to handle long datetime series (i.e. ending beyond year 9999)
     with open(input_path, 'r') as fh:
         fh.readline()
         number_of_headers = 1
@@ -440,11 +681,12 @@ def read_csv_(file_path):
     return df
 
 
-def write_csv_(df, file_path, season_definitions, renaming, write_index=False):
+def write_csv_(df, file_path, season_definitions, renaming=None, write_index=False):
     df1 = df.copy()
     if max(season_definitions.values()) == 12:
         df1.rename({'season': 'month'}, axis=1, inplace=True)
-    df1.rename(renaming, axis=1, inplace=True)
+    if renaming is not None:
+        df1.rename(renaming, axis=1, inplace=True)
 
     column_names = []
     for name in df1.columns:

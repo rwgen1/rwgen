@@ -17,16 +17,15 @@ from . import utils
 def main(
         spatial_model,
         intensity_distribution,
-        discretisation_method,  # 'default' or 'event_totals'
         output_types,
         output_folder,
         output_subfolders,
         output_format,
         season_definitions,
         parameters,
-        points,
-        catchments,
-        grid,
+        point_metadata,
+        catchment_metadata,
+        grid_metadata,
         epsg_code,
         cell_size,
         dem,
@@ -43,14 +42,15 @@ def main(
         check_available_memory,
         maximum_memory_percentage,
         block_subset_size,
+        project_name,
 ):
     print('  - Initialising')
 
     # Initialisations common to both point and spatial models (derived attributes)
     realisation_ids = range(1, number_of_realisations + 1)
     output_paths = make_output_paths(
-        spatial_model, output_types, output_format, output_folder, output_subfolders, points, catchments,
-        realisation_ids
+        spatial_model, output_types, output_format, output_folder, output_subfolders, point_metadata,
+        catchment_metadata, realisation_ids, project_name
     )
     if random_seed is None:
         seed_sequence = np.random.SeedSequence()
@@ -65,10 +65,10 @@ def main(
     if spatial_model:
 
         # Set (inner) simulation domain bounds
-        xmin, ymin, xmax, ymax = identify_domain_bounds(grid, cell_size, points)
+        xmin, ymin, xmax, ymax = identify_domain_bounds(grid_metadata, cell_size, point_metadata)
 
         # Set up discretisation point location metadata arrays (x, y and z by point)
-        discretisation_metadata = create_discretisation_metadata_arrays(points, grid, cell_size, dem)
+        discretisation_metadata = create_discretisation_metadata_arrays(point_metadata, grid_metadata, cell_size, dem)
 
         # Associate a phi value with each point
         unique_seasons = utils.identify_unique_seasons(season_definitions)
@@ -77,7 +77,7 @@ def main(
         # Get weights associated with catchments for each point
         if 'catchment' in output_types:
             discretisation_metadata = get_catchment_weights(
-                grid, catchments, cell_size, epsg_code, discretisation_metadata, output_types, dem,
+                grid_metadata, catchment_metadata, cell_size, epsg_code, discretisation_metadata, output_types, dem,
                 unique_seasons, catchment_id_field='id'
             )
 
@@ -98,7 +98,7 @@ def main(
             datetime_helper, season_definitions, timestep_length, discretisation_metadata,
             seed_sequence, simulation_length,
             spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
-            discretisation_method, output_types, points, catchments,
+            output_types, point_metadata, catchment_metadata,
             float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
         )
     else:
@@ -107,20 +107,12 @@ def main(
     # Do simulation
     rng = np.random.default_rng(seed_sequence)
     for realisation_id in realisation_ids:
-        if discretisation_method == 'default':
-            simulate_realisation(
-                realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
-                discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
-                block_subset_size
-            )
-        elif discretisation_method == 'event_totals':
-            df = simulate_realisation(
-                realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
-                discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments,
-                parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
-                block_subset_size
-            )
+        simulate_realisation(
+            realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
+            spatial_model, output_types, discretisation_metadata, point_metadata, catchment_metadata,
+            parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
+            block_subset_size
+        )
 
     # TODO: Implement additional output - phi, catchment weights, random seed
 
@@ -386,18 +378,19 @@ def get_catchment_weights(
 
 def make_output_paths(
         spatial_model, output_types, output_format, output_folder, output_subfolders, points, catchments,
-        realisation_ids
+        realisation_ids, project_name
 ):
     output_paths = {}
     for output_type in output_types:
         if output_type == 'grid':
             paths = output_paths_helper(
-                spatial_model, output_type, 'nc', output_folder, output_subfolders, points, catchments, realisation_ids
+                spatial_model, output_type, 'nc', output_folder, output_subfolders, points, catchments, realisation_ids,
+                project_name
             )
         else:
             paths = output_paths_helper(
                 spatial_model, output_type, output_format, output_folder, output_subfolders, points, catchments,
-                realisation_ids
+                realisation_ids, project_name
             )
         for key, value in paths.items():
             output_paths[key] = value
@@ -406,7 +399,7 @@ def make_output_paths(
 
 def output_paths_helper(
         spatial_model, output_type, output_format, output_folder, output_subfolders, points, catchments,
-        realisation_ids
+        realisation_ids, project_name
 ):
     output_format_extensions = {'csv': '.csv', 'csvy': '.csvy', 'txt': '.txt', 'netcdf': '.nc'}
 
@@ -416,7 +409,7 @@ def output_paths_helper(
             location_names = list(points['name'].values)
         else:
             location_ids = [1]
-            location_names = ['simulation']
+            location_names = [project_name]
         output_subfolder = os.path.join(output_folder, output_subfolders['point'])
     elif output_type == 'catchment':
         location_ids = list(catchments['id'].values)
@@ -424,7 +417,7 @@ def output_paths_helper(
         output_subfolder = os.path.join(output_folder, output_subfolders['catchment'])
     elif output_type == 'grid':
         location_ids = [1]
-        location_names = ['simulation']
+        location_names = [project_name]
         output_subfolder = os.path.join(output_folder, output_subfolders['grid'])
 
     output_paths = {}
@@ -442,7 +435,7 @@ def identify_block_size(
         datetime_helper, season_definitions, timestep_length, discretisation_metadata,
         seed_sequence, number_of_years,
         spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
-        discretisation_method, output_types, points, catchments,
+        output_types, points, catchments,
         float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
 ):
     """Identify size of blocks (number of years) needed to avoid potential memory issues in simulations."""
@@ -487,19 +480,16 @@ def identify_block_size(
         n_timesteps = datetime_helper.loc[
             (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year),
             'n_timesteps'].sum()
-        if discretisation_method == 'default':
-            if spatial_model:
-                if ('point' in output_types) and ('catchment' in output_types):
-                    n_points = points.shape[0] * catchments.shape[0]
-                elif ('point' in output_types) and ('catchment' not in output_types):
-                    n_points = points.shape[0]
-                elif ('point' not in output_types) and ('catchment' in output_types):
-                    n_points = catchments.shape[0]
-            else:
-                n_points = 1
-            output_memory = int((n_timesteps * n_points) * (16 / 8))  # assuming np.float16 for output arrays only
-        elif discretisation_method == 'event_totals':
-            raise NotImplementedError
+        if spatial_model:
+            if ('point' in output_types) and ('catchment' in output_types):
+                n_points = points.shape[0] * catchments.shape[0]
+            elif ('point' in output_types) and ('catchment' not in output_types):
+                n_points = points.shape[0]
+            elif ('point' not in output_types) and ('catchment' in output_types):
+                n_points = catchments.shape[0]
+        else:
+            n_points = 1
+        output_memory = int((n_timesteps * n_points) * (16 / 8))  # assuming np.float16 for output arrays only
 
         # Accept block size if estimated total memory is below maximum RAM percentage to use
         required_total = nsrp_memory + working_memory + output_memory
@@ -528,7 +518,7 @@ def identify_block_size(
 
 def simulate_realisation(
         realisation_id, datetime_helper, number_of_years, timestep_length, season_definitions,
-        discretisation_method, spatial_model, output_types, discretisation_metadata, points, catchments, parameters,
+        spatial_model, output_types, discretisation_metadata, points, catchments, parameters,
         intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size, block_subset_size
 ):
     """
@@ -536,10 +526,9 @@ def simulate_realisation(
 
     """
     # Initialise arrays according to discretisation method
-    if discretisation_method == 'default':  # one-month blocks
-        discrete_rainfall = initialise_discrete_rainfall_arrays(
-            spatial_model, output_types, discretisation_metadata, points, int((24 / timestep_length) * 31)
-        )
+    discrete_rainfall = initialise_discrete_rainfall_arrays(
+        spatial_model, output_types, discretisation_metadata, points, int((24 / timestep_length) * 31)
+    )
     # TODO: Consider whether arrays for point or whole-domain event totals need to be initialised here
 
     # Simulate and discretise NSRP process by block
@@ -571,25 +560,18 @@ def simulate_realisation(
             df['raincell_radii'] *= 1000.0
 
         # Discretisation
-        if discretisation_method == 'default':
-            discretise_by_point(
-                spatial_model,
-                datetime_helper.loc[
-                    (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year)
-                ],
-                season_definitions, df, output_types, timestep_length,
-                discrete_rainfall,
-                discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, block_subset_size
-            )
-            # TODO: Check that slice of datetime_helper is correct
-        elif discretisation_method == 'event_totals':
-            events_df = discretise_by_event()  # TODO: Not yet implemented
+        discretise_by_point(
+            spatial_model,
+            datetime_helper.loc[
+                (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year)
+            ],
+            season_definitions, df, output_types, timestep_length,
+            discrete_rainfall,
+            discretisation_metadata, points, catchments, realisation_id, output_paths, block_id, block_subset_size
+        )
+        # TODO: Check that slice of datetime_helper is correct
 
         block_id += 1
-
-    # Assuming that event totals etc are not being written to file but should be returned for shuffling etc
-    if discretisation_method == 'event_totals':
-        return events_df
 
 
 def initialise_discrete_rainfall_arrays(spatial_model, output_types, discretisation_metadata, points, nt):
