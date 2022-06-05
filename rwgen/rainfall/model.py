@@ -590,7 +590,9 @@ class Model:
                 check_available_memory=self.simulation_config['check_available_memory'],
                 maximum_memory_percentage=self.simulation_config['maximum_memory_percentage'],
                 block_subset_size=self.simulation_config['block_subset_size'],
-                project_name=output_name
+                project_name=output_name,
+                spatial_raincell_method=self.simulation_config['spatial_raincell_method'],
+                spatial_buffer_factor=self.simulation_config['spatial_buffer_factor'],
             )
 
     def postprocess(
@@ -845,6 +847,8 @@ class Model:
             check_available_memory=True,
             maximum_memory_percentage=75,
             block_subset_size=50,
+            spatial_raincell_method='buffer',
+            spatial_buffer_factor=15,
     ):
         """
         Update default configuration settings for simulation.
@@ -862,6 +866,10 @@ class Model:
                 until the ``minimum_block_size`` is reached.
             block_subset_size (int): Block subset size (number of years) for internal use in discretisation (as it is
                 much faster to discretise subsets of each block).
+            spatial_raincell_method (str): Flag to use ``'buffer'`` method or Burton et al. (2010) method ``'burton'``
+                for spatial raincell simulation.
+            spatial_buffer_factor (float): Number of standard deviations of raincell radius distribution to use with
+                buffer method of spatial raincell simulation.
 
         """
         simulation_config = dict(
@@ -871,6 +879,8 @@ class Model:
             check_available_memory=check_available_memory,
             maximum_memory_percentage=maximum_memory_percentage,
             block_subset_size=block_subset_size,
+            spatial_raincell_method=spatial_raincell_method,
+            spatial_buffer_factor=spatial_buffer_factor,
         )
         if hasattr(self, 'simulation_config'):
             self.simulation_config = simulation_config

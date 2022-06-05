@@ -43,6 +43,8 @@ def main(
         maximum_memory_percentage,
         block_subset_size,
         project_name,
+        spatial_raincell_method,
+        spatial_buffer_factor
 ):
     print('  - Initialising')
 
@@ -100,6 +102,7 @@ def main(
             spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
             output_types, point_metadata, catchment_metadata,
             float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
+            spatial_raincell_method, spatial_buffer_factor
         )
     else:
         block_size = default_block_size
@@ -111,7 +114,7 @@ def main(
             realisation_id, datetime_helper, simulation_length, timestep_length, season_definitions,
             spatial_model, output_types, discretisation_metadata, point_metadata, catchment_metadata,
             parameters, intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size,
-            block_subset_size
+            block_subset_size, spatial_raincell_method, spatial_buffer_factor
         )
 
     # TODO: Implement additional output - phi, catchment weights, random seed
@@ -437,6 +440,7 @@ def identify_block_size(
         spatial_model, parameters, intensity_distribution, xmin, xmax, ymin, ymax,
         output_types, points, catchments,
         float_precision, default_block_size, minimum_block_size, check_available_memory, maximum_memory_percentage,
+        spatial_raincell_method, spatial_buffer_factor
 ):
     """Identify size of blocks (number of years) needed to avoid potential memory issues in simulations."""
     # TODO: Allow for varying data types (floating point precision)
@@ -455,7 +459,7 @@ def identify_block_size(
             'n_hours'].values
         dummy1 = nsproc.main(
             spatial_model, parameters, sample_n_years, month_lengths, season_definitions, intensity_distribution,
-            rng, xmin, xmax, ymin, ymax
+            rng, xmin, xmax, ymin, ymax, spatial_raincell_method, spatial_buffer_factor
         )
 
         # Estimate memory requirements for NSRP process for length (number of years) of block
@@ -519,7 +523,8 @@ def identify_block_size(
 def simulate_realisation(
         realisation_id, datetime_helper, number_of_years, timestep_length, season_definitions,
         spatial_model, output_types, discretisation_metadata, points, catchments, parameters,
-        intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size, block_subset_size
+        intensity_distribution, rng, xmin, xmax, ymin, ymax, output_paths, block_size, block_subset_size,
+        spatial_raincell_method, spatial_buffer_factor
 ):
     """
     Simulate realisation of NSRP process.
@@ -550,7 +555,7 @@ def simulate_realisation(
             'n_hours'].values
         df = nsproc.main(
             spatial_model, parameters, actual_block_size, month_lengths, season_definitions, intensity_distribution,
-            rng, xmin, xmax, ymin, ymax
+            rng, xmin, xmax, ymin, ymax, spatial_raincell_method, spatial_buffer_factor
         )
 
         # Convert raincell coordinates and radii from km to m for discretisation

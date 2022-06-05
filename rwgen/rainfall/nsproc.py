@@ -16,6 +16,8 @@ def main(
         xmax,
         ymin,
         ymax,
+        method,
+        buffer_factor,
 ):
     """
     Args:
@@ -30,6 +32,9 @@ def main(
         xmax (float): Maximum x (easting) coordinate of domain [m].
         ymin (float): Minimum y (easting) coordinate of domain [m].
         ymax (float): Maximum y (easting) coordinate of domain [m].
+        method (str): Flag to use ``'buffer'`` method or Burton et al. (2010) method ``'burton'`` for spatial raincell
+            simulation.
+        buffer_factor (float): Number of standard deviations of raincell radius distribution to use with buffer method.
 
     Notes:
         The steps in simulation of the NSRP process are:  # TODO: Complete description
@@ -62,7 +67,6 @@ def main(
         ymax = ymax / 1000.0
         xrange = xmax - xmin
         yrange = ymax - ymin
-        area = xrange * yrange
 
     # NSRP process simulation
 
@@ -74,7 +78,13 @@ def main(
     if not spatial_model:
         df = simulate_raincells_point(storms, parameters, rng)
     else:
-        df = simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, area, rng)
+        if method == 'buffer':
+            buffer = True
+        else:
+            buffer = False
+        df = simulate_raincells_spatial(
+            storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor
+        )
 
     # Helper step - Merge parameters into master (row per raincell) dataframe
     df = merge_parameters(df, month_lengths, simulation_length, parameters)
@@ -180,7 +190,7 @@ def simulate_raincells_point(storms, parameters, rng):
     return df
 
 
-def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, area, rng):
+def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor):
     """
     Simulate raincells for spatial model.  # TODO: Expand explanation
 
@@ -198,7 +208,8 @@ def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrang
             month_raincell_y_coords, \
             month_raincell_radii = (
                 simulate_raincells_for_month(
-                    row['rho'], row['gamma'], month_number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, area, rng
+                    row['rho'], row['gamma'], month_number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, rng,
+                    buffer, buffer_factor
                 )
             )
 
@@ -296,56 +307,156 @@ def merge_parameters(df, month_lengths, simulation_length, parameters):
 # ---------------------------------------------------------------------------------------------------------------------
 # Functions required for raincell simulation for spatial model
 
-def simulate_raincells_for_month(rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, area, rng):
+def spatial_poisson_process(
+        rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, rng, buffer=True, buffer_factor=15
+):
+    # Apply buffer to domain
+    if buffer:
+        radius_variance = scipy.stats.expon.stats(moments='v', scale=(1.0 / gamma))
+        buffer_distance = buffer_factor * radius_variance ** 0.5
+    else:
+        buffer_distance = 0.0
+    xmin_b = xmin - buffer_distance
+    xmax_b = xmax + buffer_distance
+    ymin_b = ymin - buffer_distance
+    ymax_b = ymax + buffer_distance
+    area_b = (xmax_b - xmin_b) * (ymax_b - ymin_b)
+
+    # Simulate raincells (number, location and radii)
+    n_raincells_by_storm = rng.poisson(rho * area_b, number_of_storms)
+    n_raincells = np.sum(n_raincells_by_storm)
+    x_coords = rng.uniform(xmin_b, xmax_b, n_raincells)
+    y_coords = rng.uniform(ymin_b, ymax_b, n_raincells)
+    radii = rng.exponential((1.0 / gamma), n_raincells)
+
+    # Remove irrelevant raincells (and update n_raincells_by_storm)
+    storm_ids_by_raincell = np.repeat(np.arange(number_of_storms, dtype=int), n_raincells_by_storm)
+    relevant_flag = find_relevant_raincells(x_coords, y_coords, radii, xmin, xmax, ymin, ymax)
+    df = pd.DataFrame({'storm_id': storm_ids_by_raincell, 'relevant': relevant_flag})
+    df = df.groupby(['storm_id'])['relevant'].sum()
+    n_raincells_by_storm = df.values
+    n_raincells = np.sum(n_raincells_by_storm)
+    x_coords = x_coords[relevant_flag]
+    y_coords = y_coords[relevant_flag]
+    radii = radii[relevant_flag]
+
+    return n_raincells_by_storm, n_raincells, x_coords, y_coords, radii
+
+
+def find_relevant_raincells(x, y, radius, xmin, xmax, ymin, ymax):
+    # Distances for raincells within y-range but outside x-range
+    mask_1 = ((y >= ymin) & (y <= ymax)) & ((x < xmin) | (x > xmax))
+    d1 = np.abs(x - xmin)
+    d2 = np.abs(x - xmax)
+    distance_1 = np.minimum(d1, d2)
+
+    # Distances for raincells within x-range but outside y-range
+    mask_2 = ((x >= xmin) & (x <= xmax)) & ((y < ymin) | (y > ymax))
+    d1 = np.abs(y - ymin)
+    d2 = np.abs(y - ymax)
+    distance_2 = np.minimum(d1, d2)
+
+    # Distances for raincells with x greater than xmax and y outside y-range
+    mask_3 = (x > xmax) & ((y < ymin) | (y > ymax))
+    d1 = ((x - xmax) ** 2 + (y - ymax) ** 2) ** 0.5
+    d2 = ((x - xmax) ** 2 + (y - ymin) ** 2) ** 0.5
+    distance_3 = np.minimum(d1, d2)
+
+    # Distances for raincells with x less than xmin and y outside y-range
+    mask_4 = (x < xmin) & ((y < ymin) | (y > ymax))
+    d1 = ((x - xmin) ** 2 + (y - ymax) ** 2) ** 0.5
+    d2 = ((x - xmin) ** 2 + (y - ymin) ** 2) ** 0.5
+    distance_4 = np.minimum(d1, d2)
+
+    # To ensure all points within domain are definitely retained
+    mask_5 = ((x >= xmin) & (x <= xmax)) & ((y >= ymin) & (y <= ymax))
+    distance_5 = np.zeros(mask_5.shape[0])
+
+    # Collate minimum distances
+    min_distance = np.zeros(x.shape[0])
+    min_distance[mask_1] = distance_1[mask_1]
+    min_distance[mask_2] = distance_2[mask_2]
+    min_distance[mask_3] = distance_3[mask_3]
+    min_distance[mask_4] = distance_4[mask_4]
+    min_distance[mask_5] = distance_5[mask_5]
+
+    # Identify relevant raincells (i.e. radius exceeds minimum distance to domain)
+    relevant_flag = np.zeros(x.shape[0], dtype=bool)
+    relevant_flag[min_distance < radius] = 1
+
+    return relevant_flag
+
+
+def simulate_raincells_for_month(
+        rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor
+):
     """
     Simulate raincells in inner and outer regions of domain for a calendar month (e.g. all Januarys).
 
     """
     # Inner region - "standard" spatial Poisson process
-    inner_number_of_raincells_by_storm = rng.poisson(rho * area, number_of_storms)
-    inner_number_of_raincells = np.sum(inner_number_of_raincells_by_storm)
-    inner_x_coords = rng.uniform(xmin, xmax, inner_number_of_raincells)
-    inner_y_coords = rng.uniform(ymin, ymax, inner_number_of_raincells)
-    inner_radii = rng.exponential((1.0 / gamma), inner_number_of_raincells)
+    # inner_number_of_raincells_by_storm = rng.poisson(rho * area, number_of_storms)
+    # inner_number_of_raincells = np.sum(inner_number_of_raincells_by_storm)
+    # inner_x_coords = rng.uniform(xmin, xmax, inner_number_of_raincells)
+    # inner_y_coords = rng.uniform(ymin, ymax, inner_number_of_raincells)
+    # inner_radii = rng.exponential((1.0 / gamma), inner_number_of_raincells)
+    inner_number_of_raincells_by_storm,\
+        inner_number_of_raincells,\
+        inner_x_coords,\
+        inner_y_coords,\
+        inner_radii = spatial_poisson_process(
+            rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, rng, buffer, buffer_factor
+        )
 
-    # Outer region
+    # Simulate outer region if using Burton et al. (2010) method
+    if not buffer:
 
-    # Construct CDF lookup function for distances of relevant raincells occurring in outer
-    # region - Burton et al. (2010) equation A8
-    distance_from_quantile_func = construct_outer_raincells_inverse_cdf(gamma, xrange, yrange)
+        # Construct CDF lookup function for distances of relevant raincells occurring in outer
+        # region - Burton et al. (2010) equation A8
+        distance_from_quantile_func = construct_outer_raincells_inverse_cdf(gamma, xrange, yrange)
 
-    # Density of relevant raincells in outer region - Burton et al. (2010) equation A9
-    rho_y = 2 * rho / gamma ** 2 * (gamma * (xrange + yrange) + 4)
+        # Density of relevant raincells in outer region - Burton et al. (2010) equation A9
+        rho_y = 2 * rho / gamma ** 2 * (gamma * (xrange + yrange) + 4)
 
-    # Number of relevant raincells in outer region
-    outer_number_of_raincells_by_storm = rng.poisson(rho_y, number_of_storms)  # check rho=mean
-    outer_number_of_raincells = np.sum(outer_number_of_raincells_by_storm)
+        # Number of relevant raincells in outer region
+        outer_number_of_raincells_by_storm = rng.poisson(rho_y, number_of_storms)  # check rho=mean
+        outer_number_of_raincells = np.sum(outer_number_of_raincells_by_storm)
 
-    # Sample from CDF of distances of relevant raincells occurring in outer region
-    outer_raincell_distance_quantiles = rng.uniform(0.0, 1.0, outer_number_of_raincells)
-    outer_raincell_distances = distance_from_quantile_func(outer_raincell_distance_quantiles)
+        # Sample from CDF of distances of relevant raincells occurring in outer region
+        outer_raincell_distance_quantiles = rng.uniform(0.0, 1.0, outer_number_of_raincells)
+        outer_raincell_distances = distance_from_quantile_func(outer_raincell_distance_quantiles)
 
-    # Sample eastings and northings from uniform distribution given distance from domain
-    # boundaries
-    outer_x_coords, outer_y_coords = sample_outer_locations(
-        outer_raincell_distances, xrange, yrange, xmin, xmax, ymin, ymax, rng
-    )
+        # Sample eastings and northings from uniform distribution given distance from domain
+        # boundaries
+        outer_x_coords, outer_y_coords = sample_outer_locations(
+            outer_raincell_distances, xrange, yrange, xmin, xmax, ymin, ymax, rng
+        )
 
-    # Sample raincell radii - for outer region raincells the radii need to exceed the distance
-    # of the cell centre from the domain boundary (i.e. conditional)
-    min_quantiles = scipy.stats.expon.cdf(outer_raincell_distances, scale=(1.0 / gamma))
-    quantiles = rng.uniform(min_quantiles, np.ones(min_quantiles.shape[0]))
-    outer_radii = scipy.stats.expon.ppf(quantiles, scale=(1.0 / gamma))
+        # Sample raincell radii - for outer region raincells the radii need to exceed the distance
+        # of the cell centre from the domain boundary (i.e. conditional)
+        min_quantiles = scipy.stats.expon.cdf(outer_raincell_distances, scale=(1.0 / gamma))
+        quantiles = rng.uniform(min_quantiles, np.ones(min_quantiles.shape[0]))
+        outer_radii = scipy.stats.expon.ppf(quantiles, scale=(1.0 / gamma))
 
-    # Combine inner and outer region raincells
-    # number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
-    # raincell_x_coords = np.concatenate([inner_x_coords, outer_x_coords])
-    # raincell_y_coords = np.concatenate([inner_y_coords, outer_y_coords])
-    # raincell_radii = np.concatenate([inner_radii, outer_radii])
-    number_of_raincells_by_storm, raincell_x_coords, raincell_y_coords, raincell_radii = combine_inner_outer_raincells(
-        inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
-        inner_y_coords, outer_y_coords, inner_radii, outer_radii
-    )
+        # Combine inner and outer region raincells
+        # number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
+        # raincell_x_coords = np.concatenate([inner_x_coords, outer_x_coords])
+        # raincell_y_coords = np.concatenate([inner_y_coords, outer_y_coords])
+        # raincell_radii = np.concatenate([inner_radii, outer_radii])
+        # TODO: Remove four commented out lines above (incorrect - newer lines below are correct)
+        number_of_raincells_by_storm,\
+            raincell_x_coords,\
+            raincell_y_coords,\
+            raincell_radii = combine_inner_outer_raincells(
+                inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
+                inner_y_coords, outer_y_coords, inner_radii, outer_radii
+            )
+
+    else:
+        number_of_raincells_by_storm = inner_number_of_raincells_by_storm
+        raincell_x_coords = inner_x_coords
+        raincell_y_coords = inner_y_coords
+        raincell_radii = inner_radii
 
     return number_of_raincells_by_storm, raincell_x_coords, raincell_y_coords, raincell_radii
 
