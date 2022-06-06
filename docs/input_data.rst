@@ -3,6 +3,7 @@ Input Data
 
 The minimal requirements for setting up a spatiotemporal NSRP model using gauge 
 data are:
+
     1. A csv file containing gauge metadata - see ``gauge_metadata.csv``
     2. Files containing gauge time series (one file per gauge) - see gauge_data 
        directory
@@ -17,6 +18,7 @@ Gauge Metadata File
 -------------------
 
 The gauge metadata csv file has mandatory columns (data types) of:
+
     1. ``Point_ID`` (integer) - unique integer for each gauge
     2. ``Easting`` (integer or float) - units = metres
     3. ``Northing`` (integer or float) - units = metres
@@ -41,6 +43,7 @@ Gauge Time Series Files
 -----------------------
 
 The example uses csv format for time series files. Required columns are:
+
     1. ``DateTime`` - dd/mm/yyyy hh:mm format (i.e. "%d/%m/%Y %H:%M"), e.g. 
        01/01/2005 00:00
     2. ``Value`` (float)

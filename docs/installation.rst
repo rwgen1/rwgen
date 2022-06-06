@@ -129,5 +129,3 @@ Close the Python session by typing::
 
     exit()
 
-
-
