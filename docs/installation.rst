@@ -10,9 +10,9 @@ implementation.
 
 .. note::
 
-    The instructions below are for installing RWGEN as a developer on a Windows
-    operating system. Some steps will not be needed once the package has been 
-    released.
+   The instructions below are for installing RWGEN as a developer on a Windows
+   operating system. Some steps will not be needed once the package has been
+   released.
 
 
 Installing Miniconda
@@ -27,8 +27,8 @@ the installer for the most recent Python version - currently 3.9).
 
 .. note::
 
-    The second step of the instructions (verify your installer hashes) can be
-    skipped.
+   The second step of the instructions (verify your installer hashes) can be
+   skipped.
 
 
 Updating and Configuring Conda
@@ -102,8 +102,8 @@ Activate the `environment`_ before continuing::
 
 .. note::
 
-    If conda fails to create the environment try replacing ``environment.yml``
-    with ``environment_unversioned.yml`` in the command above.
+   If conda fails to create the environment try replacing ``environment.yml``
+   with ``environment_unversioned.yml`` in the command above.
 
 
 Installing RWGEN
