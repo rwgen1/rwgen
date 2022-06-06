@@ -37,6 +37,7 @@ def main(
         output_ddf_path,  # boolean and/or list ['annual', 'seasonal']; output_ddf_path ?
         ddf_return_periods,  # None or dict(annual=[], seasonal=[])
         write_output,
+        simulation_name,
 ):
     """
     Make tables/dataframes of reference statistics, weights and scale factors for use in model fitting.
@@ -88,7 +89,11 @@ def main(
         file_extension = '.' + timeseries_format
         if not spatial_model:
             point_ids = [1]
-            input_paths = [timeseries_path + file_extension]
+            if analysis_mode == 'preprocessing':
+                input_paths = [timeseries_path]  # + file_extension
+            elif analysis_mode == 'postprocessing':
+                file_name = simulation_name + file_extension
+                input_paths = [os.path.join(timeseries_folder, file_name)]
         else:
             point_ids = point_metadata['point_id'].values.tolist()
             input_paths = []

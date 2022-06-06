@@ -276,6 +276,7 @@ class Model:
             output_ddf_path=None,
             ddf_return_periods=None,
             write_output=write_output,
+            simulation_name=None,
         )
 
     def fit(
@@ -608,7 +609,7 @@ class Model:
             simulation_subfolders=None,
             simulation_length=None,
             n_realisations=None,
-            simulation_name='simulation',
+            simulation_name=None,
     ):
         """
         Post-processing to calculate statistics from simulated point output.
@@ -709,12 +710,12 @@ class Model:
                 simulation_subfolders = dict(point='point', catchment='catchment', grid='grid')
             else:
                 simulation_subfolders = dict(point='')
-        if self.spatial_model:
-            timeseries_path = None
-            timeseries_folder = os.path.join(self.output_folder, simulation_subfolders['point'])
-        else:
-            timeseries_path = os.path.join(self.output_folder, simulation_subfolders['point'], simulation_name)
-            timeseries_folder = None
+        # if self.spatial_model:
+        timeseries_path = None
+        timeseries_folder = os.path.join(self.output_folder, simulation_subfolders['point'])
+        # else:
+        #     timeseries_path = os.path.join(self.output_folder, simulation_subfolders['point'], simulation_name)
+        #     timeseries_folder = None
 
         self.simulated_statistics, _ = analysis.main(
             spatial_model=self.spatial_model,
@@ -742,6 +743,7 @@ class Model:
             output_ddf_path=output_ddf_path,
             ddf_return_periods=ddf_return_periods,
             write_output=True,
+            simulation_name=simulation_name,
         )
 
     def set_statistics(
