@@ -12,7 +12,7 @@ Features under development include:
       defined storm radii, ...).
     * Simulation of non-rainfall weather variables (e.g. temperature) using
       autoregressive models.
-    * Potential evapotranspiration calculations using the FAO56 Penman-Moneith
+    * Potential evapotranspiration calculations using the FAO56 Penman-Monteith
       method.
     * Climate change perturbations.
     * ...
