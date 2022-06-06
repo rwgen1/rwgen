@@ -11,7 +11,7 @@ from . import simulation
 from . import utils
 
 
-class Model:
+class RainfallModel:
     """
     Point and spatial Neyman-Scott Rectangular Pulse models.
 
