@@ -85,8 +85,6 @@ class Model:
         self.spatial_model = spatial_model
         self.intensity_distribution = intensity_distribution
         self.output_folder = output_folder
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
         self.project_name = project_name
 
         # Spatial model requires a table of metadata for points
@@ -224,6 +222,8 @@ class Model:
             timeseries_folder = None
 
         # Construct output paths
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
         if output_filenames == 'default':
             output_statistics_filename = 'reference_statistics.csv'
             output_amax_filename = 'reference_amax.csv'
@@ -386,6 +386,8 @@ class Model:
                 initial_parameters = utils.read_csv_(initial_parameters)
 
         # Construct output paths
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
         if output_filenames == 'default':
             output_parameters_filename = 'parameters.csv'
             output_statistics_filename = 'fitted_statistics.csv'
@@ -497,6 +499,8 @@ class Model:
         # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
 
         # Make output folders if required
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
         if output_subfolders == 'default':
             if self.spatial_model:
                 output_subfolders = dict(point='point', catchment='catchment', grid='grid')
@@ -675,6 +679,8 @@ class Model:
             simulation_name = self.simulation_args['simulation_name']
 
         # Construct output paths
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
         if output_filenames == 'default':
             output_statistics_filename = 'simulated_statistics.csv'
             output_amax_filename = 'simulated_amax.csv'
@@ -710,12 +716,8 @@ class Model:
                 simulation_subfolders = dict(point='point', catchment='catchment', grid='grid')
             else:
                 simulation_subfolders = dict(point='')
-        # if self.spatial_model:
         timeseries_path = None
         timeseries_folder = os.path.join(self.output_folder, simulation_subfolders['point'])
-        # else:
-        #     timeseries_path = os.path.join(self.output_folder, simulation_subfolders['point'], simulation_name)
-        #     timeseries_folder = None
 
         self.simulated_statistics, _ = analysis.main(
             spatial_model=self.spatial_model,
