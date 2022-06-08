@@ -11,4 +11,12 @@ Various features are under development, including NSRP options/enhancements,
 non-rainfall weather (and potential evapotranspiration) components, climate
 change perturbation capability, ... .
 
-Installation is described in the documentation (see ``docs`` folder).
+.. toctree::
+    :maxdepth: 1
+    :caption: Contents
+
+    rainfall-overview.rst
+    installation.rst
+    examples.rst
+    input-data.rst
+    api.rst
