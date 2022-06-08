@@ -13,74 +13,99 @@ from . import utils
 
 class RainfallModel:
     """
-    Point and spatial Neyman-Scott Rectangular Pulse models.
+    Neyman-Scott Rectangular Pulse (NSRP) rainfall model for point/site and spatial simulations.
 
-    This class contains methods for data pre-processing, model fitting, simulation and post-processing.
+    Args:
+        spatial_model (bool): Flag to indicate whether point or spatial model.
+        project_name (str): A name for the gauge/site location, domain or catchment.
+        season_definitions (str, list or dict): The model works on a monthly basis by default, but this argument
+            allows for user-defined seasons (see Notes).
+        intensity_distribution (str): Flag to indicate the type of probability distribution for raincell
+            intensities. Defaults to ``'exponential'`` (with ``'weibull'`` also available currently).
+        output_folder (str): Root folder for model output. Defaults to ``'./output'``.
+        statistic_definitions (pandas.DataFrame or str): Definitions (descriptions) of statistics to use in fitting
+            and/or evaluation (or path to file of definitions). See Notes for explanation of format.
+        point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point (site/gauge)
+            locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
+            details.
 
-    Attributes:
+    Notes:
+        Seasons can be specified through the ``season_definitions`` argument in several ways:
 
+         * As descriptive strings (``'monthly'``, ``'quarterly'``, ``'half-years'``, ``'annual'``). More
+           control can be gained using e.g. ``'quarterly_dec'`` to make Dec-Jan-Feb the first season and so on.
+           Specifying annual will lead to the whole year being considered together, i.e. no seasonality.
+         * As a list of strings indicating season abbreviations, e.g. ``['DJF', 'MAM', 'JJA', 'SON']``.
+         * As a dictionary whose keys are the months of the year (integers 1-12) and whose values represent a
+           season identifier, e.g. ``dict(12=1, 1=1, 2=1, 3=2, 4=2, 5=2, 6=3, 7=3, 8=3, 9=4, 10=4, 11=4)`` would
+           give quarterly seasons beginning in December.
+
+        Statistic definitions are required primarily for model fitting and evaluation. The default
+        ``statistic_definitions`` are taken largely from RainSim V3.1 and can be changed with a similarly
+        structured ``.csv`` file. Note that:
+
+         * Thresholds can be specified for ``probability_dry`` for 1hr (``0.1mm`` or ``0.2mm``) and 24hr
+           (``0.2mm`` or ``1.0mm``) durations.
+         * Lag can be specified for ``autocorrelation`` and ``cross-correlation`` (if not specified then
+           defaults of 1 and 0 will be used, respectively).
+
+        For a point model the default ``statistic_definitions`` are:
+
+        ============  =====================  ========  ======
+        Statistic_ID  Name                   Duration  Weight
+        ============  =====================  ========  ======
+        1             variance               1         1
+        2             skewness               1         2
+        3             probability_dry_0.2mm  1         7
+        4             mean                   24        6
+        5             variance               24        2
+        6             skewness               24        3
+        7             probability_dry_0.2mm  24        7
+        8             autocorrelation_lag1   24        6
+        ============  =====================  ========  ======
+
+        For a spatial model the default ``statistic_definitions`` are:
+
+        ============  ======================  ========  ======
+        Statistic_ID  Name                    Duration  Weight
+        ============  ======================  ========  ======
+        1             variance                1         3
+        2             skewness                1         3
+        3             probability_dry_0.2mm   1         5
+        4             mean                    24        5
+        5             variance                24        2
+        6             skewness                24        2
+        7             probability_dry_0.2mm   24        6
+        8             autocorrelation_lag1    24        3
+        9             cross-correlation_lag0  24        2
+        ============  ======================  ========  ======
+
+        For a spatial model, metadata for point (gauge/site) locations to be used in fitting, simulation or
+        evaluation must be specified through the ``point_metadata`` argument. This should be a table like the one
+        below (or a path to a ``.csv`` file containing such a table):
+
+        ========  =======  ========  ============  =========
+        Point_ID  Easting  Northing  Name          Elevation
+        ========  =======  ========  ============  =========
+        1         659493   5556905   Burgkunstadt  277.5
+        2         640130   5574573   Lautertal     343.79
+        3         688073   5524669   Creussen      449.5
+        ========  =======  ========  ============  =========
+
+        ``Elevation`` is good to include if available.
 
     """
 
-    # TODO: Clarify which arguments are optional and which are needed for point vs spatial model
-    # TODO: Consider breaking up into smaller methods
-    # - e.g. pre-processing for NSRP fitting, NSRP simulation, SARIMA fitting, etc
-    # - plus e.g. simulation constructing output paths, doing normal vs shuffling simulations
-    # - any value in setting more stuff as attributes to allow calling etc from different places?
-    # TODO: Swap order of precedence so that input arguments are given precedence over existing model attributes
-    # - should e.g. reference statistics passed into fitting be used to update reference statistics and statistics
-    # definitions? - this would probably make sense
-    # TODO: Move defaults into a config.py, as it will be easier for users to edit?
-    # TODO: Check use of lambda vs lamda now - only referred to in dataframes?
-    # TODO: Check switch from xi to theta throughout
-    # TODO: Flag in metadata (points) file to indicate whether to use in fitting or just simulation
-    # TODO: Put attributes in class docstring once decided on how to get relevant defaults to post-processing etc
-    # TODO: Check consistency of cross-correlation vs cross-correlations, especially in user-related arguments
-    # TODO: Ensure only final stage parameters are used in simulation
-
     def __init__(
             self,
+            spatial_model,
+            project_name,
             season_definitions='monthly',
-            spatial_model=False,
             intensity_distribution='exponential',
             output_folder='./output',
             statistic_definitions=None,
             point_metadata=None,
-            project_name=None,
     ):
-        """
-        Args:
-            season_definitions (str, list or dict): The model works on a monthly basis by default, but this argument
-                allows for user-defined seasons. The seasons can be specified in several ways (see Notes).
-            spatial_model (bool): Flag to indicate whether point or spatial model. Default is ``False`` (point model).
-            intensity_distribution (str): Flag to indicate the type of probability distribution for raincell
-                intensities. Defaults to ``'exponential'`` (with ``weibull`` also available currently).
-            output_folder (str): Root folder for model output.
-            statistic_definitions (pandas.DataFrame or str): Definitions (descriptions) of statistics to calculate or
-                path to file of definitions. See Notes for explanation of DataFrame contents and file format.
-            point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point locations for which
-                preprocessing should be carried out for a spatial model (or path to metadata file). The dataframe should
-                contain identifiers (integers) and coordinates - see Notes.
-            project_name (str): A name for e.g. the gauge/site location or catchment may be specified (optional). If
-                given this name will be used in the file names of point simulations (i.e. when ``spatial_model`` is set
-                to ``False``).
-
-        Notes:
-            Seasons can be specified through the season_definitions argument in several ways:
-                * As descriptive strings (``'monthly'``, ``'quarterly'``, ``'half-years'``, ``'annual'``). Further
-                  control can be gained using e.g. ``'quarterly_dec'`` to make Dec-Jan-Feb the first season and so on).
-                  Specifying annual will lead to the whole year being considered together, i.e. no seasonality.
-                * As a list of strings indicating season abbreviations, e.g. ``['DJF', 'MAM', 'JJA', 'SON']``.
-                * As a dictionary whose keys are the months of the year (integers 1-12) and whose values represent a
-                  season identifier, e.g. ``dict(12=1, 1=1, 2=1, 3=2, 4=2, 5=2, 6=3, 7=3, 8=3, 9=4, 10=4, 11=4)`` would
-                  give quarterly seasons beginning in December.
-
-            statistic_definitions
-
-            point_metadata - Useful to include points relevant to fitting and simulation if want to calculate
-                reference statistics for those points (e.g. for use in evaluation).
-
-        """
         self.season_definitions = utils.parse_season_definitions(season_definitions)
         self.spatial_model = spatial_model
         self.intensity_distribution = intensity_distribution
@@ -97,10 +122,10 @@ class RainfallModel:
             self.point_metadata = None
 
         # Default statistic definitions (and weights) are taken largely from RainSim V3.1 documentation
-        if statistic_definitions is not None:
+        if isinstance(statistic_definitions, pd.DataFrame):
             self.statistic_definitions = statistic_definitions
         elif isinstance(statistic_definitions, str):
-            self.statistic_definitions = utils.read_statistic_definitions(statistic_definitions)
+            self.statistic_definitions = utils.read_statistics(statistic_definitions)
         else:
             if self.spatial_model:
                 dc = {
@@ -140,20 +165,27 @@ class RainfallModel:
             })
             self.statistic_definitions = pd.concat([statistic_definitions, df])
 
-        # TODO: Rationalise config and args - only needed for simulation?
-
         # Default configuration settings for simulation (primarily memory management) - see
-        # ``update_preprocessing_config()`` method docstring
+        # ``update_simulation_config()`` method docstring
         self.simulation_config = self.update_simulation_config()
 
         # For sharing simulation arguments with post-processing method
         self.simulation_args = None
 
         # Calculated during model use and relevant across more than one method
+
+        #: pandas.DataFrame: Statistics to use as reference in fitting, simulation and/or evaluation
         self.reference_statistics = None
-        self.phi = None  # TODO: When phi is needed figure it out from reference_statistics?
+
+        self.phi = None  # for convenience - same information as in self.reference_statistics
+
+        #: pandas.DataFrame: Parameters to use in simulation
         self.parameters = None
+
+        #: pandas.DataFrame: Statistics of the NSRP process given current parameters
         self.fitted_statistics = None
+
+        #: pandas.DataFrame: Statistics of simulated time series
         self.simulated_statistics = None
 
     def preprocess(
@@ -168,9 +200,10 @@ class RainfallModel:
             output_filenames='default',
     ):
         """
-        Prepare reference statistics, weights and scale factors for use in model fitting and evaluation.
+        Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.
 
-        Updates ``self.reference_statistics`` and ``self.phi``attributes.
+        Updates ``self.reference_statistics`` and ``self.phi``attributes and writes a ``reference_statistics`` output
+        file.
 
         Args:
             input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
@@ -186,20 +219,18 @@ class RainfallModel:
             maximum_alterations (int): Maximum number of trimming or clipping alterations permitted. Used only if
                 ``outlier_method`` is not None.
             amax_durations (int or list of int): Durations (in hours) for which annual maxima (AMAX) should be
-                identified.
+                identified (default is None).
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 {'statistics': 'reference_statistics.csv', 'amax': 'reference_amax.csv'} or ``None`` to indicate that
                 no output files should be written.
 
         Notes:
-
-            outlier_method
+            Currently ``.csv`` files are used for time series inputs. These files are expected to contain a
+            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format (i.e.``'%d/%m/%Y %H:%M'``). They should also contain
+            a ``Value`` column using units of mm/timestep.
 
         """
         print('Preprocessing')
-
-        # TODO: Document each item calculated (e.g. definitions of scale factors)
-        # TODO: Expand notes section of docstring
 
         # Infer timeseries data format
         if not self.spatial_model:
@@ -279,6 +310,8 @@ class RainfallModel:
             simulation_name=None,
         )
 
+        print('  - Completed')
+
     def fit(
             self,
             fitting_method='default',
@@ -292,9 +325,12 @@ class RainfallModel:
         """
         Fit model parameters.
 
+        Depends on ``self.reference_statistics`` attribute. Sets ``self.parameters`` and ``self.fitted_statistics``.
+        Also writes ``parameters`` and `fitted_statistics`` output files.
+
         Args:
             fitting_method (str): Flag to indicate fitting method. Using ``'default'`` will fit each month or season
-                independently. Option for ``'empirical_smoothing'`` under development (see Notes).
+                independently. Other options (including ``'empirical_smoothing'``) under development.
             parameter_bounds (dict or str or pandas.DataFrame): Dictionary containing tuples of upper and lower
                 parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
                 dataframe (see Notes).
@@ -312,25 +348,81 @@ class RainfallModel:
                 no output files should be written.
 
         Notes:
-            If ``self.reference_statistics`` is not ``None`` it will be given priority for use in fitting. Otherwise the
-            reference statistics can be passed in as an argument or read from file(s).
+            The parameters used by the model are:
 
-            Lists of parameter bounds need to be passed in the order required by the model. For the point model this
-            order is: lamda, beta, nu, eta, xi. For the spatial model this order is: lamda, beta, rho, eta, gamma,
-            xi. This approach will be replaced.  # TODO: Update
+                * lamda - reciprocal of the mean waiting time between adjacent storm origins [h-1]
+                * beta - reciprocal of the mean waiting time for raincell origins after storm origin [h-1]
+                * eta - reciprocal of the mean duration of raincells [h-1]
+                * nu - mean number of raincells per storm (specified for point model only) [-]
+                * theta - mean intensity of raincells [h mm-1]
+                * gamma - reciprocal of mean radius of raincells (spatial model) [km-1]
+                * rho - spatial density of raincell centres (spatial model) [km-2]
+
+            Note also that:
+
+                * For a spatial model, the mean number of raincells overlapping a given location is related to rho
+                  and gamma, such that nu can be inferred.
+                * If using ``intensity_distribution=='weibull'``, theta is the scale parameter and an additional
+                  parameter (kappa) is introduced as the shape parameter.
+
+            The ``parameter_bounds`` argument can be specified by a dictionary like ``dict('beta': (0.02, 1.0)``. For
+            more control a dataframe (or ``.csv`` file) can be passed. For example, if a model has two (6-month)
+            seasons (using arbitrary example numbers):
+
+            ======  =========  ===========  ===========
+            Season  Parameter  Lower_Bound  Upper_Bound
+            ======  =========  ===========  ===========
+            1       Beta       0.02         0.1
+            2       Beta       0.1          1.0
+            ======  =========  ===========  ===========
+
+            If a parameter(s) should be fixed across all seasons then it can be set as e.g.
+            ``dict('beta'=0.1, 'theta'=1)``. Otherwise a table can be provided like:
+
+            ======  =====  ====
+            Season  Lamda  Beta
+            ======  =====  ====
+            1       0.015  0.05
+            2       0.012  0.04
+            ======  =====  ====
+
+            Note that if a parameter is not found in the ``parameter_bounds`` argument then default bounds will be
+            used. Similarly, if it is not found in ``fixed_parameters`` it is assumed that the parameter must be
+            fitted.
+
+            The current default parameter values for a point (gauge/site) model are  below. ``-1`` indicates that they
+            are applied across all months/seasons). The values are largely from the RainSim V3.1 documentation:
+
+            ======  =========  ===========  ===========
+            Season  Parameter  Lower_Bound  Upper_Bound
+            ======  =========  ===========  ===========
+            -1      lamda      0.00001      0.02
+            -1      beta       0.02         1.0
+            -1      nu         0.1          30.0
+            -1      eta        0.1          60.0
+            -1      theta      0.25         100.0
+            -1      kappa      0.5          1.0
+            ======  =========  ===========  ===========
+
+            And for a spatial model:
+
+            ======  =========  ===========  ===========
+            Season  Parameter  Lower_Bound  Upper_Bound
+            ======  =========  ===========  ===========
+            -1      lamda      0.001        0.05
+            -1      beta       0.02         0.5
+            -1      rho        0.0001       2.0
+            -1      eta        0.1          12.0
+            -1      gamma      0.01         500.0
+            -1      theta      0.25         100.0
+            -1      kappa      0.5          1.0
+            ======  =========  ===========  ===========
 
             Fitting can be speeded up significantly with ``n_workers > 1``. The maximum ``n_workers`` should be less
             than or equal to the number of cores or logical processors available.
 
-            Empirical smoothing.  # TODO: Explain method so far
-
-            Parameter bounds setting / file and fixed parameters setting / file.  # TODO: Expand
-
         """
         print('Fitting')
-
-        # TODO: Can subset to remove statistics where weight = 0
-        # TODO: Option to subset point_metadata so only flagged points are used
 
         # Get parameter bounds into a dataframe
         if isinstance(parameter_bounds, dict):
@@ -422,11 +514,13 @@ class RainfallModel:
             write_output=write_output,  # NEW
         )
 
+        print('  - Completed')
+
     def simulate(
             self,
             output_types='point',
             output_subfolders='default',
-            output_format='txt',  # TODO: Add in csvy functionality
+            output_format='txt',
             catchment_metadata=None,
             grid_metadata=None,
             epsg_code=None,
@@ -441,7 +535,7 @@ class RainfallModel:
             run_simulation=True,
     ):
         """
-        Simulate realisation(s) of NSRP process.
+        Simulate stochastic time series realisation(s) of NSRP process.
 
         Args:
             output_types (str or list of str): Types of output (discretised) rainfall required. Options are ``'point'``,
@@ -475,29 +569,19 @@ class RainfallModel:
             run_simulation (bool): Flag for whether to run simulation. Setting to False may be used to update
                 ``self.simulation_args`` to allow ``self.postprocess()`` to be run without ``self.simulate()``
                 having been run first (i.e. reading from existing simulation output files).
-            # TODO: Implement additional output and include also random seed (entropy attribute of SeedSequence)
 
         Notes:
             Though gridded output is calculated (if ``output_types`` includes ``'grid'``) it is not yet available to
             write (under development).
 
-            Dataframe of metadata for points should contain fields (columns) for ...  # TODO: Complete description
+            All locations in ``self.point_metadata`` will be written as output currently.  # TODO: CHANGE THIS
 
-            The code currently calculates catchment weights and performs interpolation of phi. Features could be added
-            for these variables to be passed directly as arguments.
-
-            Point metadata dataframe assumed to have a ``Point_ID`` field that can be sued to identify points.
             Catchment shapefile or geodataframe assumed to have an ``ID`` field that can be used to identify catchments.
             Both point and catchment metadata are assumed to have a ``Name`` field for use as a prefix in file naming.
-            Point (single site) simulations and grid output are assumed not to need a prefix.
 
             Updates ``self.simulation_args`` in preparation for post-processing.
 
         """
-
-        # TODO: Implement output for catchment_weights_output_folder and phi_output_path - currently not implemented
-        # TODO: Ensure that 'final' parameters are used e.g. parameters.loc[parameters['stage'] == 'final']
-
         # Make output folders if required
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -515,7 +599,6 @@ class RainfallModel:
                         os.mkdir(os.path.join(self.output_folder, output_subfolder))
 
         # Ensure valid output types
-        # TODO: Expand checks on user input arguments
         if not self.spatial_model:
             output_types = ['point']
 
@@ -600,6 +683,8 @@ class RainfallModel:
                 spatial_buffer_factor=self.simulation_config['spatial_buffer_factor'],
             )
 
+        print('  - Completed')
+
     def postprocess(
             self,
             amax_durations=None,
@@ -613,7 +698,6 @@ class RainfallModel:
             simulation_subfolders=None,
             simulation_length=None,
             n_realisations=None,
-            simulation_name=None,
     ):
         """
         Post-processing to calculate statistics from simulated point output.
@@ -627,23 +711,22 @@ class RainfallModel:
             ddf_return_periods (int or list of int): Return periods (in years) for which depths should be estimated,
                 given the durations specified by ``amax_durations``.
             subset_length (int): For splitting a realisation into ``subset_length`` years for calculating (seasonal)
-                statistics (e.g. mean, variance, etc.). Does not affect AMAX extraction or DDF calculations. See Notes.
+                statistics (e.g. mean, variance, etc.). Does not affect AMAX extraction or DDF calculations.
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 ``{'statistics': 'simulated_statistics.csv', 'amax': 'simulated_amax.csv', 'ddf': 'simulated_ddf.csv}``
                 or ``None`` to indicate that no output files should be written.
-            simulation_format:
-            start_year:
-            timestep_length:
-            calendar:
-            simulation_subfolders:
-            simulation_length:
-            n_realisations:
-            simulation_name:
+            simulation_format (str): Flag indicating point output file format (current option is ``txt``).
+            start_year (int): See ``self.simulate()`` arguments.
+            timestep_length (int): See ``self.simulate()`` arguments.
+            calendar (str): See ``self.simulate()`` arguments.
+            simulation_subfolders (dict): See ``self.simulate()`` arguments (``output_subfolders``).
+            simulation_length (int): See ``self.simulate()`` arguments.
+            n_realisations (int): See ``self.simulate()`` arguments.
 
         Notes:
-            subset_length - why? Should be less than 100 (for now at least) and less than simulation_length
-
-            passing arguments vs using self.simulation_args
+            If the ``self.simulate()`` method has been run in the same session then the following arguments are not
+            required: ``simulation_format, start_year, timestep_length, calendar, simulation_subfolders,
+            simulation_length, n_realisations``.
 
         """
         print('Post-processing')
@@ -675,8 +758,6 @@ class RainfallModel:
             simulation_length = self.simulation_args['simulation_length']
         if n_realisations is None:
             n_realisations = self.simulation_args['n_realisations']
-        if simulation_name is None:
-            simulation_name = self.simulation_args['simulation_name']
 
         # Construct output paths
         if not os.path.exists(self.output_folder):
@@ -745,8 +826,10 @@ class RainfallModel:
             output_ddf_path=output_ddf_path,
             ddf_return_periods=ddf_return_periods,
             write_output=True,
-            simulation_name=simulation_name,
+            simulation_name=self.project_name,
         )
+
+        print('  - Completed')
 
     def set_statistics(
             self,
@@ -761,7 +844,8 @@ class RainfallModel:
         Args:
             point_metadata: Required for a spatial model.
             reference_statistics (pandas.DataFrame or str): Reference statistics for model fitting and/or evaluation as
-                dataframe (or path to file). Optional.
+                dataframe (or path to file). Also used in simulation for a spatial model. Optional (depending on
+                subsequent workflow).
             fitted_statistics: Optional.
             simulated_statistics: Optional.
 
@@ -832,7 +916,7 @@ class RainfallModel:
         Set parameters attribute.
 
         Args:
-            parameters:
+            parameters (pd.DataFrame or str): Dataframe (or path to file) containing parameters for each month/season.
 
         """
         if isinstance(parameters, pd.DataFrame):
@@ -891,22 +975,12 @@ class RainfallModel:
         else:
             return simulation_config
 
-    # TODO: Implement method
-    def plot_statistics(
-            self,
-            plot_type='annual_cycle',  # 'cross-correlation'
-            include_reference=True,
-            include_fitted=True,
-            include_simulated=True,
-    ):
-        raise NotImplementedError
-
-    # TODO: Implement method - what is the most useful plot(s) for AMAX/DDF? Include external reference
-    def plot_amax(self):
+    def plot(self):
         raise NotImplementedError
 
     @property
     def parameter_names(self):
+        """list of str: Parameter names."""
         if self.spatial_model:
             parameter_names = ['lamda', 'beta', 'rho', 'eta', 'gamma']
         else:
