@@ -9,6 +9,7 @@ from . import analysis
 from . import fitting
 from . import simulation
 from . import utils
+from . import plotting
 
 
 class RainfallModel:
@@ -975,8 +976,74 @@ class RainfallModel:
         else:
             return simulation_config
 
-    def plot(self):
-        raise NotImplementedError
+    def plot(self, plot_type='annual_cycle', data_types='all', point_id=1):
+        """
+        Plot reference, fitted and/or simulated statistics.
+
+        Args:
+            plot_type (str): Flag to plot ``'annual_cycle'`` or ``'cross-correlation'`` statistics.
+            data_types (str or list of str): Indicates which of ``'reference', 'fitted', 'simulated'`` to plot.
+            point_id (int): Point to plot for annual cycle statistics.
+
+        """
+        if data_types == 'all':
+            data_types = ['reference', 'fitted', 'simulated']
+        elif isinstance(data_types, str):
+            data_types = list(data_types)
+
+        if ('reference' in data_types) and (self.reference_statistics is not None):
+            ref = self.reference_statistics
+            if plot_type == 'annual_cycle':
+                ref = ref.loc[ref['point_id'] == point_id]
+        else:
+            ref = None
+
+        if ('fitted' in data_types) and (self.fitted_statistics is not None):
+            fit = self.fitted_statistics
+            if plot_type == 'annual_cycle':
+                fit = fit.loc[fit['point_id'] == point_id]
+        else:
+            fit = None
+
+        if ('simulated' in data_types) and (self.simulated_statistics is not None):
+            sim = self.simulated_statistics
+            if plot_type == 'annual_cycle':
+                sim = sim.loc[sim['point_id'] == point_id]
+        else:
+            sim = None
+
+        # Plot per statistic definition (except cross-correlation)
+        if plot_type == 'annual_cycle':
+            plots = []
+            for _, row in self.statistic_definitions.iterrows():
+                sid = row['statistic_id']
+                name = row['name']
+                duration = row['duration']
+
+                if name != 'cross-correlation':
+
+                    p = plotting.plot_annual_cycle(sid, name, duration, ref, fit, sim)
+                    plots.append(p)
+
+        # Plot per season/month (and duration) if cross-correlation
+        if plot_type == 'cross-correlation':
+            plots = []
+            for _, row in self.statistic_definitions.iterrows():
+                sid = row['statistic_id']
+                name = row['name']
+                duration = row['duration']
+
+                if name == 'cross-correlation':
+                    for season in self.unique_seasons:
+                        ref_sub = ref.loc[ref['season'] == season]
+                        fit_sub = fit.loc[fit['season'] == season]
+                        sim_sub = sim.loc[sim['season'] == season]
+                        p = plotting.plot_cross_correlation(sid, name, duration, season, ref_sub, fit_sub, sim_sub)
+                        plots.append(p)
+
+        # Construct grid plot and show
+        g = plotting.construct_gridplot(plots, 3)
+        plotting.show_plot(g)
 
     @property
     def parameter_names(self):
