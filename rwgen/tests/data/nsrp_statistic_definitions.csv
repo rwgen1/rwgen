@@ -1,9 +1,0 @@
-ID,Name,Duration,Weight,Lag,Threshold
-1,variance,1,1.0,,
-2,skewness,1,2.0,,
-3,probability_dry,1,7.0,,0.2
-4,mean,24,6.0,,
-5,variance,24,2.0,,
-6,skewness,24,3.0,,
-7,probability_dry,24,7.0,,0.2
-8,autocorrelation,24,6.0,1,
