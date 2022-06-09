@@ -19,30 +19,22 @@ def main(
         fixed_parameters,  # NEW
         n_workers,
         output_parameters_path,
-        output_point_statistics_path,
-        output_cross_correlation_path,
+        output_statistics_path,  # CHANGED - output_point_statistics_path,
         initial_parameters,
-        initial_parameters_path,
-        smoothing_tolerance
+        smoothing_tolerance,
+        write_output,
 ):
     """
     Fit model parameters.
 
     """
-    # Helper for renaming columns in parameter output table
-    parameter_output_renaming = {
-        'number_of_iterations': 'iterations',
-        'number_of_evaluations': 'function_evaluations',
-        'fit_success': 'converged',
-    }
-
     # Derived helper variables
     unique_seasons = list(set(season_definitions.values()))
     parameter_output_columns = ['fit_stage', 'season']
     for parameter_name in all_parameter_names:
         parameter_output_columns.append(parameter_name)
     parameter_output_columns.extend([
-        'fit_success', 'objective_function', 'number_of_iterations', 'number_of_evaluations'
+        'converged', 'objective_function', 'iterations', 'function_evaluations'
     ])
 
     # Select and run fitting method
@@ -55,16 +47,17 @@ def main(
         parameters, fitted_statistics = fit_with_empirical_smoothing(
             unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
             all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, initial_parameters,
-            initial_parameters_path, smoothing_tolerance
+            smoothing_tolerance
         )
 
     # Write outputs
-    df = parameters[parameter_output_columns]  # TODO: Check that fixed parameters are present by this point
-    utils.write_csv_(df, output_parameters_path, season_definitions, parameter_output_renaming)
-    utils.write_statistics(
-        fitted_statistics, output_point_statistics_path, season_definitions, output_cross_correlation_path,
-        write_weights=False, write_gs=False, write_phi=False
-    )
+    if write_output:
+        df = parameters[parameter_output_columns]  # TODO: Check that fixed parameters are present by this point
+        utils.write_csv_(df, output_parameters_path, season_definitions)
+        utils.write_statistics(
+            fitted_statistics, output_statistics_path, season_definitions, write_weights=False, write_gs=False,
+            write_phi_=False
+        )
 
     return parameters, fitted_statistics
 
@@ -79,11 +72,15 @@ def fit_by_season(
     """
     results = {}
     fitted_statistics = []
+    if len(unique_seasons) == 12:
+        print('  - Month = ', end='')
+    else:
+        print('  - Season = ', end='')
     for season in unique_seasons:
-        if len(unique_seasons) == 12:
-            print('  - Month =', season)
+        if season == max(unique_seasons):
+            print(season)
         else:
-            print('  - Season =', season)
+            print(season, end=' ')
 
         # Gather relevant data, weights and objective function scaling terms
         season_reference_statistics = reference_statistics.loc[reference_statistics['season'] == season].copy()
@@ -114,10 +111,10 @@ def fit_by_season(
         # Store optimisation results for season
         for idx in range(len(parameters_to_fit)):
             results[(parameters_to_fit[idx], season)] = result.x[idx]
-        results[('fit_success', season)] = result.success
+        results[('converged', season)] = result.success
         results[('objective_function', season)] = result.fun
-        results[('number_of_iterations', season)] = result.nit
-        results[('number_of_evaluations', season)] = result.nfev
+        results[('iterations', season)] = result.nit
+        results[('function_evaluations', season)] = result.nfev
 
         # Get and store statistics associated with optimised parameters
         dfs = []
@@ -154,7 +151,7 @@ def fit_by_season(
 def fit_with_empirical_smoothing(
         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters,
-        initial_parameters, initial_parameters_path, smoothing_tolerance
+        initial_parameters, smoothing_tolerance
 ):
     """
     Optimise parameters by season but with an empirical smoothing step.
@@ -170,15 +167,13 @@ def fit_with_empirical_smoothing(
 
     """
     # Step 1 - Initial parameters for can either be passed, read or obtained from default season-wise fitting
-    if initial_parameters is not None:
-        initial_parameters = initial_parameters.copy()
-    elif initial_parameters_path is not None:
-        initial_parameters = utils.read_csv_(initial_parameters_path)
-    else:
+    if initial_parameters is None:
         initial_parameters, _ = fit_by_season(
             unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
             parameters_to_fit, stage='interim'
         )
+    else:
+        initial_parameters = initial_parameters.copy()
 
     # Step 2 - Smooth the parameter values using a +/-1 season weighted moving average
 
@@ -237,6 +232,15 @@ def format_results(results, all_parameter_names, parameters_to_fit, fixed_parame
     df = df.pivot(index='season', columns='field', values='value')
     df.sort_index(inplace=True)
     df.reset_index(inplace=True)
+
+    # Types need to be set after unpivotting (mixed column type comes through as object dtype)
+    for parameter_name in all_parameter_names:
+        df = df.astype({parameter_name: float})
+    df = df.astype({
+        'season': int, 'converged': bool, 'function_evaluations': int, 'iterations': int,
+        'objective_function': float
+    })
+
     return df
 
 
