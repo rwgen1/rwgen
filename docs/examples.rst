@@ -16,7 +16,7 @@ installation - for example::
 
 Then navigate to the folder containing the notebook
 that you would like to run. For example, if the notebook is located at
-``H:/RWGEN/examples/nsrp_example1.ipynb`` then type::
+``H:/RWGEN/examples/nsrp_example.ipynb`` then type::
 
     H:
     cd H:\RWGEN\examples
@@ -26,7 +26,7 @@ Next launch JupyterLab by typing at the prompt::
     jupyter-lab
 
 It may take a moment, but this should launch JupyterLab in the default browser.
-In the left hand panel you should see the notebook ``nsrp_example1.ipynb`` -
+In the left hand panel you should see the notebook ``nsrp_example.ipynb`` -
 double click on this to launch it.
 
 The code cells in the notebooks can be run using ``Ctrl + Enter``.

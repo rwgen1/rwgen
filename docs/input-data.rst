@@ -10,7 +10,7 @@ using gauge data are:
 
     1. A csv file containing gauge metadata - see ``gauge_metadata.csv``
     2. Files containing gauge time series (one file per gauge) - see
-       gauge_data directory
+       ``gauge_data`` directory
 
 A DEM is optional but good if available.
 
@@ -29,7 +29,7 @@ The gauge metadata csv file has mandatory columns (data types) of:
        series file
 
 It is assumed that the ``Name`` field corresponds with a gauge time series file
-name (after ``.csv`` is added to the ``Name entry``). For example,
+name (after ``.csv`` is added to the ``Name`` entry). For example,
 ``Burgkunstadt`` corresponds with the file ``./gauge_data/Burgkunstadt.csv``.
 Avoid spaces and special characters.
 

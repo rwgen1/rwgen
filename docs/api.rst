@@ -4,7 +4,8 @@ Rainfall Model API
 .. currentmodule:: rwgen
 
 .. autoclass:: RainfallModel
-   :members:
+   :members: reference_statistics, parameters, fitted_statistics,
+             simulated_statistics, parameter_names, unique_seasons
 
    
    .. automethod:: __init__
@@ -13,7 +14,8 @@ Rainfall Model API
    .. rubric:: Methods
 
    .. autosummary::
-   
+      :toctree: generated
+
       ~RainfallModel.__init__
       ~RainfallModel.preprocess
       ~RainfallModel.fit
