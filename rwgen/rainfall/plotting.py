@@ -43,7 +43,7 @@ def plot_annual_cycle(sid, name, duration, ref=None, fit=None, sim=None):
         p.circle(x='season', y='value', source=fit_source, legend_label='fit', color='#1b9e77')
 
     if sim is not None:
-        df = sim.loc[fit['statistic_id'] == sid, ['season', 'mean']]  # , 'percentile_25', 'percentile_75'
+        df = sim.loc[sim['statistic_id'] == sid, ['season', 'mean']]  # , 'percentile_25', 'percentile_75'
         mins.append(df['mean'].min())
         maxs.append(df['mean'].max())
         # mins.append(df['percentile_25'].min())
@@ -102,7 +102,7 @@ def plot_cross_correlation(sid, name, duration, season, ref=None, fit=None, sim=
         p.line(x='distance', y='value', source=fit_source, legend_label='fit', color='#1b9e77')
 
     if sim is not None:
-        df = sim.loc[fit['statistic_id'] == sid, ['season', 'distance', 'mean']]  # , 'percentile_25', 'percentile_75'
+        df = sim.loc[sim['statistic_id'] == sid, ['season', 'distance', 'mean']]  # , 'percentile_25', 'percentile_75'
         df = df.sort_values('distance')
         y_mins.append(df['mean'].min())
         y_maxs.append(df['mean'].max())
@@ -149,7 +149,7 @@ def construct_gridplot(plots, n_in_row):
             col = 1
             row += 1
 
-    g = gridplot(nested_list)
+    g = gridplot(nested_list, sizing_mode='scale_both')
 
     return g
 

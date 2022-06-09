@@ -1035,9 +1035,18 @@ class RainfallModel:
 
                 if name == 'cross-correlation':
                     for season in self.unique_seasons:
-                        ref_sub = ref.loc[ref['season'] == season]
-                        fit_sub = fit.loc[fit['season'] == season]
-                        sim_sub = sim.loc[sim['season'] == season]
+                        if ref is not None:
+                            ref_sub = ref.loc[ref['season'] == season]
+                        else:
+                            ref_sub = None
+                        if fit is not None:
+                            fit_sub = fit.loc[fit['season'] == season]
+                        else:
+                            fit_sub = None
+                        if sim is not None:
+                            sim_sub = sim.loc[sim['season'] == season]
+                        else:
+                            sim_sub = None
                         p = plotting.plot_cross_correlation(sid, name, duration, season, ref_sub, fit_sub, sim_sub)
                         plots.append(p)
 
