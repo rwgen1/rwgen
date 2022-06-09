@@ -202,7 +202,7 @@ class RainfallModel:
         """
         Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.
 
-        Updates ``self.reference_statistics`` and ``self.phi``attributes and writes a ``reference_statistics`` output
+        Updates ``self.reference_statistics`` and ``self.phi`` attributes and writes a ``reference_statistics`` output
         file.
 
         Args:
@@ -226,7 +226,7 @@ class RainfallModel:
 
         Notes:
             Currently ``.csv`` files are used for time series inputs. These files are expected to contain a
-            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format (i.e.``'%d/%m/%Y %H:%M'``). They should also contain
+            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format, i.e. '%d/%m/%Y %H:%M'. They should also contain
             a ``Value`` column using units of mm/timestep.
 
         """

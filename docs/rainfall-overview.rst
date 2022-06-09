@@ -47,7 +47,7 @@ workflow can consist of something like (for a single site model)::
     rainfall_model.simulate(
         simulation_length=1000,
         n_realisations=5,
-        timestep=1,
+        timestep_length=1,
     )
 
     # Calculate/extract statistics from simulated time series (e.g. AMAX, DDF)
@@ -60,7 +60,7 @@ Explanation
 -----------
 
 In the example above we initialise a ``RainfallModel``, which contains the
-underlying data preprocessing, model fitting, simulation and post-processing
+underlying preprocessing, fitting, simulation and post-processing
 functionality. By creating an instance of ``RainfallModel``, we can specify
 input files, choose various options and then carry out a set of specific
 tasks (e.g. using ``fit()`` to find suitable model parameters).
@@ -147,7 +147,7 @@ For example, we could use something like::
     rainfall_model.simulate(
         simulation_length=1000,
         n_realisations=5,
-        timestep=1,
+        timestep_length=1,
     )
 
 It is also possible to do things like run a method more than once using
