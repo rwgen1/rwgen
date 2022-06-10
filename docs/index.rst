@@ -13,10 +13,16 @@ change perturbation capability, ... .
 
 .. toctree::
     :maxdepth: 1
-    :caption: Contents
+    :caption: Getting Started
+
+    installation.rst
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Rainfall Model
 
     rainfall-overview.rst
-    installation.rst
     examples.rst
     input-data.rst
     api.rst

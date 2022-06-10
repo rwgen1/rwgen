@@ -47,11 +47,12 @@ The conda-forge channel is needed to help manage dependencies.
 
 .. _conda-forge: https://conda-forge.org/
 
-Getting the RWGEN Code
-----------------------
+Getting the RWGEN Files
+-----------------------
 
-Download the code as a `zip`_ file and unzip (choose somewhere other than the
-``Downloads`` folder).
+Download the ``rwgen-0.0.0`` files as a `zip`_ file (if you do not have it
+already) and unzip. It is recommended to create a ``RWGEN`` folder somewhere
+- e.g. ``H:/RWGEN``.
 
 Note that Windows ``Extract All...`` adds the zip file name (e.g.
 ``rwgen-0.0.0``) to the default location for unzipping. This can be deleted, as
@@ -67,8 +68,9 @@ and some files (e.g. ``setup.py, environment.yml, ...``).
 Creating the Conda Environment
 ------------------------------
 
-Open the Anaconda Prompt - see `Updating and Configuring Conda`_ section - and
-navigate (at the prompt) to the unzipped ``rwgen-0.0.0`` folder.
+In the Anaconda Prompt (or open a new one if closed - see the
+`Updating and Configuring Conda`_ section) and navigate (at the prompt) to the
+unzipped ``rwgen-0.0.0`` folder.
 
 For example, to change from the directory ``C:/`` to the directory 
 ``H:/RWGEN/rwgen-0.0.0``, first switch drives by typing::
@@ -87,6 +89,13 @@ Create a specific conda `environment`_ for RWGEN by typing::
     conda env create --name rwgen --file environment.yml
 
 The environment name can be set to something other than ``rwgen`` if preferred.
+It may take a few minutes for the environment to be created as conda installs
+the dependencies that we need.
+
+.. note::
+
+    If conda fails to create the environment try replacing ``environment.yml``
+    with ``environment_unversioned.yml`` in the command above.
 
 Activate the `environment`_ before continuing::
 
@@ -96,13 +105,14 @@ Activate the `environment`_ before continuing::
 
 .. note::
 
-    If conda fails to create the environment try replacing ``environment.yml``
-    with ``environment_unversioned.yml`` in the command above.
+    If we want to deactivate the rwgen environment at any point we can just
+    enter ``conda deactivate``.
 
 Installing RWGEN
 ----------------
 
-At the Anaconda Prompt type the following to install RWGEN in developer mode::
+At the Anaconda Prompt (while still in the ``rwgen-0.0.0`` folder), type the
+following (including the ``.``) to install RWGEN in developer mode::
 
     pip install -e .
 
@@ -111,7 +121,7 @@ session, which is done by entering::
 
     python
 
-In the python session type::
+In the Python session type::
 
     import rwgen
 

@@ -19,8 +19,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Examples" href="examples.html" />
-    <link rel="prev" title="Rainfall Model Overview" href="rainfall-overview.html" /> 
+    <link rel="next" title="Overview" href="rainfall-overview.html" />
+    <link rel="prev" title="RWGEN" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -38,20 +38,23 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="rainfall-overview.html">Rainfall Model Overview</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installing-miniconda">Installing Miniconda</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#updating-and-configuring-conda">Updating and Configuring Conda</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#getting-the-rwgen-code">Getting the RWGEN Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-the-rwgen-files">Getting the RWGEN Files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#creating-the-conda-environment">Creating the Conda Environment</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installing-rwgen">Installing RWGEN</a></li>
 </ul>
 </li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="rainfall-overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="input-data.html">Input Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Rainfall Model API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
 
         </div>
@@ -113,10 +116,11 @@ Windows Command Prompt.</p>
 </div>
 <p>The conda-forge channel is needed to help manage dependencies.</p>
 </section>
-<section id="getting-the-rwgen-code">
-<h2>Getting the RWGEN Code<a class="headerlink" href="#getting-the-rwgen-code" title="Permalink to this heading"></a></h2>
-<p>Download the code as a <a class="reference external" href="https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.0.zip">zip</a> file and unzip (choose somewhere other than the
-<code class="docutils literal notranslate"><span class="pre">Downloads</span></code> folder).</p>
+<section id="getting-the-rwgen-files">
+<h2>Getting the RWGEN Files<a class="headerlink" href="#getting-the-rwgen-files" title="Permalink to this heading"></a></h2>
+<p>Download the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> files as a <a class="reference external" href="https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.0.zip">zip</a> file (if you do not have it
+already) and unzip. It is recommended to create a <code class="docutils literal notranslate"><span class="pre">RWGEN</span></code> folder somewhere
+- e.g. <code class="docutils literal notranslate"><span class="pre">H:/RWGEN</span></code>.</p>
 <p>Note that Windows <code class="docutils literal notranslate"><span class="pre">Extract</span> <span class="pre">All...</span></code> adds the zip file name (e.g.
 <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code>) to the default location for unzipping. This can be deleted, as
 the zip file already contains an <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> folder housing all other
@@ -127,8 +131,9 @@ and some files (e.g. <code class="docutils literal notranslate"><span class="pre
 </section>
 <section id="creating-the-conda-environment">
 <h2>Creating the Conda Environment<a class="headerlink" href="#creating-the-conda-environment" title="Permalink to this heading"></a></h2>
-<p>Open the Anaconda Prompt - see <a class="reference internal" href="#updating-and-configuring-conda">Updating and Configuring Conda</a> section - and
-navigate (at the prompt) to the unzipped <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> folder.</p>
+<p>In the Anaconda Prompt (or open a new one if closed - see the
+<a class="reference internal" href="#updating-and-configuring-conda">Updating and Configuring Conda</a> section) and navigate (at the prompt) to the
+unzipped <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> folder.</p>
 <p>For example, to change from the directory <code class="docutils literal notranslate"><span class="pre">C:/</span></code> to the directory
 <code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.0</span></code>, first switch drives by typing:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">H</span><span class="p">:</span>
@@ -144,20 +149,28 @@ of the dependencies required by RWGEN.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">env</span> <span class="n">create</span> <span class="o">--</span><span class="n">name</span> <span class="n">rwgen</span> <span class="o">--</span><span class="n">file</span> <span class="n">environment</span><span class="o">.</span><span class="n">yml</span>
 </pre></div>
 </div>
-<p>The environment name can be set to something other than <code class="docutils literal notranslate"><span class="pre">rwgen</span></code> if preferred.</p>
+<p>The environment name can be set to something other than <code class="docutils literal notranslate"><span class="pre">rwgen</span></code> if preferred.
+It may take a few minutes for the environment to be created as conda installs
+the dependencies that we need.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If conda fails to create the environment try replacing <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code>
+with <code class="docutils literal notranslate"><span class="pre">environment_unversioned.yml</span></code> in the command above.</p>
+</div>
 <p>Activate the <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/concepts/environments.html">environment</a> before continuing:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">activate</span> <span class="n">rwgen</span>
 </pre></div>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If conda fails to create the environment try replacing <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code>
-with <code class="docutils literal notranslate"><span class="pre">environment_unversioned.yml</span></code> in the command above.</p>
+<p>If we want to deactivate the rwgen environment at any point we can just
+enter <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">deactivate</span></code>.</p>
 </div>
 </section>
 <section id="installing-rwgen">
 <h2>Installing RWGEN<a class="headerlink" href="#installing-rwgen" title="Permalink to this heading"></a></h2>
-<p>At the Anaconda Prompt type the following to install RWGEN in developer mode:</p>
+<p>At the Anaconda Prompt (while still in the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> folder), type the
+following (including the <code class="docutils literal notranslate"><span class="pre">.</span></code>) to install RWGEN in developer mode:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
 </pre></div>
 </div>
@@ -166,7 +179,7 @@ session, which is done by entering:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span>
 </pre></div>
 </div>
-<p>In the python session type:</p>
+<p>In the Python session type:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rwgen</span>
 </pre></div>
 </div>
@@ -183,8 +196,8 @@ screen will be a warning or an error).</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="rainfall-overview.html" class="btn btn-neutral float-left" title="Rainfall Model Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="RWGEN" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rainfall-overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
