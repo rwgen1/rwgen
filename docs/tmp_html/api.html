@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rainfall Model API &mdash; RWGEN 0.0.0 documentation</title>
+  <title>API Reference &mdash; RWGEN 0.0.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -38,13 +38,16 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="rainfall-overview.html">Rainfall Model Overview</a></li>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="rainfall-overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="input-data.html">Input Data</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Rainfall Model API</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.__init__.html">rwgen.RainfallModel.__init__</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.preprocess.html">rwgen.RainfallModel.preprocess</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.fit.html">rwgen.RainfallModel.fit</a></li>
@@ -73,7 +76,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Rainfall Model API</li>
+      <li>API Reference</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -83,8 +86,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rainfall-model-api">
-<h1>Rainfall Model API<a class="headerlink" href="#rainfall-model-api" title="Permalink to this heading"></a></h1>
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="rwgen.RainfallModel">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rwgen.</span></span><span class="sig-name descname"><span class="pre">RainfallModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'./output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel" title="Permalink to this definition"></a></dt>
@@ -326,8 +329,8 @@ below (or a path to a <code class="docutils literal notranslate"><span class="pr
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.set_statistics.html#rwgen.RainfallModel.set_statistics" title="rwgen.RainfallModel.set_statistics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_statistics</span></code></a>([point_metadata, ...])</p></td>
 <td><p>Set statistics and related attributes.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.plot.html#rwgen.RainfallModel.plot" title="rwgen.RainfallModel.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>()</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.plot.html#rwgen.RainfallModel.plot" title="rwgen.RainfallModel.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>([plot_type, data_types, point_id])</p></td>
+<td><p>Plot reference, fitted and/or simulated statistics.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.update_output_folder.html#rwgen.RainfallModel.update_output_folder" title="rwgen.RainfallModel.update_output_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_output_folder</span></code></a>(output_folder)</p></td>
 <td><p></p></td>

@@ -1,5 +1,5 @@
-Rainfall Model API
-==================
+API Reference
+=============
 
 .. currentmodule:: rwgen
 
