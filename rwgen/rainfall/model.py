@@ -882,6 +882,12 @@ class RainfallModel:
                 self.reference_statistics = reference_statistics
             elif isinstance(reference_statistics, str):
                 self.reference_statistics = utils.read_statistics(reference_statistics)
+            phi = self.reference_statistics.loc[
+                (self.reference_statistics['point_id'] == self.reference_statistics['point_id'].min())
+                & (self.reference_statistics['statistic_id'] == self.reference_statistics['statistic_id'].min()),
+                ['point_id', 'season', 'phi']
+            ]
+            self.phi = pd.merge(phi, self.point_metadata)
 
         # Fitted statistics
         if fitted_statistics is not None:
