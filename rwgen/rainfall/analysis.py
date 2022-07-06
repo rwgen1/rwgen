@@ -167,7 +167,6 @@ def main(
                 # Prepare time series for analysis - join seasons, remove outliers, aggregate
                 timeseries[point_id] = prepare_point_timeseries(
                     df=df,
-                    calculation_period=calculation_period,
                     season_definitions=season_definitions,
                     completeness_threshold=completeness_threshold,
                     durations=durations,
@@ -179,7 +178,7 @@ def main(
                 # Calculate statistics and store dataframes
                 point_statistics = calculate_point_statistics(
                     statistic_definitions.loc[statistic_definitions['name'] != 'cross-correlation'],
-                    timeseries[point_id]
+                    timeseries[point_id], calculation_period
                 )
                 if analysis_mode == 'preprocessing':
                     gs, point_statistics = calculate_gs(point_statistics)
@@ -333,7 +332,7 @@ def main(
 
 
 def prepare_point_timeseries(
-        df, calculation_period, season_definitions, completeness_threshold, durations, outlier_method,
+        df, season_definitions, completeness_threshold, durations, outlier_method,
         maximum_relative_difference, maximum_alterations,
 ):
     """
@@ -345,12 +344,6 @@ def prepare_point_timeseries(
     """
     # Check valid or nan  # TODO: Revisit if this function gets used for non-precipitation variables
     df.loc[df['value'] < 0.0] = np.nan
-
-    # Subset required calculation period
-    if calculation_period is not None:
-        start_year = calculation_period[0]
-        end_year = calculation_period[1]
-        df = df.loc[(df.index.year >= start_year) & (df.index.year <= end_year)]
 
     # Apply season definitions and make a running UID for season that goes up by one at each change in season
     # through the time series. Season definitions are needed to identify season completeness but also to apply
@@ -409,7 +402,7 @@ def prepare_point_timeseries(
     return dfs
 
 
-def calculate_point_statistics(statistic_definitions, dfs):
+def calculate_point_statistics(statistic_definitions, dfs, calculation_period):
     """
     Calculate mean, variance, skewness, lag-n autocorrelation and dry probability by season and duration.
 
@@ -419,14 +412,22 @@ def calculate_point_statistics(statistic_definitions, dfs):
     for index, row in statistic_definitions.iterrows():
         statistic_name = row['name']
         duration = row['duration']
+
+        if calculation_period is not None:
+            start_year = calculation_period[0]
+            end_year = calculation_period[1]
+            df = dfs[duration].loc[(dfs[duration].index.year >= start_year) & (dfs[duration].index.year <= end_year)]
+        else:
+            df = dfs[duration]
+
         if statistic_name in ['mean', 'variance', 'skewness']:
-            values = dfs[duration].groupby('season')['value'].agg(statistic_functions[statistic_name])
+            values = df.groupby('season')['value'].agg(statistic_functions[statistic_name])
         elif statistic_name == 'probability_dry':
             threshold = row['threshold']
-            values = dfs[duration].groupby('season')['value'].agg(probability_dry(threshold))
+            values = df.groupby('season')['value'].agg(probability_dry(threshold))
         elif statistic_name == 'autocorrelation':
             lag = row['lag']
-            values = dfs[duration].groupby('season')['value'].agg(autocorrelation(lag))
+            values = df.groupby('season')['value'].agg(autocorrelation(lag))
 
         values = values.to_frame('value')
         values.reset_index(inplace=True)
