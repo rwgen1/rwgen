@@ -16,6 +16,7 @@ dependencies:
   - jupyter_bokeh
   - qgrid
   - sphinx
+  - statsmodels
   - pip
   - pip:
     - sphinx-rtd-theme

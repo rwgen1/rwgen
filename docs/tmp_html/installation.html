@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; RWGEN 0.0.0 documentation</title>
+  <title>Installation &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -81,14 +80,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="installation">
+  <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
 <p>The instructions below are for installing RWGEN as a developer on a Windows
 operating system. Some steps will not be needed once the package has been
 released.</p>
 <p>Python and the RWGEN dependencies can be installed using the <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/index.html">conda</a> package
 manager. <a class="reference external" href="http://conda.pydata.org/miniconda.html">Miniconda</a> provides a lightweight implementation.</p>
-<section id="installing-miniconda">
+<div class="section" id="installing-miniconda">
 <h2>Installing Miniconda<a class="headerlink" href="#installing-miniconda" title="Permalink to this heading"></a></h2>
 <p>The conda website provides <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/windows.html">instructions</a> for installing Miniconda.
 Installation on Windows involves downloading and running an <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html#windows-installers">installer</a> (use
@@ -98,8 +97,8 @@ the installer for the most recent Python version - currently 3.9).</p>
 <p>The second step of the instructions (verify your installer hashes) can be
 skipped.</p>
 </div>
-</section>
-<section id="updating-and-configuring-conda">
+</div>
+<div class="section" id="updating-and-configuring-conda">
 <h2>Updating and Configuring Conda<a class="headerlink" href="#updating-and-configuring-conda" title="Permalink to this heading"></a></h2>
 <p>A few settings need to be adjusted after installing conda. To do this open the
 Anaconda Prompt (press the Windows button and then start typing
@@ -115,8 +114,8 @@ Windows Command Prompt.</p>
 </pre></div>
 </div>
 <p>The conda-forge channel is needed to help manage dependencies.</p>
-</section>
-<section id="getting-the-rwgen-files">
+</div>
+<div class="section" id="getting-the-rwgen-files">
 <h2>Getting the RWGEN Files<a class="headerlink" href="#getting-the-rwgen-files" title="Permalink to this heading"></a></h2>
 <p>Download the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> files as a <a class="reference external" href="https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.0.zip">zip</a> file (if you do not have it
 already) and unzip. It is recommended to create a <code class="docutils literal notranslate"><span class="pre">RWGEN</span></code> folder somewhere
@@ -128,8 +127,8 @@ files.</p>
 <p>If the target folder is <code class="docutils literal notranslate"><span class="pre">H:/RWGEN</span></code> then we should end up with a folder
 <code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.0</span></code>, which contains sub-folders <code class="docutils literal notranslate"><span class="pre">docs,</span> <span class="pre">examples,</span> <span class="pre">rwgen</span></code>
 and some files (e.g. <code class="docutils literal notranslate"><span class="pre">setup.py,</span> <span class="pre">environment.yml,</span> <span class="pre">...</span></code>).</p>
-</section>
-<section id="creating-the-conda-environment">
+</div>
+<div class="section" id="creating-the-conda-environment">
 <h2>Creating the Conda Environment<a class="headerlink" href="#creating-the-conda-environment" title="Permalink to this heading"></a></h2>
 <p>In the Anaconda Prompt (or open a new one if closed - see the
 <a class="reference internal" href="#updating-and-configuring-conda">Updating and Configuring Conda</a> section) and navigate (at the prompt) to the
@@ -166,8 +165,8 @@ with <code class="docutils literal notranslate"><span class="pre">environment_un
 <p>If we want to deactivate the rwgen environment at any point we can just
 enter <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">deactivate</span></code>.</p>
 </div>
-</section>
-<section id="installing-rwgen">
+</div>
+<div class="section" id="installing-rwgen">
 <h2>Installing RWGEN<a class="headerlink" href="#installing-rwgen" title="Permalink to this heading"></a></h2>
 <p>At the Anaconda Prompt (while still in the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.0</span></code> folder), type the
 following (including the <code class="docutils literal notranslate"><span class="pre">.</span></code>) to install RWGEN in developer mode:</p>
@@ -189,8 +188,8 @@ screen will be a warning or an error).</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">exit</span><span class="p">()</span>
 </pre></div>
 </div>
-</section>
-</section>
+</div>
+</div>
 
 
            </div>

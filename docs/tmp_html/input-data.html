@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Input Data &mdash; RWGEN 0.0.0 documentation</title>
+  <title>Input Data &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -80,7 +79,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="input-data">
+  <div class="section" id="input-data">
 <h1>Input Data<a class="headerlink" href="#input-data" title="Permalink to this heading"></a></h1>
 <p>Example files for a spatiotemporal NSRP model are given in the
 <code class="docutils literal notranslate"><span class="pre">examples/stnsrp/input</span></code> folder in the RWGEN root folder. In the description
@@ -97,7 +96,7 @@ using gauge data are:</p>
 <p>A DEM is optional but good if available.</p>
 <p>A polygon shapefile containing catchment/sub-catchment boundaries is needed if
 catchment-average outputs are requested.</p>
-<section id="gauge-metadata-file">
+<div class="section" id="gauge-metadata-file">
 <h2>Gauge Metadata File<a class="headerlink" href="#gauge-metadata-file" title="Permalink to this heading"></a></h2>
 <p>The gauge metadata csv file has mandatory columns (data types) of:</p>
 <blockquote>
@@ -117,8 +116,8 @@ Avoid spaces and special characters.</p>
 good to include if possible (depending on region).</p>
 <p>Other fields in the gauge metadata csv file are not currently needed or used
 (but can be added for reference).</p>
-</section>
-<section id="gauge-time-series-files">
+</div>
+<div class="section" id="gauge-time-series-files">
 <h2>Gauge Time Series Files<a class="headerlink" href="#gauge-time-series-files" title="Permalink to this heading"></a></h2>
 <p>The example uses csv format for time series files. Required columns are:</p>
 <blockquote>
@@ -132,8 +131,8 @@ good to include if possible (depending on region).</p>
 as missing).</p>
 <p>All gauge time series files should be placed in the same directory, e.g.
 <code class="docutils literal notranslate"><span class="pre">./gauge_data</span></code></p>
-</section>
-<section id="dem">
+</div>
+<div class="section" id="dem">
 <h2>DEM<a class="headerlink" href="#dem" title="Permalink to this heading"></a></h2>
 <p>Supplying a DEM is optional but useful if “ungauged” locations are to be
 sampled or grid-based / catchment-average outputs are required (depending on
@@ -148,8 +147,8 @@ input, internally the model simulation can take place (and produce outputs) at
 a coarser resolution (e.g. 1 km).</p>
 <p>Unless output on a specific grid is required, precise DEM extent does not
 matter but it should not be much larger than it really needs to be.</p>
-</section>
-<section id="catchment-s-shapefile">
+</div>
+<div class="section" id="catchment-s-shapefile">
 <h2>Catchment(s) Shapefile<a class="headerlink" href="#catchment-s-shapefile" title="Permalink to this heading"></a></h2>
 <p>A polygon shapefile of catchment(s) is needed if catchment-average output is
 requested (otherwise it is not required).</p>
@@ -164,8 +163,8 @@ series will be generated for each polygon in the shapefile.</p>
 </dd>
 </dl>
 <p>Other fields may be present in the shapefile - they will be ignored.</p>
-</section>
-</section>
+</div>
+</div>
 
 
            </div>

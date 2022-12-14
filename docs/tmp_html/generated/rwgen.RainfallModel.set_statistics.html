@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.set_statistics &mdash; RWGEN 0.0.0 documentation</title>
+  <title>rwgen.RainfallModel.set_statistics &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -58,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.plot.html">rwgen.RainfallModel.plot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_output_folder.html">rwgen.RainfallModel.update_output_folder</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_simulation_config.html">rwgen.RainfallModel.update_simulation_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_shuffling_config.html">rwgen.RainfallModel.update_shuffling_config</a></li>
 </ul>
 </li>
 </ul>
@@ -87,7 +87,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rwgen-rainfallmodel-set-statistics">
+  <div class="section" id="rwgen-rainfallmodel-set-statistics">
 <h1>rwgen.RainfallModel.set_statistics<a class="headerlink" href="#rwgen-rainfallmodel-set-statistics" title="Permalink to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.set_statistics">
@@ -96,7 +96,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>point_metadata</strong> – Required for a spatial model.</p></li>
+<li><p><strong>point_metadata</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Required for a spatial model. See <code class="docutils literal notranslate"><span class="pre">RainfallModel</span></code> class
+docstring for explanation.</p></li>
 <li><p><strong>reference_statistics</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Reference statistics for model fitting and/or evaluation as
 dataframe (or path to file). Also used in simulation for a spatial model. Optional (depending on
 subsequent workflow).</p></li>
@@ -117,7 +118,7 @@ simulated.</p>
 it is required for both fitting and simulation.</p>
 </dd></dl>
 
-</section>
+</div>
 
 
            </div>

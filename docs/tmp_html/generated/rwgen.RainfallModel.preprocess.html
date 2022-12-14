@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.preprocess &mdash; RWGEN 0.0.0 documentation</title>
+  <title>rwgen.RainfallModel.preprocess &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -58,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.plot.html">rwgen.RainfallModel.plot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_output_folder.html">rwgen.RainfallModel.update_output_folder</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_simulation_config.html">rwgen.RainfallModel.update_simulation_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_shuffling_config.html">rwgen.RainfallModel.update_shuffling_config</a></li>
 </ul>
 </li>
 </ul>
@@ -87,19 +87,17 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rwgen-rainfallmodel-preprocess">
+  <div class="section" id="rwgen-rainfallmodel-preprocess">
 <h1>rwgen.RainfallModel.preprocess<a class="headerlink" href="#rwgen-rainfallmodel-preprocess" title="Permalink to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.preprocess">
-<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_timeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calculation_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full_record'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">completeness_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outlier_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_relative_difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_durations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.preprocess" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">calculation_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full_record'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">completeness_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outlier_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_relative_difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_durations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sliding'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.preprocess" title="Permalink to this definition"></a></dt>
 <dd><p>Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.</p>
 <p>Updates <code class="docutils literal notranslate"><span class="pre">self.reference_statistics</span></code> and <code class="docutils literal notranslate"><span class="pre">self.phi</span></code> attributes and writes a <code class="docutils literal notranslate"><span class="pre">reference_statistics</span></code> output
 file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>input_timeseries</strong> (<em>str</em>) – Path to file containing timeseries data (for point model) or folder containing
-timeseries data files (for spatial model).</p></li>
 <li><p><strong>calculation_period</strong> (<em>str</em><em> or </em><em>list of int</em>) – Start year and end year of calculation period as list. If
 string <code class="docutils literal notranslate"><span class="pre">'full_record'</span></code> is passed (default) then all available data will be used.</p></li>
 <li><p><strong>completeness_threshold</strong> (<em>float</em>) – Percentage completeness for a month or season to be included in statistics
@@ -112,9 +110,13 @@ in a timeseries. Used only if <code class="docutils literal notranslate"><span c
 <code class="docutils literal notranslate"><span class="pre">outlier_method</span></code> is not None.</p></li>
 <li><p><strong>amax_durations</strong> (<em>int</em><em> or </em><em>list of int</em>) – Durations (in hours) for which annual maxima (AMAX) should be
 identified (default is None).</p></li>
+<li><p><strong>amax_window_type</strong> (<em>str</em>) – Use a <code class="docutils literal notranslate"><span class="pre">'sliding'</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">'fixed'</span></code> window in AMAX extraction.</p></li>
 <li><p><strong>output_filenames</strong> (<em>str</em><em> or </em><em>dict</em>) – Either key/value pairs indicating output file names, <code class="docutils literal notranslate"><span class="pre">'default'</span></code> to use
 {‘statistics’: ‘reference_statistics.csv’, ‘amax’: ‘reference_amax.csv’} or <code class="docutils literal notranslate"><span class="pre">None</span></code> to indicate that
 no output files should be written.</p></li>
+<li><p><strong>use_pooling</strong> (<em>bool</em>) – Indicates whether to pool (scaled) point series for calculating statistics for
+a spatial model. If True (default), cross-correlations are also “averaged” for a set of separation
+distance bins.</p></li>
 </ul>
 </dd>
 </dl>
@@ -124,7 +126,7 @@ no output files should be written.</p></li>
 a <code class="docutils literal notranslate"><span class="pre">Value</span></code> column using units of mm/timestep.</p>
 </dd></dl>
 
-</section>
+</div>
 
 
            </div>

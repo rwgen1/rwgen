@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.fit &mdash; RWGEN 0.0.0 documentation</title>
+  <title>rwgen.RainfallModel.fit &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -58,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.plot.html">rwgen.RainfallModel.plot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_output_folder.html">rwgen.RainfallModel.update_output_folder</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_simulation_config.html">rwgen.RainfallModel.update_simulation_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_shuffling_config.html">rwgen.RainfallModel.update_shuffling_config</a></li>
 </ul>
 </li>
 </ul>
@@ -87,11 +87,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rwgen-rainfallmodel-fit">
+  <div class="section" id="rwgen-rainfallmodel-fit">
 <h1>rwgen.RainfallModel.fit<a class="headerlink" href="#rwgen-rainfallmodel-fit" title="Permalink to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.fit">
-<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fitting_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.fit" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fitting_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_nsrp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_shuffling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.fit" title="Permalink to this definition"></a></dt>
 <dd><p>Fit model parameters.</p>
 <p>Depends on <code class="docutils literal notranslate"><span class="pre">self.reference_statistics</span></code> attribute. Sets <code class="docutils literal notranslate"><span class="pre">self.parameters</span></code> and <code class="docutils literal notranslate"><span class="pre">self.fitted_statistics</span></code>.
 Also writes <code class="docutils literal notranslate"><span class="pre">parameters</span></code> and <cite>fitted_statistics`</cite> output files.</p>
@@ -115,6 +115,14 @@ value, e.g. 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a 
 <li><p><strong>output_filenames</strong> (<em>str</em><em> or </em><em>dict</em>) – Either key/value pairs indicating output file names, <code class="docutils literal notranslate"><span class="pre">'default'</span></code> to use
 {‘statistics’: ‘fitted_statistics.csv’, ‘parameters’: ‘parameters.csv’} or <code class="docutils literal notranslate"><span class="pre">None</span></code> to indicate that
 no output files should be written.</p></li>
+<li><p><strong>fit_nsrp</strong> (<em>bool</em>) – Indicates whether to fit NSRP parameters.</p></li>
+<li><p><strong>fit_shuffling</strong> (<em>bool</em>) – Indicates whether to fit the “delta” parameter that controls the probability of
+selecting more/less similar storms during shuffling, as well the parameters of the periodic
+monthly AR1 model.</p></li>
+<li><p><strong>random_seed</strong> (<em>int</em><em> or </em><em>numpy.random.SeedSequence</em>) – For reproducibility in fitting (currently for delta only).</p></li>
+<li><p><strong>n_iterations</strong> (<em>int</em>) – Number of iterations to use to correct bias between fitted (analytical) dry
+probability and simulated dry probability. Default is 2.</p></li>
+<li><p><strong>use_pooling</strong> (<em>bool</em>) – Indicates whether to used pooled statistics in NSRP fitting for a spatial model.</p></li>
 </ul>
 </dd>
 </dl>
@@ -136,11 +144,11 @@ no output files should be written.</p></li>
 <div><ul class="simple">
 <li><p>For a spatial model, the mean number of raincells overlapping a given location is related to rho
 and gamma, such that nu can be inferred.</p></li>
-<li><p>If using <code class="docutils literal notranslate"><span class="pre">intensity_distribution=='weibull'</span></code>, theta is the scale parameter and an additional
+<li><p>If using <code class="docutils literal notranslate"><span class="pre">intensity_distribution='weibull'</span></code>, theta is the scale parameter and an additional
 parameter (kappa) is introduced as the shape parameter.</p></li>
 </ul>
 </div></blockquote>
-<p>The <code class="docutils literal notranslate"><span class="pre">parameter_bounds</span></code> argument can be specified by a dictionary like <code class="docutils literal notranslate"><span class="pre">dict('beta':</span> <span class="pre">(0.02,</span> <span class="pre">1.0)</span></code>. For
+<p>The <code class="docutils literal notranslate"><span class="pre">parameter_bounds</span></code> argument can be specified by a dictionary like <code class="docutils literal notranslate"><span class="pre">dict(beta=(0.02,</span> <span class="pre">1.0))</span></code>. For
 more control a dataframe (or <code class="docutils literal notranslate"><span class="pre">.csv</span></code> file) can be passed. For example, if a model has two (6-month)
 seasons (using arbitrary example numbers):</p>
 <table class="docutils align-default">
@@ -171,7 +179,7 @@ seasons (using arbitrary example numbers):</p>
 </tbody>
 </table>
 <p>If a parameter(s) should be fixed across all seasons then it can be set as e.g.
-<code class="docutils literal notranslate"><span class="pre">dict('beta'=0.1,</span> <span class="pre">'theta'=1)</span></code>. Otherwise a table can be provided like:</p>
+<code class="docutils literal notranslate"><span class="pre">dict(beta=0.1,</span> <span class="pre">theta=1)</span></code>. Otherwise a table can be provided like:</p>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 40%" />
@@ -242,7 +250,7 @@ are applied across all months/seasons). The values are largely from the RainSim 
 </tr>
 <tr class="row-odd"><td><p>-1</p></td>
 <td><p>kappa</p></td>
-<td><p>0.5</p></td>
+<td><p>0.3</p></td>
 <td><p>1.0</p></td>
 </tr>
 </tbody>
@@ -276,7 +284,7 @@ are applied across all months/seasons). The values are largely from the RainSim 
 <tr class="row-even"><td><p>-1</p></td>
 <td><p>rho</p></td>
 <td><p>0.0001</p></td>
-<td><p>2.0</p></td>
+<td><p>0.05</p></td>
 </tr>
 <tr class="row-odd"><td><p>-1</p></td>
 <td><p>eta</p></td>
@@ -295,7 +303,7 @@ are applied across all months/seasons). The values are largely from the RainSim 
 </tr>
 <tr class="row-even"><td><p>-1</p></td>
 <td><p>kappa</p></td>
-<td><p>0.5</p></td>
+<td><p>0.3</p></td>
 <td><p>1.0</p></td>
 </tr>
 </tbody>
@@ -304,7 +312,7 @@ are applied across all months/seasons). The values are largely from the RainSim 
 than or equal to the number of cores or logical processors available.</p>
 </dd></dl>
 
-</section>
+</div>
 
 
            </div>

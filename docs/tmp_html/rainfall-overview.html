@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overview &mdash; RWGEN 0.0.0 documentation</title>
+  <title>Overview &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -80,13 +79,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="overview">
+  <div class="section" id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h1>
 <p>The rainfall component of RWGEN uses a Neyman-Scott Rectangular Pulse (NSRP)
 model. Both single site (point) and spatial models can be configured in a
 standalone mode (and ultimately as a component of the full RWGEN weather
 generator).</p>
-<section id="basic-workflow">
+<div class="section" id="basic-workflow">
 <h2>Basic Workflow<a class="headerlink" href="#basic-workflow" title="Permalink to this heading"></a></h2>
 <p>The basic workflow for the rainfall model consists of the following steps:</p>
 <blockquote>
@@ -137,8 +136,8 @@ workflow can consist of something like (for a single site model):</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-</section>
-<section id="explanation">
+</div>
+<div class="section" id="explanation">
 <h2>Explanation<a class="headerlink" href="#explanation" title="Permalink to this heading"></a></h2>
 <p>In the example above we initialise a <code class="docutils literal notranslate"><span class="pre">RainfallModel</span></code>, which contains the
 underlying preprocessing, fitting, simulation and post-processing
@@ -179,14 +178,14 @@ method, other methods generate output files that can be inspected or
 even modified.</p></li>
 </ul>
 </div></blockquote>
-</section>
-<section id="method-details">
+</div>
+<div class="section" id="method-details">
 <h2>Method Details<a class="headerlink" href="#method-details" title="Permalink to this heading"></a></h2>
 <p>Details of the options available for the different methods of <code class="docutils literal notranslate"><span class="pre">RainfallModel</span></code>
 are currently given in the example notebooks, as well as in the documentation
 of <code class="docutils literal notranslate"><span class="pre">RainfallModel</span></code> itself.</p>
-</section>
-<section id="alternative-workflows">
+</div>
+<div class="section" id="alternative-workflows">
 <h2>Alternative Workflows<a class="headerlink" href="#alternative-workflows" title="Permalink to this heading"></a></h2>
 <p>In some cases it might be useful to follow an alternative workflow. For
 example, if model fitting was conducted in a previous session and we are
@@ -230,8 +229,8 @@ different optional arguments. For example, if we ran <code class="docutils liter
 to run it again with different parameter bounds, we could make a second call
 to <code class="docutils literal notranslate"><span class="pre">fit()</span></code>. The only thing would be to specify different output file
 names to avoid previous output being overwritten (if we wanted to keep it).</p>
-</section>
-</section>
+</div>
+</div>
 
 
            </div>

@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.simulate &mdash; RWGEN 0.0.0 documentation</title>
+  <title>rwgen.RainfallModel.simulate &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -58,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.plot.html">rwgen.RainfallModel.plot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_output_folder.html">rwgen.RainfallModel.update_output_folder</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_simulation_config.html">rwgen.RainfallModel.update_simulation_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.RainfallModel.update_shuffling_config.html">rwgen.RainfallModel.update_shuffling_config</a></li>
 </ul>
 </li>
 </ul>
@@ -87,11 +87,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rwgen-rainfallmodel-simulate">
+  <div class="section" id="rwgen-rainfallmodel-simulate">
 <h1>rwgen.RainfallModel.simulate<a class="headerlink" href="#rwgen-rainfallmodel-simulate" title="Permalink to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.simulate">
-<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">simulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'point'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_subfolders</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'txt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catchment_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsg_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simulation_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_realisations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calendar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gregorian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_simulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.simulate" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">simulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'point'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_subfolders</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'txt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catchment_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsg_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simulation_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_realisations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calendar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gregorian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_simulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_shuffling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weather_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.simulate" title="Permalink to this definition"></a></dt>
 <dd><p>Simulate stochastic time series realisation(s) of NSRP process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -127,19 +127,22 @@ calendar should be used.</p></li>
 <li><p><strong>run_simulation</strong> (<em>bool</em>) – Flag for whether to run simulation. Setting to False may be used to update
 <code class="docutils literal notranslate"><span class="pre">self.simulation_args</span></code> to allow <code class="docutils literal notranslate"><span class="pre">self.postprocess()</span></code> to be run without <code class="docutils literal notranslate"><span class="pre">self.simulate()</span></code>
 having been run first (i.e. reading from existing simulation output files).</p></li>
+<li><p><strong>apply_shuffling</strong> (<em>bool</em>) – Indicates whether to run model with or without shuffling following Kim and Onof
+(2020) method.  # TODO: Provide explanation of method</p></li>
+<li><p><strong>weather_model</strong> (<em>object</em>) – Instance of WeatherModel.  # TODO: Expand explanation</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <p>Though gridded output is calculated (if <code class="docutils literal notranslate"><span class="pre">output_types</span></code> includes <code class="docutils literal notranslate"><span class="pre">'grid'</span></code>) it is not yet available to
 write (under development).</p>
-<p>All locations in <code class="docutils literal notranslate"><span class="pre">self.point_metadata</span></code> will be written as output currently.  # TODO: CHANGE THIS</p>
+<p>All locations in <code class="docutils literal notranslate"><span class="pre">self.point_metadata</span></code> will be written as output currently.  # TODO: To be changed</p>
 <p>Catchment shapefile or geodataframe assumed to have an <code class="docutils literal notranslate"><span class="pre">ID</span></code> field that can be used to identify catchments.
 Both point and catchment metadata are assumed to have a <code class="docutils literal notranslate"><span class="pre">Name</span></code> field for use as a prefix in file naming.</p>
 <p>Updates <code class="docutils literal notranslate"><span class="pre">self.simulation_args</span></code> in preparation for post-processing.</p>
 </dd></dl>
 
-</section>
+</div>
 
 
            </div>

@@ -26,6 +26,7 @@ API Reference
       ~RainfallModel.plot
       ~RainfallModel.update_output_folder
       ~RainfallModel.update_simulation_config
+      ~RainfallModel.update_shuffling_config
    
    
 

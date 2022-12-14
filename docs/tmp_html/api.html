@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
-
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Reference &mdash; RWGEN 0.0.0 documentation</title>
+  <title>API Reference &mdash; RWGEN 0.0.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -58,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.plot.html">rwgen.RainfallModel.plot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.update_output_folder.html">rwgen.RainfallModel.update_output_folder</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.update_simulation_config.html">rwgen.RainfallModel.update_simulation_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/rwgen.RainfallModel.update_shuffling_config.html">rwgen.RainfallModel.update_shuffling_config</a></li>
 </ul>
 </li>
 </ul>
@@ -86,17 +86,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="api-reference">
+  <div class="section" id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="rwgen.RainfallModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rwgen.</span></span><span class="sig-name descname"><span class="pre">RainfallModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'./output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rwgen.</span></span><span class="sig-name descname"><span class="pre">RainfallModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_timeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'./output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel" title="Permalink to this definition"></a></dt>
 <dd><p>Neyman-Scott Rectangular Pulse (NSRP) rainfall model for point/site and spatial simulations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>spatial_model</strong> (<em>bool</em>) – Flag to indicate whether point or spatial model.</p></li>
 <li><p><strong>project_name</strong> (<em>str</em>) – A name for the gauge/site location, domain or catchment.</p></li>
+<li><p><strong>input_timeseries</strong> (<em>str</em>) – Path to file containing timeseries data (for point model) or folder containing
+timeseries data files (for spatial model).</p></li>
+<li><p><strong>point_metadata</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Metadata (or path to metadata file) on point (site/gauge)
+locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
+details.</p></li>
 <li><p><strong>season_definitions</strong> (<em>str</em><em>, </em><em>list</em><em> or </em><em>dict</em>) – The model works on a monthly basis by default, but this argument
 allows for user-defined seasons (see Notes).</p></li>
 <li><p><strong>intensity_distribution</strong> (<em>str</em>) – Flag to indicate the type of probability distribution for raincell
@@ -104,9 +109,6 @@ intensities. Defaults to <code class="docutils literal notranslate"><span class=
 <li><p><strong>output_folder</strong> (<em>str</em>) – Root folder for model output. Defaults to <code class="docutils literal notranslate"><span class="pre">'./output'</span></code>.</p></li>
 <li><p><strong>statistic_definitions</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Definitions (descriptions) of statistics to use in fitting
 and/or evaluation (or path to file of definitions). See Notes for explanation of format.</p></li>
-<li><p><strong>point_metadata</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Metadata (or path to metadata file) on point (site/gauge)
-locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
-details.</p></li>
 </ul>
 </dd>
 </dl>
@@ -152,43 +154,48 @@ defaults of 1 and 0 will be used, respectively).</p></li>
 <tbody>
 <tr class="row-even"><td><p>1</p></td>
 <td><p>variance</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>1</p></td>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
 <td><p>skewness</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>2</p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
 <td><p>probability_dry_0.2mm</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>7</p></td>
 </tr>
 <tr class="row-odd"><td><p>4</p></td>
 <td><p>mean</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>6</p></td>
 </tr>
 <tr class="row-even"><td><p>5</p></td>
 <td><p>variance</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>2</p></td>
 </tr>
 <tr class="row-odd"><td><p>6</p></td>
 <td><p>skewness</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>3</p></td>
 </tr>
 <tr class="row-even"><td><p>7</p></td>
 <td><p>probability_dry_0.2mm</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>7</p></td>
 </tr>
 <tr class="row-odd"><td><p>8</p></td>
 <td><p>autocorrelation_lag1</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>6</p></td>
+</tr>
+<tr class="row-even"><td><p>9</p></td>
+<td><p>variance</p></td>
+<td><p>72H</p></td>
+<td><p>3</p></td>
 </tr>
 </tbody>
 </table>
@@ -210,52 +217,57 @@ defaults of 1 and 0 will be used, respectively).</p></li>
 <tbody>
 <tr class="row-even"><td><p>1</p></td>
 <td><p>variance</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>3</p></td>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
 <td><p>skewness</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>3</p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
 <td><p>probability_dry_0.2mm</p></td>
-<td><p>1</p></td>
+<td><p>1H</p></td>
 <td><p>5</p></td>
 </tr>
 <tr class="row-odd"><td><p>4</p></td>
 <td><p>mean</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>5</p></td>
 </tr>
 <tr class="row-even"><td><p>5</p></td>
 <td><p>variance</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>2</p></td>
 </tr>
 <tr class="row-odd"><td><p>6</p></td>
 <td><p>skewness</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>2</p></td>
 </tr>
 <tr class="row-even"><td><p>7</p></td>
 <td><p>probability_dry_0.2mm</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>6</p></td>
 </tr>
 <tr class="row-odd"><td><p>8</p></td>
 <td><p>autocorrelation_lag1</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>3</p></td>
 </tr>
 <tr class="row-even"><td><p>9</p></td>
 <td><p>cross-correlation_lag0</p></td>
-<td><p>24</p></td>
+<td><p>24H</p></td>
 <td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>10</p></td>
+<td><p>variance</p></td>
+<td><p>72H</p></td>
+<td><p>3</p></td>
 </tr>
 </tbody>
 </table>
-<p>For a spatial model, metadata for point (gauge/site) locations to be used in fitting, simulation or
+<p>For a point or spatial model, metadata for point (gauge/site) locations to be used in fitting, simulation or
 evaluation must be specified through the <code class="docutils literal notranslate"><span class="pre">point_metadata</span></code> argument. This should be a table like the one
 below (or a path to a <code class="docutils literal notranslate"><span class="pre">.csv</span></code> file containing such a table):</p>
 <table class="docutils align-default">
@@ -298,7 +310,7 @@ below (or a path to a <code class="docutils literal notranslate"><span class="pr
 <p><code class="docutils literal notranslate"><span class="pre">Elevation</span></code> is good to include if available.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'./output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.__init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_timeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'./output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.__init__" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <p class="rubric">Methods</p>
@@ -308,10 +320,10 @@ below (or a path to a <code class="docutils literal notranslate"><span class="pr
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.__init__.html#rwgen.RainfallModel.__init__" title="rwgen.RainfallModel.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(spatial_model, project_name[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.__init__.html#rwgen.RainfallModel.__init__" title="rwgen.RainfallModel.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(spatial_model, project_name, ...[, ...])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.preprocess.html#rwgen.RainfallModel.preprocess" title="rwgen.RainfallModel.preprocess"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess</span></code></a>(input_timeseries[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.preprocess.html#rwgen.RainfallModel.preprocess" title="rwgen.RainfallModel.preprocess"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess</span></code></a>([calculation_period, ...])</p></td>
 <td><p>Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.fit.html#rwgen.RainfallModel.fit" title="rwgen.RainfallModel.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>([fitting_method, parameter_bounds, ...])</p></td>
@@ -337,6 +349,9 @@ below (or a path to a <code class="docutils literal notranslate"><span class="pr
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.update_simulation_config.html#rwgen.RainfallModel.update_simulation_config" title="rwgen.RainfallModel.update_simulation_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_simulation_config</span></code></a>([...])</p></td>
 <td><p>Update default configuration settings for simulation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/rwgen.RainfallModel.update_shuffling_config.html#rwgen.RainfallModel.update_shuffling_config" title="rwgen.RainfallModel.update_shuffling_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_shuffling_config</span></code></a>([target_duration, ...])</p></td>
+<td><p>Update shuffling settings for fitting and simulation using modified Kim and Onof (2020) method.</p></td>
 </tr>
 </tbody>
 </table>
@@ -435,7 +450,7 @@ below (or a path to a <code class="docutils literal notranslate"><span class="pr
 
 </dd></dl>
 
-</section>
+</div>
 
 
            </div>
