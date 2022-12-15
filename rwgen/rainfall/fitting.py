@@ -810,6 +810,11 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
     if spatial_model and use_pooling:
         sim_stats['point_id'] = -1
 
+    # !221215
+    # orig_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/orig_ref_stats_1a.csv', index=False)
+    # curr_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/curr_ref_stats_1a.csv', index=False)
+    # sim_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/sim_stats_1a.csv', index=False)
+
     # TODO: Need to merge without cross-correlations then get them back in while keeping order of orig_ref_stats
 
     # Merge simulated and reference statistics
@@ -822,14 +827,18 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
         new_ref_stats = orig_ref_stats_sub.merge(
             curr_ref_stats[['point_id', 'statistic_id', 'season', 'curr_ref_value']], how='left'
         )
+        # !221215
+        # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0a.csv', index=False)
     new_ref_stats = new_ref_stats.merge(
         sim_stats[['point_id', 'statistic_id', 'season', 'sim_value']], how='left',
     )
+    # !221215
+    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0b.csv', index=False)
 
     # Bring cross-correlations back in and ensure order matches original
     if spatial_model:
         orig_ref_stats_sub = orig_ref_stats.loc[orig_ref_stats['name'] == 'cross-correlation']
-    new_ref_stats = pd.concat([new_ref_stats, orig_ref_stats_sub])
+        new_ref_stats = pd.concat([new_ref_stats, orig_ref_stats_sub])
     if spatial_model:
         new_ref_stats.sort_values(['statistic_id', 'point_id', 'season', 'distance'], inplace=True)
     else:
@@ -861,6 +870,8 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
 
     # new_ref_stats.to_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/new_ref_' + str(iteration) + 'b3.csv', index=False)
 
+    # !221215
+    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_2a.csv', index=False)
     # sys.exit()
 
     return new_ref_stats
