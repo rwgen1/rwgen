@@ -250,9 +250,11 @@ def get_phi(unique_seasons, dem, phi, output_types, discretisation_metadata):
 
         # Make interpolator (flag needed for whether phi should be log-transformed)
         if dem is not None:
-            interpolator, log_transformation = make_phi_interpolator(phi.loc[phi['season'] == season])
+            interpolator, log_transformation, significant_regression = make_phi_interpolator(
+                phi.loc[phi['season'] == season]
+            )
         else:
-            interpolator, log_transformation = make_phi_interpolator(
+            interpolator, log_transformation, significant_regression = make_phi_interpolator(
                 phi.loc[phi['season'] == season], include_elevation=False
             )
 
@@ -261,7 +263,7 @@ def get_phi(unique_seasons, dem, phi, output_types, discretisation_metadata):
         if ('catchment' in output_types) and ('grid' not in output_types):
             discretisation_types.append('grid')
         for output_type in discretisation_types:
-            if dem is not None:
+            if (dem is not None) and significant_regression:
                 interpolated_phi = interpolator(
                     (discretisation_metadata[(output_type, 'x')], discretisation_metadata[(output_type, 'y')]),
                     mesh_type='unstructured',
@@ -304,19 +306,23 @@ def make_phi_interpolator(df1, include_elevation=True, distance_bins=7):
                 log_transformation = True
         else:
             significant_regression = False
+            log_transformation = False
     else:
         significant_regression = False
         log_transformation = False
 
     # Select regression model (untransformed or log-transformed) if significant (linear) elevation dependence
-    if log_transformation:
-        phi = np.log(df1['phi'])
-        if significant_regression:
-            regression_model = log_transformed_regression
+    if include_elevation:
+        if log_transformation:
+            phi = np.log(df1['phi'])
+            if significant_regression:
+                regression_model = log_transformed_regression
+        else:
+            phi = df1['phi'].values
+            if significant_regression:
+                regression_model = untransformed_regression
     else:
         phi = df1['phi'].values
-        if significant_regression:
-            regression_model = untransformed_regression
 
     # Remove elevation signal from data first to allow better variogram fit
     if include_elevation and significant_regression:
@@ -364,7 +370,7 @@ def make_phi_interpolator(df1, include_elevation=True, distance_bins=7):
             covariance_model, (df1['easting'].values, df1['northing'].values), phi
         )
 
-    return phi_interpolator, log_transformation
+    return phi_interpolator, log_transformation, significant_regression
 
 
 def get_catchment_weights(
