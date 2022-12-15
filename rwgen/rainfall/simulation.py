@@ -117,6 +117,11 @@ def main(
         # discretisation_metadata = None
         discretisation_metadata = create_discretisation_metadata_arrays(point_metadata, grid_metadata, cell_size, dem)
 
+    # !221215
+    # print(discretisation_metadata[('point', 'x')].shape)
+    # print(discretisation_metadata[('grid', 'x')].shape)
+    # sys.exit()
+
     # Date/time helper - monthly time series indicating number of hours and timesteps in month
     end_year = start_year + simulation_length - 1
     datetime_helper = utils.make_datetime_helper(start_year, end_year, timestep_length, calendar)
@@ -648,6 +653,12 @@ def simulate_realisation(
             # print('  - Realisation =', realisation_id, '[Block =', str(block_id + 1) + '/' + str(n_blocks) + ']')
             # print('    - Sampling')
 
+        # !221215 - TESTING
+        # print(block_id, n_blocks)
+        # t1 = datetime.datetime.now()
+
+        # t1a = datetime.datetime.now()
+
         # NSRP process simulation - allow for the final block to be less than the full block size
         block_start_year = datetime_helper['year'].values[0] + block_id * block_size
         block_end_year = block_start_year + block_size - 1
@@ -671,6 +682,9 @@ def simulate_realisation(
             spatial_model, parameters, actual_block_size, month_lengths, season_definitions, intensity_distribution,
             rng, xmin, xmax, ymin, ymax, spatial_raincell_method, spatial_buffer_factor,  # dth,
         )
+
+        # t1b = datetime.datetime.now()
+        # print('nsrp', t1b - t1a)
 
         # Convert raincell coordinates and radii from km to m for discretisation
         if 'raincell_x' in df.columns:
@@ -704,6 +718,9 @@ def simulate_realisation(
 
         # +++
 
+        # t1c = datetime.datetime.now()
+        # print('rc coverage', t1c - t1b)
+
         # Rationalised dataframe of raincells and total depths by window
         dth = datetime_helper.loc[
             (datetime_helper['year'] >= block_start_year) & (datetime_helper['year'] <= block_end_year)
@@ -711,8 +728,14 @@ def simulate_realisation(
         # df, df1 = rationalise_storms2(dth, df, n_divisions)
         df = rationalise_storms2(dth, df, n_divisions)
 
+        # t1d = datetime.datetime.now()
+        # print('rationalise', t1d - t1c)
+
         # Spatial mean (domain-average) aggregated into fixed windows
         df1 = aggregate_windows(dth, df, n_divisions)
+
+        # t1e = datetime.datetime.now()
+        # print('aggregate', t1e - t1d)
 
         # !221115 - TESTING
         # df1.to_csv('H:/Projects/rwgen/working/iss13/stnsrp/shuffling/df1_3a.csv', index=False)
@@ -757,6 +780,9 @@ def simulate_realisation(
                 #     spatial_model, df, df1, dc1, parameters, datetime_helper, rng2, n_divisions, do_reordering
                 # )
 
+            # t1f = datetime.datetime.now()
+            # print('shuffling', t1f - t1e)
+
             discretise_by_point(
                 spatial_model,
                 datetime_helper.loc[
@@ -768,6 +794,13 @@ def simulate_realisation(
                 weather_model, simulation_mode,
             )
             # TODO: Check that slice of datetime_helper is correct
+
+            # t1g = datetime.datetime.now()
+            # print('discretisation', t1g - t1f)
+
+        # !221215 - TESTING
+        # t2 = datetime.datetime.now()
+        # print(t2 - t1)
 
         block_id += 1
 
@@ -878,6 +911,10 @@ def discretise_by_point(
                     else:
                         discretisation_case = output_type
 
+                    # !221215
+                    # print(discretisation_case)
+                    # t1a = datetime.datetime.now()
+
                     # !221122 - ORIGINAL
                     discretise_spatial(
                         start_time, timestep_length, raincell_arrival_times, raincell_end_times,
@@ -887,6 +924,9 @@ def discretise_by_point(
                         discretisation_metadata[(discretisation_case, 'y')],
                         discretisation_metadata[(discretisation_case, 'phi', season)],
                     )
+
+                    # t1b = datetime.datetime.now()
+                    # print(month_idx, discretisation_case, t1b - t1a)
 
                     # !221122 - TESTING grid cell average discretisation
                     # if discretisation_case == 'point':
@@ -951,6 +991,9 @@ def discretise_by_point(
                     discretisation_metadata, month_idx,
                 )
             # ///
+
+            # t1c = datetime.datetime.now()
+            # print(month_idx, 'collation', t1c - t1b)
 
             # ***
             # Put discrete rainfall in arrays ready for writing once all block available
@@ -1136,39 +1179,75 @@ def collate_output_arrays(
             location_ids = [1]
         # TODO: See if output keys can be looped directly without needing to figure out location_ids again
 
+        # !221215
+        # t1 = datetime.datetime.now()
+        # dt1 = t1 - t1
+        # dt2 = t1 - t1
+        # dt3 = t1 - t1
+
         # TODO: Reduce dependence on list/array order
         idx = 0
         for location_id in location_ids:
             output_key = (output_type, location_id, realisation_id, variable)
 
             if output_type == 'point':
+                # t1a = datetime.datetime.now()
                 if variable == 'prcp':
                     output_array = values['point'][:, idx]
                 else:
                     output_array = values[('point', variable)][:, idx]
                 output_array = output_array[timesteps_to_skip:timesteps_to_skip + timesteps_in_month]
+                # t1b = datetime.datetime.now()
+                # dt1 += (t1b - t1a)
             elif output_type == 'catchment':
+                # t1a = datetime.datetime.now()
                 if variable == 'prcp':
-                    catchment_discrete_rainfall = np.average(
-                        values['grid'], axis=1,
-                        weights=discretisation_metadata[('catchment', 'weights', location_id)]
+                    # !221215 - original below
+                    # catchment_discrete_rainfall = np.average(
+                    #     values['grid'], axis=1,
+                    #     weights=discretisation_metadata[('catchment', 'weights', location_id)]
+                    # )
+                    catchment_discrete_rainfall = spatial_mean(
+                        values['grid'],
+                        discretisation_metadata[('catchment', 'weights', location_id)],
                     )
                 else:
-                    catchment_discrete_rainfall = np.average(
-                        values[('grid', variable)], axis=1,
-                        weights=discretisation_metadata[('catchment', 'weights', location_id)]
+                    # !221215 - original below
+                    # catchment_discrete_rainfall = np.average(
+                    #     values[('grid', variable)], axis=1,
+                    #     weights=discretisation_metadata[('catchment', 'weights', location_id)]
+                    # )
+                    catchment_discrete_rainfall = spatial_mean(
+                        values[('grid', variable)],
+                        discretisation_metadata[('catchment', 'weights', location_id)]
                     )
                 output_array = catchment_discrete_rainfall[timesteps_to_skip:timesteps_to_skip + timesteps_in_month]
+                # t1b = datetime.datetime.now()
+                # dt2 += (t1b - t1a)
             elif output_type == 'grid':
                 raise NotImplementedError('Grid output not implemented yet')
 
             # Appending an array to a list is faster than concatenating arrays
+            # t1a = datetime.datetime.now()
             if month_idx == 0:
                 output_arrays[output_key] = [output_array.astype(np.float16)]
             else:
                 output_arrays[output_key].append(output_array.astype(np.float16))
+            # t1b = datetime.datetime.now()
+            # dt3 += (t1b - t1a)
 
             idx += 1
+
+        # print(output_type)
+        # print('point', dt1)
+        # print('catchment', dt2)
+        # print('append', dt3)
+    # sys.exit()
+
+
+def spatial_mean(x, w, axis=1, w_crit=0.0):  # , w_m , y):
+    y = np.average(x[:, w > w_crit], axis=axis, weights=w[w > w_crit])
+    return y
 
 
 def get_storm_depths(df, spatial_model, rng, xmin, xmax, ymin, ymax):
