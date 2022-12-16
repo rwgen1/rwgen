@@ -1335,12 +1335,12 @@ class Simulator:
 
             # Normalised diurnal cycle for temperature
             # - each hour as proportion of range
-            # - ensure offset puts max at 1500 and min at 0600 - hardcoded currently
+            # - offset puts max at 1500 and min at 0300 - hardcoded currently
             nt = int(24 / dt)
             x = np.arange(nt) * np.pi / (nt / 2.0)
             y = np.sin(x)
             y_norm = (y - np.min(y)) / (np.max(y) - np.min(y))
-            offset = int(3.0 / dt)
+            offset = int((3.0 + 6.0) / dt)  # +6 needed to enable 1500 max and 0300 min
             temp_norm = np.zeros(y.shape)
             temp_norm[offset:] = y_norm[:-offset]
             temp_norm[:offset] = y_norm[-offset:]
