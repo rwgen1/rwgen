@@ -13,8 +13,8 @@ class WeatherModel:
             spatial_model,
             input_timeseries,
             output_folder,
-            latitude,  # decimal degrees (negative for southern hemisphere)
-            longitude,  # decimal degrees east of greenwich (negative for western hemisphere)
+            latitude,
+            longitude,
             predictors='default',
             input_variables='default',
             output_variables='default',
@@ -31,6 +31,36 @@ class WeatherModel:
             ymax=None,
             point_metadata=None,
     ):
+        """
+        Initialise weather model to simulate temperature, potential evapotranspiration and other weather variables.
+
+        Args:
+            spatial_model (bool): Flag to indicate whether point or spatial model.
+            input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
+                timeseries data files (for spatial model). Currently compulsory.
+            output_folder (str): Root folder for model output.
+            latitude (int or float): Latitude in decimal degrees (negative for southern hemisphere).
+            longitude (int or float): Longitude in decimal degrees (negative for western hemisphere).
+            predictors (dict or str): Predictors for each variable for each (wet/dry) transition state. Leave as
+                'default' for now.
+            input_variables (list of str): List of input variables for weather/PET simulation (corresponding with
+                column names in input file(s)). Leave as 'default' for now, which is
+                ``['temp_avg', 'dtr', 'vap_press', 'wind_speed', 'sun_dur']``.
+            output_variables (list or str): List of output variables. If 'default' then the list is ['pet', 'tas'].
+            season_length (str): Default is to run the weather model on a monthly basis, with 'half-month' under
+                development as an option.
+            wet_threshold (float): Threshold used to identify wet days (in mm/day).
+            wind_height (int or float): Measurement height for wind speed data (metres above ground).
+            dem (str): Only None acceptable currently.
+            residual_method (str): Only 'default' available currently.
+            xmin (int or float): Minimum easting (in metres) of domain bounding box for spatial model.
+            xmax (int or float): Maximum easting (in metres) of domain bounding box for spatial model.
+            ymin (int or float): Minimum northing (in metres) of domain bounding box for spatial model.
+            ymax (int or float): Maximum northing (in metres) of domain bounding box for spatial model.
+            point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point (site/gauge)
+                locations to use for fitting, simulation and/or evaluation for a spatial model only.
+
+        """
         print('Weather model initialisation')
 
         self.spatial_model = spatial_model
@@ -126,8 +156,6 @@ class WeatherModel:
 
     def preprocess(
             self,
-            climatology_grids=None,
-            spatial_method='pool',
             max_buffer=150.0,  # km
             min_points=5,
             use_neighbours=True,  # use neighbouring precipitation record
@@ -135,12 +163,34 @@ class WeatherModel:
             calculation_period=(1991, 2020),
             completeness_threshold=33.0,
     ):
+        """
+        Read and transform reference series in preparation for model fitting.
+
+        Args:
+            max_buffer (int or float): Maximum distance (km) to look away from domain edges for weather stations.
+                Defaults to 150km.
+            min_points (int): Minimum number of weather stations required for spatial model. Defaults to 5.
+            use_neighbours (bool): Flag to use neighbouring precipitation record to infill wet/dry state series for above
+                weather station (i.e. if precipitation data wholly or partly missing). Default is True.
+            neighbour_radius (int or float): Maximum distance for using a neighbouring gauge to infill wet/dry state
+                for a weather station (i.e. if precipitation data missing). Defaults to 20km.
+            calculation_period (list or tuple): Start and end year for calculating reference statistics. Defaults to
+                ``(1991, 2020)``.
+            completeness_threshold (int or float): Percentage completeness threshold for using a reference weather
+                series (default of 33%).
+
+        """
         print('Weather model preprocessing')
+
+        # Things that might become options/arguments
+        climatology_grids = None
+        spatial_method = 'pool'
 
         self.preprocessor = preprocessing.Preprocessor(
             spatial_model=self.spatial_model,
             input_timeseries=self.input_timeseries,  # infer input variables | file path or folder of files
-            point_metadata=self.point_metadata,  # optional if single site | rename as point_metadata in line with rainfall model?
+            point_metadata=self.point_metadata,
+            # optional if single site | rename as point_metadata in line with rainfall model?
             climatology_grids=climatology_grids,  # dict of file paths (or opened files)
             output_folder=self.output_folder,
             xmin=self.xmin,
@@ -163,30 +213,16 @@ class WeatherModel:
         )
         self.preprocessor.preprocess()
 
-        # print('--')
-        # df = self.preprocessor.raw_statistics
-        # print(df.loc[df['variable'] == 'temp_avg'])
-        # print()
-        # # print(self.preprocessor.r2[(1, 1, 'temp_avg', 'DDD')])
-        # # print(self.preprocessor.r2[(1, 1, 'temp_avg', 'DD')])
-        # # print(self.preprocessor.r2[(1, 1, 'temp_avg', 'DW')])
-        # # print(self.preprocessor.r2[(1, 1, 'temp_avg', 'WD')])
-        # # print(self.preprocessor.r2[(1, 1, 'temp_avg', 'WW')])
-        # print(self.preprocessor.r2)
-        # sys.exit()
-
         print('  - Completed')
 
     def fit(self):
+        """
+        Fit regression models for weather variables.
+
+        """
         print('Weather model fitting')
         self.preprocessor.fit()
         print('  - Completed')
-
-    # def set_outputs(
-    #         self,
-    #         precipitation_paths,  # to "hack"
-    # ):
-    #     pass
 
     def simulate(
             self,
@@ -198,6 +234,20 @@ class WeatherModel:
             output_types,
             timestep,  # hours
     ):
+        """
+        Simulate weather and potential evapotranspiration variables for one month.
+
+        Args:
+            rainfall (numpy.ndarray or list of numpy.ndarray): Rainfall/precipitation values in mm/timestep.
+            n_timesteps (int): Number of timesteps in month (matching rainfall model timestep).
+            year (int): Calendar year.
+            month (int): Calendar month to simulate (1-12).
+            discretisation_metadata (dict): Metadata of locations for which output is required. See RainfallModel.
+            output_types (str or list of str): Types of output (discretised) rainfall required. Options are ``'point'``,
+                ``'catchment'`` and ``'grid'``.
+            timestep (int): Timestep for weather model output in hours.
+
+        """
         if self.simulator is None:
             self.simulator = simulation.Simulator(
                 spatial_model=self.spatial_model,
