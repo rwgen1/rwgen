@@ -1,157 +1,144 @@
-Overview
-========
+Rainfall Model Overview
+=======================
 
 The rainfall component of RWGEN uses a Neyman-Scott Rectangular Pulse (NSRP)
 model. Both single site (point) and spatial models can be configured in a
-standalone mode (and ultimately as a component of the full RWGEN weather
-generator).
+standalone mode and as a component of a complete weather generator. This page
+provides an overview of the NSRP model concepts.
 
-Basic Workflow
---------------
+The rainfall model largely follows the earlier RainSim software described by
+`Burton et al. (2008)`_. For more detailed explanations of NSRP models see
+this paper and references therein.
 
-The basic workflow for the rainfall model consists of the following steps:
+.. _Burton et al. (2008): https://doi.org/10.1016/j.envsoft.2008.04.003
 
-    1. Initialise a model
-    2. Preprocess time series data (e.g. from a gauge(s)) to calculate
-       "reference statistics"
-    3. Fit model parameters to reference statistics
-    4. Simulate one or more stochastic time series
-    5. Postprocess simulation to calculate/extract relevant statistics
+Single Site Model
+-----------------
 
-.. note::
+The basic single site (point) NSRP model consists of the following steps:
 
-    The term "reference statistics" is used instead of "observed statistics"
-    or "gauge statistics" in preparation for e.g. climate change scenarios
-    based on perturbed statistics.
+    - Begin by simulating storm origins
+    - Each storm is then assigned a number of rain cells
+    - Each rain cell is assigned an intensity and a duration
+    - Total intensity at a moment in time comes from the sum of intensities
+      of all active rain cells
 
-More detailed examples are given separately, but in outline terms the basic
-workflow can consist of something like (for a single site model)::
+This process is summarised in the diagram below (from
+`Burton et al. (2008)`_). Each step is explained further below.
 
-    import rwgen
+.. image:: ./_static/nsrp_schematic.png
 
-    # Initialise rainfall model
-    rainfall_model = rwgen.RainfallModel(
-        spatial_model=False,
-        project_name='brize_norton',
-    )
+Storm Origins
+~~~~~~~~~~~~~
 
-    # Calculate reference statistics from gauge time series
-    rainfall_model.preprocess(
-        input_timeseries='./input/brize_norton.csv',
-    )
+Storm origins are simulated using a Poisson process, which is a model for a
+series of discrete events. The number of events (storms) in a time period is
+sampled from a Poisson distribution. Waiting times between events (storms)
+follow an exponential distribution.
 
-    # Fit model parameters using reference statistics
-    rainfall_model.fit()
+A parameter λ (lambda) governs the rate of storm occurrence – i.e. number of
+storms (from Poisson distribution) and waiting times between storms (from
+exponential distribution).
 
-    # Simulate five realisations of 1000 years at an hourly timestep
-    rainfall_model.simulate(
-        simulation_length=1000,
-        n_realisations=5,
-        timestep_length=1,
-    )
+Rain Cell Arrivals
+~~~~~~~~~~~~~~~~~~
 
-    # Calculate/extract statistics from simulated time series (e.g. AMAX, DDF)
-    rainfall_model.postprocess(
-        amax_durations=[1, 6, 24],  # durations in hours
-        ddf_return_periods=[20, 50, 100]  # return periods in years
-    )
+Number of rain cells for a given storm is sampled from a Poisson distribution
+defined by parameter ν (nu). Arrival times of rain cells after the storm
+origin are then sampled from an exponential distribution using parameter
+β (beta).
 
-Explanation
------------
+Rain Cell Intensity and Duration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the example above we initialise a ``RainfallModel``, which contains the
-underlying preprocessing, fitting, simulation and post-processing
-functionality. By creating an instance of ``RainfallModel``, we can specify
-input files, choose various options and then carry out a set of specific
-tasks (e.g. using ``fit()`` to find suitable model parameters).
+Each rain cell has a uniform rainfall rate throughout its lifetime. Rain cell
+duration and intensity are sampled from exponential distributions with
+parameters η (eta) and ξ (xi), respectively. However, other distributions can
+be used for intensity, e.g. Weibull, Gamma.
 
-In Python terminology, ``RainfallModel`` is a class. An instance of a class
-(in our case the object ``rainfall_model``) can have methods and attributes.
-An attribute is a variable that "belongs" to the model, such as an option that
-we have set (e.g. ``project_name``) or some other data. Attributes are
-retained by the model until we change them (typically through a method call).
-Methods are like functions, but they can also modify the attributes of an
-object.
+Final Rainfall Series
+~~~~~~~~~~~~~~~~~~~~~
 
-The structure of ``RainfallModel`` and the basic workflow is shown by the
-"CORE METHODS" column in the diagram below. Dashed arrows indicate the basic
-workflow using these methods.
+The total rainfall intensity at a moment in time comes from the sum of
+intensities of all active rain cells. As the NSRP process is continuous in
+time, it can be discretised into a time series with a desired time step
+(e.g. hourly, daily).
 
-.. image:: ./_static/rainfall_model.png
+Parameters (Single Site)
+------------------------
 
-The diagram indicates the "CORE ATTRIBUTES" that are set or updated when
-each method is run (effectively the outputs of calling the method). For
-example, the diagram indicates that the ``preprocess()`` method sets or
-updates the ``reference_statistics`` attribute. The ``fit()`` method sets or
-updates the ``parameters`` and ``fitted_statistics`` attributes.
+The single site NSRP process described above requires a minimum of five
+parameters: λ (lambda), ν (nu), β (beta), η (eta) and ξ (xi). The parameters
+are typically also specified separately for each month of the year to account
+for seasonality (i.e. 12 x 5 parameters).
 
-A few points are worth noting:
+Parameters are identified by minimising the differences between a set of
+observed rainfall statistics and their NSRP model counterparts. The statistics
+include: mean, variance, skewness, autocorrelation and dry probability.
+Multiple durations can be used (e.g. 1- and 24-hour statistics) and statistics
+can be weighted differently Need to use an optimisation algorithm to test
+different possible parameter values to arrive at the “best” ones.
 
-    - The initialisation (``__init__()``) method sets many of the attributes
-      we need upfront.
-    - Some methods require particular attributes to have been set/updated
-      before they are run. For example, the ``fit()`` method requires
-      the ``reference_statistics`` attribute, which is set/updated by the
-      ``preprocess()`` method.
-    - Each method may take other arguments to help perform its task, even
-      though these arguments are not set as model attributes. For example,
-      the ``simulate()`` method takes an argument ``simulation_length`` to
-      determine the number of years that should be simulated.
-    - In addition to simulated time series files created by the ``simulate()``
-      method, other methods generate output files that can be inspected or
-      even modified.
+Spatial Model
+-------------
 
-Method Details
---------------
+The single site NSRP can be generalised to simulate spatially consistent time
+series at any locations in a domain. The main difference in the spatial model
+is that rain cells (specifically cell centre locations) are simulated via a
+uniform spatial Poisson process. In contrast, the number of rain cells
+associated with a given storm is just sampled from a Poisson distribution in
+the single site model.
 
-Details of the options available for the different methods of ``RainfallModel``
-are currently given in the example notebooks, as well as in the documentation
-of ``RainfallModel`` itself.
+In the spatial model, the average number of rain cell centres in an area is
+prescribed via the parameter ρ (rho), although the exact placements of rain
+cell centres in a simulation exhibit randomness. Rain cells do not move in
+space in the model (i.e. no advection representation). A rain cell stays in the
+same location throughout its lifetime.
 
-Alternative Workflows
----------------------
+Each rain cell is assigned an arrival time, duration and intensity (uniform
+during cell lifetime) as per the single site model. In addition, each rain
+cell gets a radius sampled from an exponential distribution with parameter
+γ (gamma).
 
-In some cases it might be useful to follow an alternative workflow. For
-example, if model fitting was conducted in a previous session and we are
-happy with the parameters, we do not want to run the fitting method again in
-order to do some additional simulations. In this case we want to set the
-required attributes directly and go straight to fitting.
+Total intensity at a point in space and time is the sum of intensities of all
+active rain cells.
 
-The diagram above shows some "ALTERNATIVE METHODS" that allow us to do this.
-These methods are ``set_statistics()`` and ``set_parameters()``. Both methods
-can read from ``.csv`` files output by other methods (e.g. ``preprocess()`` and
-``fit()`` methods). These methods thus add flexibility to how the model can
-be used.
+Parameter fitting is as per the single site model, but also finding γ (gamma)
+and ρ (rho). Including spatial cross-correlations in the set of statistics
+used for fitting facilitates identification of these parameters.
 
-For example, we could use something like::
+Stationarity
+~~~~~~~~~~~~
 
-    import rwgen
+It should also be noted that, before an additional adjustment, the spatial
+NSRP formulation is also spatially stationary in the statistical sense. This
+means that statistics (e.g. mean) are the same everywhere if averaged over a
+long period of simulation.
 
-    # Initialise rainfall model
-    rainfall_model = rwgen.RainfallModel(
-        spatial_model=False,
-        project_name='brize_norton',
-    )
+To have spatially varying statistics, we use a “scale factor” Φ (phi)
+proportional to the mean rainfall at a location to "rescale" the simulated
+time series. This scale factor can be calculated upfront from observations
+(and interpolated to ungauged locations if necessary). The mean and variance
+can now vary spatially, but other statistics (e.g. skewness, dry probability)
+cannot - at least in the basic spatial NSRP model.
 
-    # Set reference statistics from a file written during a previous session
-    rainfall_model.set_statistics(
-        reference_statistics='./output/reference_statistics.csv',
-    )
+Shuffling Method
+----------------
 
-    # Set parameters from a file
-    rainfall_model.set_parameters(
-        parameters='./output/parameters.csv',
-    )
+The rainfall model has an optional, adapted implementation of the
+"shuffling" method proposed by `Kim and Onof (2020)`_. This method attempts to
+improve the performance of clustered point process rainfall models across
+timescales (from sub-hourly through to daily, monthly and beyond). This is
+achieved by nesting models and algorithms that work well at different
+timescales.
 
-    # Simulate five realisations of 1000 years at an hourly timestep
-    rainfall_model.simulate(
-        simulation_length=1000,
-        n_realisations=5,
-        timestep_length=1,
-    )
+Three modules or layers are used in this nesting strategy:
 
-It is also possible to do things like run a method more than once using
-different optional arguments. For example, if we ran ``fit()`` but decided
-to run it again with different parameter bounds, we could make a second call
-to ``fit()``. The only thing would be to specify different output file
-names to avoid previous output being overwritten (if we wanted to keep it).
+    1. Simulate a high (temporal) resolution series using the NSRP model
+    2. Shuffle storms using a similarity metric
+    3. Reorder months to match ranks of a coarse model (e.g. ARIMA)
+
+The method and implementation is still undergoing evaluation, so it should be
+considered experimental at present.
+
+.. _Kim and Onof (2020): https://doi.org/10.1016/j.jhydrol.2020.125150

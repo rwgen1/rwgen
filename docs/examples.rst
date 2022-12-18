@@ -1,9 +1,12 @@
 Examples
 ========
 
-Examples are provided primarily as Jupyter notebooks. These notebooks contain
-relatively detailed explanations of the examples/code and provide a more
-interactive way of trying things out.
+Outline examples and explanations of the rainfall model and weather generator 
+are given on the :doc:`rainfall-workflow` and :doc:`weather-workflow` pages.
+
+More detailed examples are provided primarily as Jupyter notebooks. These 
+notebooks contain relatively detailed explanations of the examples/code and 
+provide a more interactive way of trying things out.
 
 The examples can be found in the ``examples`` folder within the RWGEN root
 folder (e.g. ``rwgen-0.0.0``).

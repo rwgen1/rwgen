@@ -1,5 +1,5 @@
-Input Data
-==========
+Rainfall Model Input Data
+=========================
 
 Example files for a spatiotemporal NSRP model are given in the
 ``examples/stnsrp/input`` folder in the RWGEN root folder. In the description

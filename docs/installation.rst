@@ -16,15 +16,15 @@ Installing Miniconda
 
 The conda website provides `instructions`_ for installing Miniconda. 
 Installation on Windows involves downloading and running an `installer`_ (use 
-the installer for the most recent Python version - currently 3.9).
+the installer for the most recent Python version).
 
 .. _instructions: https://docs.conda.io/projects/conda/en/latest/user-guide/install/windows.html
 .. _installer: https://docs.conda.io/en/latest/miniconda.html#windows-installers
 
 .. note::
 
-    The second step of the instructions (verify your installer hashes) can be
-    skipped.
+    The second step of the instructions (verify your installer hashes) can
+    typically be skipped.
 
 Updating and Configuring Conda
 ------------------------------
@@ -50,39 +50,47 @@ The conda-forge channel is needed to help manage dependencies.
 Getting the RWGEN Files
 -----------------------
 
-Download the ``rwgen-0.0.0`` files as a `zip`_ file (if you do not have it
+Download the ``rwgen-0.0.3`` files as a `zip`_ file (if you do not have it
 already) and unzip. It is recommended to create a ``RWGEN`` folder somewhere
 - e.g. ``H:/RWGEN``.
 
 Note that Windows ``Extract All...`` adds the zip file name (e.g.
-``rwgen-0.0.0``) to the default location for unzipping. This can be deleted, as
-the zip file already contains an ``rwgen-0.0.0`` folder housing all other
+``rwgen-0.0.3``) to the default location for unzipping. This can be deleted, as
+the zip file already contains an ``rwgen-0.0.3`` folder housing all other
 files.
 
 If the target folder is ``H:/RWGEN`` then we should end up with a folder
-``H:/RWGEN/rwgen-0.0.0``, which contains sub-folders ``docs, examples, rwgen``
+``H:/RWGEN/rwgen-0.0.3``, which contains sub-folders ``docs, examples, rwgen``
 and some files (e.g. ``setup.py, environment.yml, ...``).
 
-.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.0.zip
+.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.3.zip
 
 Creating the Conda Environment
 ------------------------------
 
 In the Anaconda Prompt (or open a new one if closed - see the
 `Updating and Configuring Conda`_ section) and navigate (at the prompt) to the
-unzipped ``rwgen-0.0.0`` folder.
+unzipped ``rwgen-0.0.3`` folder.
 
 For example, to change from the directory ``C:/`` to the directory 
-``H:/RWGEN/rwgen-0.0.0``, first switch drives by typing::
+``H:/RWGEN/rwgen-0.0.3``, first switch drives by typing::
 
     H:
 
-Then to change to ``H:/RWGEN/rwgen-0.0.0`` enter::
+Then to change to ``H:/RWGEN/rwgen-0.0.3`` enter::
 
-    cd H:/RWGEN/rwgen-0.0.0
+    cd H:/RWGEN/rwgen-0.0.3
 
 This folder should contain a file called ``environment.yml``, which lists all
 of the dependencies required by RWGEN.
+
+.. note::
+    
+    If you already have an environment for rwgen installed that you want to
+    update, it may be easiest to remove the existing environment and reinstall.
+    The existing environment can be removed at this point by using 
+    ``conda env remove --name rwgen`` (if your existing environment name is 
+    ``rwgen``. You can now proceed with the rest of the instructions.
 
 Create a specific conda `environment`_ for RWGEN by typing::
 
@@ -91,11 +99,6 @@ Create a specific conda `environment`_ for RWGEN by typing::
 The environment name can be set to something other than ``rwgen`` if preferred.
 It may take a few minutes for the environment to be created as conda installs
 the dependencies that we need.
-
-.. note::
-
-    If conda fails to create the environment try replacing ``environment.yml``
-    with ``environment_unversioned.yml`` in the command above.
 
 Activate the `environment`_ before continuing::
 
@@ -111,7 +114,7 @@ Activate the `environment`_ before continuing::
 Installing RWGEN
 ----------------
 
-At the Anaconda Prompt (while still in the ``rwgen-0.0.0`` folder), type the
+At the Anaconda Prompt (while still in the ``rwgen-0.0.3`` folder), type the
 following (including the ``.``) to install RWGEN in developer mode::
 
     pip install -e .
