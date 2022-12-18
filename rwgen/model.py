@@ -66,7 +66,10 @@ class WeatherGenerator:
         self.northing_min = northing_min
         self.northing_max = northing_max
 
+        #: rwgen.RainfallModel: Instance of NSRP rainfall model
         self.rainfall_model = None
+
+        #: rwgen.WeatherModel: Instance of regression-based weather model
         self.weather_model = None
 
         print('  - Completed')
