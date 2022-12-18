@@ -377,9 +377,9 @@ class RainfallModel:
             smoothing_tolerance=0.2,
             output_filenames='default',
             fit_nsrp=True,
-            fit_shuffling=True,
+            fit_shuffling=False,
             random_seed=None,
-            n_iterations=2,
+            pdry_iterations=2,
             use_pooling=True,
     ):
         """
@@ -411,7 +411,7 @@ class RainfallModel:
                 selecting more/less similar storms during shuffling, as well the parameters of the periodic
                 monthly AR1 model.
             random_seed (int or numpy.random.SeedSequence): For reproducibility in fitting (currently for delta only).
-            n_iterations (int): Number of iterations to use to correct bias between fitted (analytical) dry
+            pdry_iterations (int): Number of iterations to use to correct bias between fitted (analytical) dry
                 probability and simulated dry probability. Default is 2.
             use_pooling (bool): Indicates whether to used pooled statistics in NSRP fitting for a spatial model.
 
@@ -589,7 +589,7 @@ class RainfallModel:
                 smoothing_tolerance=smoothing_tolerance,
                 write_output=write_output,  # NEW
                 # !221123 - for pre-biasing
-                n_iterations=n_iterations,
+                n_iterations=pdry_iterations,
                 output_folder=self.output_folder,
                 point_metadata=self.point_metadata,
                 phi=self.phi,
