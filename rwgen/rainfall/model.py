@@ -469,7 +469,7 @@ class RainfallModel:
             -1      nu         0.1          30.0
             -1      eta        0.1          60.0
             -1      theta      0.25         100.0
-            -1      kappa      0.3          1.0
+            -1      kappa      0.5          1.0
             ======  =========  ===========  ===========
 
             And for a spatial model:
@@ -483,7 +483,7 @@ class RainfallModel:
             -1      eta        0.1          12.0
             -1      gamma      0.01         500.0
             -1      theta      0.25         100.0
-            -1      kappa      0.3          1.0
+            -1      kappa      0.5          1.0
             ======  =========  ===========  ===========
 
             Fitting can be speeded up significantly with ``n_workers > 1``. The maximum ``n_workers`` should be less
@@ -523,13 +523,13 @@ class RainfallModel:
         if not self.spatial_model:
             default_bounds = pd.DataFrame.from_dict({
                 'lamda': (0.00001, 0.02), 'beta': (0.02, 1.0), 'nu': (0.1, 30), 'eta': (0.1, 60.0),  # 'xi': (0.01, 4.0)
-                'theta': (0.25, 100), 'kappa': (0.3, 1.0), 'kappa_1': (0.3, 1.0), 'kappa_2': (0.3, 1.0)
+                'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
         else:
             default_bounds = pd.DataFrame.from_dict({  # TODO: Check rho - originally 2.0
                 'lamda': (0.001, 0.05), 'beta': (0.02, 0.5), 'rho': (0.0001, 0.05), 'eta': (0.1, 12.0),
                 'gamma': (0.01, 500.0),
-                'theta': (0.25, 100), 'kappa': (0.3, 1.0), 'kappa_1': (0.3, 1.0), 'kappa_2': (0.3, 1.0)
+                'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
         default_bounds.reset_index(inplace=True)
         default_bounds.rename(columns={'index': 'parameter'}, inplace=True)
@@ -1149,11 +1149,11 @@ class RainfallModel:
              The default names for mapping rwgen statistics to the change factors in the NetCDF files are specified by
              the following dictionary:
              ``change_factor_names = {
-                 'mean': 'mean_changefactor_ts1_to_ts3',
-                 'variance': 'variance_changefactor_ts1_to_ts3',
-                 'skewness': 'skewness_changefactor_ts1_to_ts3',
-                 'probability_dry_0.2mm': 'pd_0p2_changefactor_ts1_to_ts3',
-                 'autocorrelation_lag1': 'l1ac_changefactor_ts1_to_ts3',
+             'mean': 'mean_changefactor_ts1_to_ts3',
+             'variance': 'variance_changefactor_ts1_to_ts3',
+             'skewness': 'skewness_changefactor_ts1_to_ts3',
+             'probability_dry_0.2mm': 'pd_0p2_changefactor_ts1_to_ts3',
+             'autocorrelation_lag1': 'l1ac_changefactor_ts1_to_ts3',
              }``
 
              Other points to note are:
