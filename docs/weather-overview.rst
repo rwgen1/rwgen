@@ -1,5 +1,5 @@
-Weather Generator Overview
-==========================
+Overview
+========
 
 There are three key "objects" available within RWGEN:
 
@@ -21,9 +21,9 @@ model). The rainfall model may be used as a standalone model, but the weather
 model will typically be used as a component of the weather generator.
 
 The rest of this page explains the core concepts of the weather model
-component. The rainfall model is described on the :doc:`rainfall-overview` page,
-while an overview of usage of the weather generator is provided on the
-:doc:`weather-workflow` page.
+component. The rainfall model is described on the rainfall model
+:doc:`rainfall-overview` page, while an overview of usage of the weather
+generator is provided on its :doc:`weather-workflow` page.
 
 Single Site Weather Model
 -------------------------

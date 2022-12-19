@@ -1,5 +1,5 @@
-Rainfall Model Overview
-=======================
+Overview
+========
 
 The rainfall component of RWGEN uses a Neyman-Scott Rectangular Pulse (NSRP)
 model. Both single site (point) and spatial models can be configured in a

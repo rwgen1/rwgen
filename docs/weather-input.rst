@@ -1,4 +1,7 @@
-Weather Model Input Data
-========================
+Input Data
+==========
 
-TBC
+This page is under development.
+
+Please see the `examples` folder for the time series file format. Further
+details will be added.

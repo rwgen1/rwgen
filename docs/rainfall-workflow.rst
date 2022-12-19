@@ -1,5 +1,5 @@
-Rainfall Model Workflow
-=======================
+Workflow
+========
 
 Basic Workflow
 --------------
@@ -19,7 +19,7 @@ The basic workflow for the rainfall model consists of the following steps:
     or "gauge statistics" in preparation for e.g. climate change scenarios
     based on perturbed statistics.
 
-More detailed examples are given separately, but in outline terms the basic
+More detailed :doc:`examples` are given separately, but in outline terms the basic
 workflow can consist of something like (for a single site model)::
 
     import rwgen
@@ -101,8 +101,8 @@ Method Details
 
 Details of the options available for the different methods of ``RainfallModel``
 are currently given in the example notebooks, as well as on the
-:doc:`rainfall-methods` page. Please also see the :doc:`rainfall-api`
-documentation for further details.
+rainfall model :doc:`rainfall-methods` page. Please also see the
+:doc:`rainfall-api` documentation for further details.
 
 Alternative Workflows
 ---------------------

@@ -1,11 +1,14 @@
-Weather Generator Workflow
-==========================
+Workflow
+========
 
 The weather generator workflow is for performing coupled simulations of 
 rainfall and other weather variables (e.g. temperature). Potential
 evapotranspiration can also be calculated.
 
-It is best to read the :doc:`rainfall-workflow` page before reading this page.
+It is best to read the rainfall model :doc:`rainfall-workflow` page before
+reading this page.
+
+Example notebooks are under development.
 
 Basic Workflow
 --------------
@@ -117,7 +120,4 @@ default the model will try to simulate temperature, humidity, sunshine duration,
 wind speed and potential evapotranspiration. See the
 :doc:`weather-generator-api` and :doc:`weather-model-api` pages for further
 details.
-
-
-
 

@@ -1,10 +1,11 @@
-Rainfall Model Options
-======================
+Method Options
+==============
 
 This page provides an overview of the options available in each of the key
 methods (functions) of the rainfall model. For detailed information on each of
 the method arguments, please see the RainfallModel API documentation pages. For
-an overview of the methods, take a look at the :doc:`rainfall-workflow` page.
+an overview of the methods, take a look at the rainfall model
+:doc:`rainfall-workflow` page.
 
 Initialisation
 --------------
@@ -71,7 +72,7 @@ Several options can be specified when fitting:
     - Fixed parameters (if you wish to specify any)
     - Output file names
     - Whether to fit parameters needed for the `Kim and Onof (2020)`_
-      "shuffling" method (see :doc:`rainfall-overview`)
+      "shuffling" method (see rainfall model :doc:`rainfall-overview`)
     - Whether to iteratively correct for residual bias between simulated and
       fitted (analytical) 24H dry probability (see below)
 
@@ -97,7 +98,7 @@ General options available in time series simulation include:
       start year (default is 2000)
     - Random number seed (optional but can be used for reproducibility)
     - Whether or not to apply the `Kim and Onof (2020)`_ "shuffling" method
-      (see also :doc:`rainfall-overview`)
+      (see also rainfall model :doc:`rainfall-overview`)
 
 There are some additional options for a spatial model:
 
