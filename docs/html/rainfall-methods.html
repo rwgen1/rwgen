@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Method Options &mdash; RWGEN 0.0.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Input Data" href="rainfall-input.html" />
+    <link rel="prev" title="Workflow" href="rainfall-workflow.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> RWGEN
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="rainfall-overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rainfall-workflow.html">Workflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Method Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#initialisation">Initialisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fitting">Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simulation">Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="rainfall-input.html">Input Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Weather Generator</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="weather-overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="weather-workflow.html">Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="weather-input.html">Input Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="weather-generator-api.html">Weather Generator API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rainfall-api.html">Rainfall Model API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="weather-model-api.html">Weather Model API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RWGEN</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">Method Options</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/rainfall-methods.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="method-options">
+<h1>Method Options<a class="headerlink" href="#method-options" title="Permalink to this heading"></a></h1>
+<p>This page provides an overview of the options available in each of the key
+methods (functions) of the rainfall model. For detailed information on each of
+the method arguments, please see the RainfallModel API documentation pages. For
+an overview of the methods, take a look at the rainfall model
+<a class="reference internal" href="rainfall-workflow.html"><span class="doc">Workflow</span></a> page.</p>
+<section id="initialisation">
+<h2>Initialisation<a class="headerlink" href="#initialisation" title="Permalink to this heading"></a></h2>
+<p>The initialisation step creates an instance of the rainfall model and sets some
+basic options.</p>
+<p>When initialising the rainfall model it is compulsory to specify:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Whether the model is for a single site (point) or a spatial model</p></li>
+<li><p>A name for the model (e.g. gauge/site or catchment name) for output
+purposes</p></li>
+<li><p>The path to an input time series file (or a folder containing input
+series for the spatial model).</p></li>
+</ul>
+</div></blockquote>
+<p>Note also that we have to specify a metadata file detailing the input
+gauges/sites when initialising a spatial model.</p>
+<p>Additional options are available for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Season definitions - default is a monthly model</p></li>
+<li><p>Probability distribution to use for rain cell intensity (defaults to
+exponential</p></li>
+<li><p>Path to output folder</p></li>
+<li><p>Whether or not we wish to override the default statistic definitions
+to be used in fitting</p></li>
+</ul>
+</div></blockquote>
+<p>The <a class="reference internal" href="rainfall-api.html"><span class="doc">Rainfall Model API</span></a> provides further details of all defaults, including
+tables of the statistics and weights that the model uses in fitting.</p>
+</section>
+<section id="preprocessing">
+<h2>Preprocessing<a class="headerlink" href="#preprocessing" title="Permalink to this heading"></a></h2>
+<p>The preprocessing step calculates reference statistics against which the model
+parameters should be fitted.</p>
+<p>Options available in this step include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Using a subset of the record period (default is to use full record)</p></li>
+<li><p>Using only months/seasons exceeding a completeness threshold (default is
+to use all data)</p></li>
+<li><p>Trimming or clipping time series to reduce the influence of outliers
+(default is not to trim/clip)</p></li>
+<li><p>Annual maxima (AMAX) extraction for a set of durations</p></li>
+<li><p>Output file names (default is reference_statistics.csv)</p></li>
+</ul>
+</div></blockquote>
+<p>In addition, there is an option to calculate “pooled” statistics for a spatial
+model. If this option is applied (which it is by default in a spatial model)
+then input time series are scaled to have a uniform mean and then pooled before
+calculation of reference statistics. This helps to speed up the fitting step,
+as fewer calculations are required. A simple exponential function is also
+fitted to the reference spatial cross-correlations to help further reduce the
+number of calculations in fitting.</p>
+</section>
+<section id="fitting">
+<h2>Fitting<a class="headerlink" href="#fitting" title="Permalink to this heading"></a></h2>
+<p>The fitting step finds a parameter set that should give as good a fit as
+possible between a model simulation and the reference statistics.</p>
+<p>Several options can be specified when fitting:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Parameter bounds (if you wish to change the defaults)</p></li>
+<li><p>Fixed parameters (if you wish to specify any)</p></li>
+<li><p>Output file names</p></li>
+<li><p>Whether to fit parameters needed for the <a class="reference external" href="https://doi.org/10.1016/j.jhydrol.2020.125150">Kim and Onof (2020)</a>
+“shuffling” method (see rainfall model <a class="reference internal" href="rainfall-overview.html"><span class="doc">Overview</span></a>)</p></li>
+<li><p>Whether to iteratively correct for residual bias between simulated and
+fitted (analytical) 24H dry probability (see below)</p></li>
+</ul>
+</div></blockquote>
+<p>There can be a residual bias in the simulated dry probability compared with
+the fitted (analytical) equivalent in the Neyman-Scott Rectangular Pulse (NSRP)
+rainfall model. This is also apparent in other implementations of the NSRP
+model and requires further investigation. For now, an iterative correction
+method has been implemented to reduce this bias (using simulation to identify
+the approximate bias and then adjusting the reference statistics before
+re-estimating the parameters).</p>
+</section>
+<section id="simulation">
+<h2>Simulation<a class="headerlink" href="#simulation" title="Permalink to this heading"></a></h2>
+<p>General options available in time series simulation include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Simulation length (in years)</p></li>
+<li><p>Number of realisations to simulate</p></li>
+<li><p>Length of output timestep (in hours)</p></li>
+<li><p>Calendar (i.e. account for leap years or not - default yes) and notional
+start year (default is 2000)</p></li>
+<li><p>Random number seed (optional but can be used for reproducibility)</p></li>
+<li><p>Whether or not to apply the <a class="reference external" href="https://doi.org/10.1016/j.jhydrol.2020.125150">Kim and Onof (2020)</a> “shuffling” method
+(see also rainfall model <a class="reference internal" href="rainfall-overview.html"><span class="doc">Overview</span></a>)</p></li>
+</ul>
+</div></blockquote>
+<p>There are some additional options for a spatial model:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Output types: point/site or catchment-average (gridded output under
+development)</p></li>
+<li><p>Resolution at which to discretise the domain for catchment-average or
+gridded outputs</p></li>
+<li><p>Whether to use a DEM to help interpolate the “scale factor” Φ (phi) to
+ungauge locations</p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rainfall-workflow.html" class="btn btn-neutral float-left" title="Workflow" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rainfall-input.html" class="btn btn-neutral float-right" title="Input Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, ndp81.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
