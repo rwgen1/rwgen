@@ -1,4 +1,4 @@
-rwgen.RainfallModel.\_\_init\_\_
+﻿rwgen.RainfallModel.\_\_init\_\_
 ================================
 
 .. currentmodule:: rwgen

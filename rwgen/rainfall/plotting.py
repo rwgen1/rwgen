@@ -19,7 +19,7 @@ UNITS = {
 
 def plot_annual_cycle(sid, name, duration, ref=None, fit=None, sim=None):
 
-    p = figure(title=NAMES[name] + ' (' + str(duration) + 'hr)', width=400, height=400)
+    p = figure(title=NAMES[name] + ' (' + str(duration) + 'hr)', width=350, height=350)
     p.xaxis.axis_label = 'Month'
     p.yaxis.axis_label = NAMES[name] + ' (' + UNITS[name] + ')'
 
@@ -76,7 +76,7 @@ def plot_annual_cycle(sid, name, duration, ref=None, fit=None, sim=None):
 
 def plot_cross_correlation(sid, name, duration, season, ref=None, fit=None, sim=None):
 
-    p = figure(title=NAMES[name] + ' (' + str(duration) + 'hr) - Season = ' + str(season), width=400, height=400)
+    p = figure(title=NAMES[name] + ' (' + str(duration) + 'hr) - Season = ' + str(season), width=350, height=350)
     p.xaxis.axis_label = 'Separation Distance (km)'
     p.yaxis.axis_label = NAMES[name] + ' (' + UNITS[name] + ')'
 
@@ -112,7 +112,9 @@ def plot_cross_correlation(sid, name, duration, season, ref=None, fit=None, sim=
         sim_source = ColumnDataSource(df)
         # p.line(x='season', y='percentile_25', source=sim_source, color='#d95f02', line_dash='dotted')
         # p.line(x='season', y='percentile_75', source=sim_source, color='#d95f02', line_dash='dotted')
-        p.line(x='distance', y='mean', source=sim_source, legend_label='sim', color='#d95f02')
+
+        # p.line(x='distance', y='mean', source=sim_source, legend_label='sim', color='#d95f02')
+        p.circle(x='distance', y='mean', source=sim_source, legend_label='sim', color='#d95f02', fill_alpha=0)
 
     y_min = min(y_mins)
     y_min = min(y_min, 0)

@@ -10,6 +10,8 @@ from . import fitting
 from . import simulation
 from . import utils
 from . import plotting
+from . import shuffling
+from . import perturbation
 
 
 class RainfallModel:
@@ -19,6 +21,11 @@ class RainfallModel:
     Args:
         spatial_model (bool): Flag to indicate whether point or spatial model.
         project_name (str): A name for the gauge/site location, domain or catchment.
+        input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
+            timeseries data files (for spatial model). Needed if running pre-processing or fitting steps.
+        point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point (site/gauge)
+            locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
+            details.
         season_definitions (str, list or dict): The model works on a monthly basis by default, but this argument
             allows for user-defined seasons (see Notes).
         intensity_distribution (str): Flag to indicate the type of probability distribution for raincell
@@ -26,9 +33,11 @@ class RainfallModel:
         output_folder (str): Root folder for model output. Defaults to ``'./output'``.
         statistic_definitions (pandas.DataFrame or str): Definitions (descriptions) of statistics to use in fitting
             and/or evaluation (or path to file of definitions). See Notes for explanation of format.
-        point_metadata (pandas.DataFrame or str): Metadata (or path to metadata file) on point (site/gauge)
-            locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
-            details.
+        easting (int or float): Easting of gauge/site for a point simulation. Required if planning to simulate other
+            variables (temperature, PET, ...) or apply climate change perturbations via the ``perturb_statistics()``
+            method. Not required for a spatial model.
+        northing (int or float): Northing of gauge/site for a point simulation. See easting entry above.
+        elevation (int or float): Elevation of gauge/site for a point simulation. See easting entry above.
 
     Notes:
         Seasons can be specified through the ``season_definitions`` argument in several ways:
@@ -55,14 +64,15 @@ class RainfallModel:
         ============  =====================  ========  ======
         Statistic_ID  Name                   Duration  Weight
         ============  =====================  ========  ======
-        1             variance               1         1
-        2             skewness               1         2
-        3             probability_dry_0.2mm  1         7
-        4             mean                   24        6
-        5             variance               24        2
-        6             skewness               24        3
-        7             probability_dry_0.2mm  24        7
-        8             autocorrelation_lag1   24        6
+        1             variance               1H        1
+        2             skewness               1H        2
+        3             probability_dry_0.2mm  1H        7
+        4             mean                   24H       6
+        5             variance               24H       2
+        6             skewness               24H       3
+        7             probability_dry_0.2mm  24H       7
+        8             autocorrelation_lag1   24H       6
+        9             variance               72H       3
         ============  =====================  ========  ======
 
         For a spatial model the default ``statistic_definitions`` are:
@@ -70,15 +80,16 @@ class RainfallModel:
         ============  ======================  ========  ======
         Statistic_ID  Name                    Duration  Weight
         ============  ======================  ========  ======
-        1             variance                1         3
-        2             skewness                1         3
-        3             probability_dry_0.2mm   1         5
-        4             mean                    24        5
-        5             variance                24        2
-        6             skewness                24        2
-        7             probability_dry_0.2mm   24        6
-        8             autocorrelation_lag1    24        3
-        9             cross-correlation_lag0  24        2
+        1             variance                1H        3
+        2             skewness                1H        3
+        3             probability_dry_0.2mm   1H        5
+        4             mean                    24H       5
+        5             variance                24H       2
+        6             skewness                24H       2
+        7             probability_dry_0.2mm   24H       6
+        8             autocorrelation_lag1    24H       3
+        9             cross-correlation_lag0  24H       2
+        10            variance                72H       3
         ============  ======================  ========  ======
 
         For a spatial model, metadata for point (gauge/site) locations to be used in fitting, simulation or
@@ -100,27 +111,42 @@ class RainfallModel:
     def __init__(
             self,
             spatial_model,
-            project_name,
+            project_name,  # TODO: Check whether needed now that variable name is used in output files (for WG)
+            input_timeseries=None,
+            point_metadata=None,  # TODO: Compulsory or not for rainfall model? - ideally not
             season_definitions='monthly',
             intensity_distribution='exponential',
             output_folder='./output',
             statistic_definitions=None,
-            point_metadata=None,
+            easting=None,
+            northing=None,
+            elevation=None,
     ):
+        print('Rainfall model initialisation')
+
+        # Set key options/attributes needed throughout model
         self.season_definitions = utils.parse_season_definitions(season_definitions)
         self.spatial_model = spatial_model
         self.intensity_distribution = intensity_distribution
         self.output_folder = output_folder
         self.project_name = project_name
+        self.input_timeseries = input_timeseries
 
         # Spatial model requires a table of metadata for points
-        if self.spatial_model:
-            if isinstance(point_metadata, pd.DataFrame):
-                self.point_metadata = point_metadata
-            elif isinstance(point_metadata, str):
-                self.point_metadata = utils.read_csv_(point_metadata)
+        # if self.spatial_model:
+        if isinstance(point_metadata, pd.DataFrame):
+            self.point_metadata = point_metadata
+            self.point_metadata.columns = [name.lower() for name in self.point_metadata.columns]
+            # TODO: Other dataframe arguments need to be converted to lowercase column headings (e.g. statistic defs...)
+        elif isinstance(point_metadata, str):
+            self.point_metadata = utils.read_csv_(point_metadata)
         else:
-            self.point_metadata = None
+            if not spatial_model and (easting is not None):
+                self.point_metadata = pd.DataFrame(dict(
+                    point_id=[1], easting=[easting], northing=[northing], name=[project_name], elevation=[elevation],
+                ))
+            else:
+                self.point_metadata = None
 
         # Default statistic definitions (and weights) are taken largely from RainSim V3.1 documentation
         if isinstance(statistic_definitions, pd.DataFrame):
@@ -130,26 +156,30 @@ class RainfallModel:
         else:
             if self.spatial_model:
                 dc = {
-                    1: {'weight': 3.0, 'duration': 1, 'name': 'variance'},
-                    2: {'weight': 3.0, 'duration': 1, 'name': 'skewness'},
-                    3: {'weight': 5.0, 'duration': 1, 'name': 'probability_dry', 'threshold': 0.2},
-                    4: {'weight': 5.0, 'duration': 24, 'name': 'mean'},
-                    5: {'weight': 2.0, 'duration': 24, 'name': 'variance'},
-                    6: {'weight': 2.0, 'duration': 24, 'name': 'skewness'},
-                    7: {'weight': 6.0, 'duration': 24, 'name': 'probability_dry', 'threshold': 0.2},
-                    8: {'weight': 3.0, 'duration': 24, 'name': 'autocorrelation', 'lag': 1},
-                    9: {'weight': 2.0, 'duration': 24, 'name': 'cross-correlation', 'lag': 0}
+                    1: {'weight': 3.0, 'duration': '1H', 'name': 'variance'},
+                    2: {'weight': 3.0, 'duration': '1H', 'name': 'skewness'},
+                    3: {'weight': 5.0, 'duration': '1H', 'name': 'probability_dry', 'threshold': 0.2},
+                    4: {'weight': 5.0, 'duration': '24H', 'name': 'mean'},
+                    5: {'weight': 2.0, 'duration': '24H', 'name': 'variance'},
+                    6: {'weight': 2.0, 'duration': '24H', 'name': 'skewness'},
+                    7: {'weight': 6.0, 'duration': '24H', 'name': 'probability_dry', 'threshold': 0.2},
+                    8: {'weight': 3.0, 'duration': '24H', 'name': 'autocorrelation', 'lag': 1},
+                    9: {'weight': 2.0, 'duration': '24H', 'name': 'cross-correlation', 'lag': 0},
+                    10: {'weight': 3.0, 'duration': '72H', 'name': 'variance'},
+                    11: {'weight': 0.0, 'duration': '1M', 'name': 'variance'},
                 }
             else:
                 dc = {
-                    1: {'weight': 1.0, 'duration': 1, 'name': 'variance'},
-                    2: {'weight': 2.0, 'duration': 1, 'name': 'skewness'},
-                    3: {'weight': 7.0, 'duration': 1, 'name': 'probability_dry', 'threshold': 0.2},
-                    4: {'weight': 6.0, 'duration': 24, 'name': 'mean'},
-                    5: {'weight': 2.0, 'duration': 24, 'name': 'variance'},
-                    6: {'weight': 3.0, 'duration': 24, 'name': 'skewness'},
-                    7: {'weight': 7.0, 'duration': 24, 'name': 'probability_dry', 'threshold': 0.2},
-                    8: {'weight': 6.0, 'duration': 24, 'name': 'autocorrelation', 'lag': 1},
+                    1: {'weight': 1.0, 'duration': '1H', 'name': 'variance'},
+                    2: {'weight': 2.0, 'duration': '1H', 'name': 'skewness'},
+                    3: {'weight': 7.0, 'duration': '1H', 'name': 'probability_dry', 'threshold': 0.2},
+                    4: {'weight': 6.0, 'duration': '24H', 'name': 'mean'},
+                    5: {'weight': 2.0, 'duration': '24H', 'name': 'variance'},
+                    6: {'weight': 3.0, 'duration': '24H', 'name': 'skewness'},
+                    7: {'weight': 7.0, 'duration': '24H', 'name': 'probability_dry', 'threshold': 0.2},
+                    8: {'weight': 6.0, 'duration': '24H', 'name': 'autocorrelation', 'lag': 1},
+                    9: {'weight': 3.0, 'duration': '72H', 'name': 'variance'},
+                    10: {'weight': 0.0, 'duration': '1M', 'name': 'variance'},
                 }
             id_name = 'statistic_id'
             non_id_columns = ['name', 'duration', 'lag', 'threshold', 'weight']
@@ -157,12 +187,13 @@ class RainfallModel:
 
         # Check that statistics include 24hr mean, as it is currently required for calculating phi (add in if absent)
         includes_24hr_mean = self.statistic_definitions.loc[
-            (self.statistic_definitions['name'] == 'mean') & (self.statistic_definitions['duration'] == 24)
+            (self.statistic_definitions['name'] == 'mean')
+            & ((self.statistic_definitions['duration'] == '24H') | (self.statistic_definitions['duration'] == '1D'))
             ].shape[0]
         if not includes_24hr_mean:
             df = pd.DataFrame({
                 'statistic_id': [int(np.max(statistic_definitions['statistic_id'])) + 1], 'weight': [0],
-                'duration': [24], 'name': ['mean'], 'lag': ['NA'], 'threshold': ['NA']
+                'duration': ['24H'], 'name': ['mean'], 'lag': ['NA'], 'threshold': ['NA']
             })
             self.statistic_definitions = pd.concat([statistic_definitions, df])
 
@@ -189,16 +220,25 @@ class RainfallModel:
         #: pandas.DataFrame: Statistics of simulated time series
         self.simulated_statistics = None
 
+        # Default configuration settings for shuffling - see ``update_shuffling_config()`` method docstring
+        self.shuffling_config = self.update_shuffling_config()
+
+        #: list: Start year and end year of record to use in calculations based on reference time series
+        self.calculation_period = None
+
+        print('  - Completed')
+
     def preprocess(
             self,
-            input_timeseries,
             calculation_period='full_record',
             completeness_threshold=0.0,
             outlier_method=None,
             maximum_relative_difference=2.0,
             maximum_alterations=5,
             amax_durations=None,
+            amax_window_type='sliding',
             output_filenames='default',
+            use_pooling=True,
     ):
         """
         Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.
@@ -207,8 +247,6 @@ class RainfallModel:
         file.
 
         Args:
-            input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
-                timeseries data files (for spatial model).
             calculation_period (str or list of int): Start year and end year of calculation period as list. If
                 string ``'full_record'`` is passed (default) then all available data will be used.
             completeness_threshold (float): Percentage completeness for a month or season to be included in statistics
@@ -221,9 +259,13 @@ class RainfallModel:
                 ``outlier_method`` is not None.
             amax_durations (int or list of int): Durations (in hours) for which annual maxima (AMAX) should be
                 identified (default is None).
+            amax_window_type (str): Use a ``'sliding'`` (default) or ``'fixed'`` window in AMAX extraction.
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 {'statistics': 'reference_statistics.csv', 'amax': 'reference_amax.csv'} or ``None`` to indicate that
                 no output files should be written.
+            use_pooling (bool): Indicates whether to pool (scaled) point series for calculating statistics for
+                a spatial model. If True (default), cross-correlations are also "averaged" for a set of separation
+                distance bins.
 
         Notes:
             Currently ``.csv`` files are used for time series inputs. These files are expected to contain a
@@ -231,14 +273,18 @@ class RainfallModel:
             a ``Value`` column using units of mm/timestep.
 
         """
-        print('Preprocessing')
+        print('Rainfall model preprocessing')
 
         # Infer timeseries data format
         if not self.spatial_model:
-            timeseries_format = input_timeseries.split('.')[-1]
+            timeseries_format = self.input_timeseries.split('.')[-1]
         else:
-            file_names = os.listdir(input_timeseries)
-            test_file = self.point_metadata['name'].values[0]
+            file_names = os.listdir(self.input_timeseries)
+            if 'file_name' in self.point_metadata.columns:
+                test_file = self.point_metadata['file_name'].values[0]
+                test_file, _ = test_file.split('.')
+            else:
+                test_file = self.point_metadata['name'].values[0]
             for file_name in file_names:
                 file_name, extension = file_name.split('.')
                 if file_name == test_file:
@@ -248,9 +294,9 @@ class RainfallModel:
         # Input paths as required by analysis function
         if self.spatial_model:
             timeseries_path = None
-            timeseries_folder = input_timeseries
+            timeseries_folder = self.input_timeseries
         else:
-            timeseries_path = input_timeseries
+            timeseries_path = self.input_timeseries
             timeseries_folder = None
 
         # Construct output paths
@@ -279,7 +325,12 @@ class RainfallModel:
         else:
             write_output = True
         if calculation_period == 'full_record':
-            calculation_period = None
+            self.calculation_period = None
+        else:
+            self.calculation_period = calculation_period
+
+        # AMAX durations using resample codes
+        # _amax_durations = [str(dur) + 'H' for dur in amax_durations]
 
         # Do preprocessing
         self.reference_statistics, self.phi = analysis.main(
@@ -293,7 +344,7 @@ class RainfallModel:
             timeseries_path=timeseries_path,
             timeseries_folder=timeseries_folder,
             point_metadata=self.point_metadata,
-            calculation_period=calculation_period,
+            calculation_period=self.calculation_period,
             completeness_threshold=completeness_threshold,
             output_statistics_path=output_statistics_path,
             outlier_method=outlier_method,
@@ -305,10 +356,13 @@ class RainfallModel:
             subset_length=None,
             output_amax_path=output_amax_path,
             amax_durations=amax_durations,
+            amax_window_type=amax_window_type,
             output_ddf_path=None,
             ddf_return_periods=None,
             write_output=write_output,
             simulation_name=None,
+            use_pooling=use_pooling,
+            calculate_statistics=True,
         )
 
         print('  - Completed')
@@ -322,6 +376,11 @@ class RainfallModel:
             initial_parameters=None,
             smoothing_tolerance=0.2,
             output_filenames='default',
+            fit_nsrp=True,
+            fit_shuffling=False,
+            random_seed=None,
+            pdry_iterations=2,
+            use_pooling=True,
     ):
         """
         Fit model parameters.
@@ -347,6 +406,14 @@ class RainfallModel:
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 {'statistics': 'fitted_statistics.csv', 'parameters': 'parameters.csv'} or ``None`` to indicate that
                 no output files should be written.
+            fit_nsrp (bool): Indicates whether to fit NSRP parameters.
+            fit_shuffling (bool): Indicates whether to fit the "delta" parameter that controls the probability of
+                selecting more/less similar storms during shuffling, as well the parameters of the periodic
+                monthly AR1 model.
+            random_seed (int or numpy.random.SeedSequence): For reproducibility in fitting (currently for delta only).
+            pdry_iterations (int): Number of iterations to use to correct bias between fitted (analytical) dry
+                probability and simulated dry probability. Default is 2.
+            use_pooling (bool): Indicates whether to used pooled statistics in NSRP fitting for a spatial model.
 
         Notes:
             The parameters used by the model are:
@@ -363,10 +430,10 @@ class RainfallModel:
 
                 * For a spatial model, the mean number of raincells overlapping a given location is related to rho
                   and gamma, such that nu can be inferred.
-                * If using ``intensity_distribution=='weibull'``, theta is the scale parameter and an additional
+                * If using ``intensity_distribution='weibull'``, theta is the scale parameter and an additional
                   parameter (kappa) is introduced as the shape parameter.
 
-            The ``parameter_bounds`` argument can be specified by a dictionary like ``dict('beta': (0.02, 1.0)``. For
+            The ``parameter_bounds`` argument can be specified by a dictionary like ``dict(beta=(0.02, 1.0))``. For
             more control a dataframe (or ``.csv`` file) can be passed. For example, if a model has two (6-month)
             seasons (using arbitrary example numbers):
 
@@ -378,7 +445,7 @@ class RainfallModel:
             ======  =========  ===========  ===========
 
             If a parameter(s) should be fixed across all seasons then it can be set as e.g.
-            ``dict('beta'=0.1, 'theta'=1)``. Otherwise a table can be provided like:
+            ``dict(beta=0.1, theta=1)``. Otherwise a table can be provided like:
 
             ======  =====  ====
             Season  Lamda  Beta
@@ -412,7 +479,7 @@ class RainfallModel:
             ======  =========  ===========  ===========
             -1      lamda      0.001        0.05
             -1      beta       0.02         0.5
-            -1      rho        0.0001       2.0
+            -1      rho        0.0001       0.05
             -1      eta        0.1          12.0
             -1      gamma      0.01         500.0
             -1      theta      0.25         100.0
@@ -423,7 +490,8 @@ class RainfallModel:
             than or equal to the number of cores or logical processors available.
 
         """
-        print('Fitting')
+        # TODO: Check upper bound for rho in spatial model - originally 2.0
+        print('Rainfall model fitting')
 
         # Get parameter bounds into a dataframe
         if isinstance(parameter_bounds, dict):
@@ -458,8 +526,8 @@ class RainfallModel:
                 'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
         else:
-            default_bounds = pd.DataFrame.from_dict({
-                'lamda': (0.001, 0.05), 'beta': (0.02, 0.5), 'rho': (0.0001, 2.0), 'eta': (0.1, 12.0),
+            default_bounds = pd.DataFrame.from_dict({  # TODO: Check rho - originally 2.0
+                'lamda': (0.001, 0.05), 'beta': (0.02, 0.5), 'rho': (0.0001, 0.05), 'eta': (0.1, 12.0),
                 'gamma': (0.01, 500.0),
                 'theta': (0.25, 100), 'kappa': (0.5, 1.0), 'kappa_1': (0.5, 1.0), 'kappa_2': (0.5, 1.0)
             }, orient='index', columns=['lower_bound', 'upper_bound'])
@@ -496,24 +564,85 @@ class RainfallModel:
         else:
             write_output = True
 
+        if random_seed is None:
+            rng = np.random.default_rng()
+            random_seed = rng.integers(1000000, 1000000000)
+
         # Do fitting
-        self.parameters, self.fitted_statistics = fitting.main(
-            season_definitions=self.season_definitions,
-            spatial_model=self.spatial_model,
-            intensity_distribution=self.intensity_distribution,
-            fitting_method=fitting_method,
-            reference_statistics=self.reference_statistics,
-            all_parameter_names=self.parameter_names,  # RENAMED
-            parameters_to_fit=parameters_to_fit,  # NEW
-            parameter_bounds=parameter_bounds,  # SAME
-            fixed_parameters=fixed_parameters,  # NEW
-            n_workers=n_workers,
-            output_parameters_path=output_parameters_path,
-            output_statistics_path=output_statistics_path,
-            initial_parameters=initial_parameters,
-            smoothing_tolerance=smoothing_tolerance,
-            write_output=write_output,  # NEW
-        )
+        if fit_nsrp:
+            self.parameters, self.fitted_statistics = fitting.main(
+                season_definitions=self.season_definitions,
+                spatial_model=self.spatial_model,
+                intensity_distribution=self.intensity_distribution,
+                fitting_method=fitting_method,
+                reference_statistics=self.reference_statistics.loc[
+                    self.reference_statistics['duration'] != self.shuffling_config['target_duration']
+                ],  # TODO: This subset may no longer be needed, as all weights except nsrp can potentially go to zero
+                all_parameter_names=self.parameter_names,  # RENAMED
+                parameters_to_fit=parameters_to_fit,  # NEW
+                parameter_bounds=parameter_bounds,  # SAME
+                fixed_parameters=fixed_parameters,  # NEW
+                n_workers=n_workers,
+                output_parameters_path=output_parameters_path,
+                output_statistics_path=output_statistics_path,
+                initial_parameters=initial_parameters,
+                smoothing_tolerance=smoothing_tolerance,
+                write_output=write_output,  # NEW
+                # !221123 - for pre-biasing
+                n_iterations=pdry_iterations,
+                output_folder=self.output_folder,
+                point_metadata=self.point_metadata,
+                phi=self.phi,
+                statistic_definitions=self.statistic_definitions,
+                random_seed=random_seed,
+                use_pooling=use_pooling,
+                testing_pars=self.parameters,  # TEMPORARY FOR TESTING
+            )
+
+        if fit_shuffling:
+            ar1_parameters = shuffling.fit_ar1(
+                self.spatial_model, self.input_timeseries, self.point_metadata, self.calculation_period,
+                self.reference_statistics,
+            )
+            delta = shuffling.fit_delta(
+                spatial_model=self.spatial_model,
+                parameters=self.parameters,
+                intensity_distribution=self.intensity_distribution,
+                point_metadata=self.point_metadata,
+                n_workers=n_workers,
+                random_seed=random_seed,
+                reference_statistics=self.reference_statistics,
+                reference_duration=self.shuffling_config['target_duration'],
+                n_divisions=self.shuffling_config['month_divisions'],
+                use_pooling=use_pooling,
+            )
+            delta = delta.merge(ar1_parameters)
+            delta = delta[['season', 'delta', 'ar1_slope', 'ar1_intercept', 'ar1_stderr']]
+            self.parameters = pd.merge(self.parameters, delta)
+
+            # TODO: Sort out how to write out delta - merge into fit method?
+            lines = []
+            with open(output_parameters_path, 'r') as fh:
+                for line in fh:
+                    lines.append(line.rstrip())
+            with open(output_parameters_path, 'w') as fh:
+                i = 0
+                for line in lines:
+                    if i == 0:
+                        # line = line + ',Delta\n'  # Max_DSL,
+                        line = line + ',Delta,AR1_Slope,AR1_Intercept,AR1_STDERR\n'
+                    else:
+                        line = (
+                            line
+                            # + ',' + str(self.parameters['max_dsl'].values[i-1])
+                            + ',' + str(self.parameters['delta'].values[i - 1])
+                            + ',' + str(self.parameters['ar1_slope'].values[i - 1])
+                            + ',' + str(self.parameters['ar1_intercept'].values[i - 1])
+                            + ',' + str(self.parameters['ar1_stderr'].values[i - 1])
+                            + '\n'
+                        )
+                    fh.write(line)
+                    i += 1
 
         print('  - Completed')
 
@@ -534,6 +663,8 @@ class RainfallModel:
             calendar='gregorian',
             random_seed=None,
             run_simulation=True,
+            apply_shuffling=False,
+            weather_model=None,
     ):
         """
         Simulate stochastic time series realisation(s) of NSRP process.
@@ -570,12 +701,15 @@ class RainfallModel:
             run_simulation (bool): Flag for whether to run simulation. Setting to False may be used to update
                 ``self.simulation_args`` to allow ``self.postprocess()`` to be run without ``self.simulate()``
                 having been run first (i.e. reading from existing simulation output files).
+            apply_shuffling (bool): Indicates whether to run model with or without shuffling following Kim and Onof
+                (2020) method.  # TODO: Provide explanation of method
+            weather_model (object): Instance of WeatherModel.  # TODO: Expand explanation
 
         Notes:
             Though gridded output is calculated (if ``output_types`` includes ``'grid'``) it is not yet available to
             write (under development).
 
-            All locations in ``self.point_metadata`` will be written as output currently.  # TODO: CHANGE THIS
+            All locations in ``self.point_metadata`` will be written as output currently.  # TODO: To be changed
 
             Catchment shapefile or geodataframe assumed to have an ``ID`` field that can be used to identify catchments.
             Both point and catchment metadata are assumed to have a ``Name`` field for use as a prefix in file naming.
@@ -627,7 +761,7 @@ class RainfallModel:
         if self.project_name is None:
             output_name = 'simulation'
         else:
-            output_name = self.project_name
+            output_name = self.project_name  # TODO: Sort out inclusion of variable name...
 
         # Ensure only "final" parameters are used in simulation (in case intermediate parameters were recorded during
         # fitting)
@@ -647,6 +781,19 @@ class RainfallModel:
             n_realisations=n_realisations,
             simulation_name=output_name,
         )
+
+        # Get input timeseries data file/folder paths to help with shuffling
+        if self.spatial_model:
+            timeseries_path = None
+            timeseries_folder = self.input_timeseries
+        else:
+            timeseries_path = self.input_timeseries
+            timeseries_folder = None
+
+        if apply_shuffling:
+            simulation_mode = 'with_shuffling'
+        else:
+            simulation_mode = 'no_shuffling'
 
         # Stop here if only the arguments needed for post-processing (of existing files) are required
         if run_simulation:
@@ -682,16 +829,23 @@ class RainfallModel:
                 project_name=output_name,
                 spatial_raincell_method=self.simulation_config['spatial_raincell_method'],
                 spatial_buffer_factor=self.simulation_config['spatial_buffer_factor'],
+                simulation_mode=simulation_mode,
+                weather_model=weather_model,
+                max_dsl=6.0,  # TODO: Remove?
+                n_divisions=self.shuffling_config['month_divisions'],
+                do_reordering=self.shuffling_config['reorder_months'],
             )
 
-        print('  - Completed')
+            print('  - Completed')
 
     def postprocess(
             self,
             amax_durations=None,
             ddf_return_periods=None,
-            subset_length=50,
+            amax_window_type='sliding',
+            subset_length=200,  # 50,
             output_filenames='default',
+            calculate_statistics=True,
             simulation_format=None,
             start_year=None,
             timestep_length=None,
@@ -699,6 +853,7 @@ class RainfallModel:
             simulation_subfolders=None,
             simulation_length=None,
             n_realisations=None,
+            # n_workers=1,  # TODO: Define n_workers in __init__()
     ):
         """
         Post-processing to calculate statistics from simulated point output.
@@ -711,11 +866,14 @@ class RainfallModel:
                 identified.
             ddf_return_periods (int or list of int): Return periods (in years) for which depths should be estimated,
                 given the durations specified by ``amax_durations``.
+            amax_window_type (str): Use a ``'sliding'`` (default) or ``'fixed'`` window in AMAX extraction.
             subset_length (int): For splitting a realisation into ``subset_length`` years for calculating (seasonal)
                 statistics (e.g. mean, variance, etc.). Does not affect AMAX extraction or DDF calculations.
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 ``{'statistics': 'simulated_statistics.csv', 'amax': 'simulated_amax.csv', 'ddf': 'simulated_ddf.csv}``
                 or ``None`` to indicate that no output files should be written.
+            calculate_statistics (bool): Indicates whether to calculate statistics (e.g. mean, variance, etc) for
+                comparison with reference and/or fitted statistics. Default is True.
             simulation_format (str): Flag indicating point output file format (current option is ``txt``).
             start_year (int): See ``self.simulate()`` arguments.
             timestep_length (int): See ``self.simulate()`` arguments.
@@ -730,7 +888,7 @@ class RainfallModel:
             simulation_length, n_realisations``.
 
         """
-        print('Post-processing')
+        print('Rainfall simulation post-processing')
 
         # Check that either arguments of self.simulation_args are available
         postprocessing_args = utils.get_kwargs()
@@ -761,8 +919,9 @@ class RainfallModel:
             n_realisations = self.simulation_args['n_realisations']
 
         # Construct output paths
-        if not os.path.exists(self.output_folder):
-            os.makedirs(self.output_folder)
+        output_subfolder = os.path.join(self.output_folder, simulation_subfolders['point'])
+        if not os.path.exists(output_subfolder):
+            os.makedirs(output_subfolder)
         if output_filenames == 'default':
             output_statistics_filename = 'simulated_statistics.csv'
             output_amax_filename = 'simulated_amax.csv'
@@ -774,13 +933,13 @@ class RainfallModel:
                 output_amax_filename = output_filenames['amax']
             if 'ddf' in output_filenames:
                 output_ddf_filename = output_filenames['ddf']
-        output_statistics_path = os.path.join(self.output_folder, output_statistics_filename)
+        output_statistics_path = os.path.join(output_subfolder, output_statistics_filename)
         if amax_durations is not None:
-            output_amax_path = os.path.join(self.output_folder, output_amax_filename)
+            output_amax_path = os.path.join(output_subfolder, output_amax_filename)
         else:
             output_amax_path = None
         if ddf_return_periods is not None:
-            output_ddf_path = os.path.join(self.output_folder, output_ddf_filename)
+            output_ddf_path = os.path.join(output_subfolder, output_ddf_filename)
         else:
             output_ddf_path = None
 
@@ -799,7 +958,11 @@ class RainfallModel:
             else:
                 simulation_subfolders = dict(point='')
         timeseries_path = None
-        timeseries_folder = os.path.join(self.output_folder, simulation_subfolders['point'])
+        timeseries_folder = os.path.join(output_subfolder)
+
+        # Subset on points to use in post-processing
+        # if 'postprocess' in self.point_metadata.columns:
+        #     pass
 
         self.simulated_statistics, _ = analysis.main(
             spatial_model=self.spatial_model,
@@ -824,10 +987,14 @@ class RainfallModel:
             subset_length=subset_length,
             output_amax_path=output_amax_path,
             amax_durations=amax_durations,
+            amax_window_type=amax_window_type,
             output_ddf_path=output_ddf_path,
             ddf_return_periods=ddf_return_periods,
             write_output=True,
             simulation_name=self.project_name,
+            # n_workers=n_workers,
+            use_pooling=False,
+            calculate_statistics=calculate_statistics,
         )
 
         print('  - Completed')
@@ -843,7 +1010,8 @@ class RainfallModel:
         Set statistics and related attributes.
 
         Args:
-            point_metadata: Required for a spatial model.
+            point_metadata (pandas.DataFrame or str): Required for a spatial model. See ``RainfallModel`` class
+                docstring for explanation.
             reference_statistics (pandas.DataFrame or str): Reference statistics for model fitting and/or evaluation as
                 dataframe (or path to file). Also used in simulation for a spatial model. Optional (depending on
                 subsequent workflow).
@@ -866,15 +1034,21 @@ class RainfallModel:
             it is required for both fitting and simulation.
 
         """
+        print('Setting rainfall statistics')
+
         # Point metadata
-        if self.spatial_model and point_metadata is None:
-            raise ValueError('point_metadata must be supplied for a spatial model.')
+        # if self.spatial_model and point_metadata is None:
+        #     raise ValueError('point_metadata must be supplied for a spatial model.')
+        if (self.point_metadata is None) and (point_metadata is None):
+            # TODO: Confirm whether point_metadata is needed/compulsory for rainfall model - ideally not
+            # raise ValueError('point_metadata must be supplied.')
+            pass
         if isinstance(point_metadata, pd.DataFrame):
             self.point_metadata = point_metadata
         elif isinstance(point_metadata, str):
             self.point_metadata = utils.read_csv_(point_metadata)
-        if not self.spatial_model:
-            self.point_metadata = None
+        # if not self.spatial_model:
+        #     self.point_metadata = None
 
         # Reference statistics
         if reference_statistics is not None:
@@ -882,6 +1056,15 @@ class RainfallModel:
                 self.reference_statistics = reference_statistics
             elif isinstance(reference_statistics, str):
                 self.reference_statistics = utils.read_statistics(reference_statistics)
+            phi = self.reference_statistics.loc[
+                (self.reference_statistics['point_id'] == self.reference_statistics['point_id'].min())
+                & (self.reference_statistics['statistic_id'] == self.reference_statistics['statistic_id'].min()),
+                ['point_id', 'season', 'phi']
+            ]
+            if self.spatial_model:
+                self.phi = pd.merge(phi, self.point_metadata)
+            else:
+                self.phi = phi
 
         # Fitted statistics
         if fitted_statistics is not None:
@@ -912,6 +1095,8 @@ class RainfallModel:
             phi = self.reference_statistics[columns].drop_duplicates(subset=columns)
             self.phi = pd.merge(self.point_metadata, phi)
 
+        print('  - Completed')
+
     def set_parameters(self, parameters):
         """
         Set parameters attribute.
@@ -920,13 +1105,116 @@ class RainfallModel:
             parameters (pd.DataFrame or str): Dataframe (or path to file) containing parameters for each month/season.
 
         """
+        print('Setting rainfall model parameters')
+
         if isinstance(parameters, pd.DataFrame):
             self.parameters = parameters
         elif isinstance(parameters, str):
             self.parameters = utils.read_csv_(parameters)
 
+        print('  - Completed')
+
+    def perturb_statistics(
+            self,
+            change_factors,
+            change_factor_names='default',
+            easting_name='projection_x_coordinate',
+            northing_name='projection_y_coordinate',
+            month_variable='month_number',
+            write_output=True,
+            output_filename='perturbed_statistics.csv',
+    ):
+        """
+        Perturb reference statistics using a set of change factors.
+
+        Updates self.reference_statistics in preparation for fitting.
+
+        Args:
+            change_factors (dict): Paths to NetCDF files containing change factors for each required duration
+                (e.g. 1H, 24H).
+            change_factor_names (dict): Mapping of statistic names used in rwgen to change factor variable names in
+                NetCDF files. See notes for 'default' mapping.
+            easting_name (str): Name of easting variable in NetCDF files.
+            northing_name (str): Name of northing variable in NetCDF files.
+            month_variable (str): Name of variable indicating month number associated with each time in the NetCDF
+                files.
+            write_output (bool): Flag to write output file containing perturbed statistics.
+            output_filename (str): Name of output file
+
+        Notes:
+             Change factors are read from NetCDF files. The files should be specified via the ``change_factors``
+             argument using e.g.:
+             ``change_factors={'1H': 'C:/Path/To/1H_ChangeFactors.nc', '24H': 'C:/Path/To/24H_ChangeFactors.nc'}``
+
+             The default names for mapping rwgen statistics to the change factors in the NetCDF files are specified by
+             the following dictionary:
+             ``change_factor_names = {
+             'mean': 'mean_changefactor_ts1_to_ts3',
+             'variance': 'variance_changefactor_ts1_to_ts3',
+             'skewness': 'skewness_changefactor_ts1_to_ts3',
+             'probability_dry_0.2mm': 'pd_0p2_changefactor_ts1_to_ts3',
+             'autocorrelation_lag1': 'l1ac_changefactor_ts1_to_ts3',
+             }``
+
+             Other points to note are:
+
+                 * Perturbation currently works for the point (single site) version of the model only.
+                 * Change factors can also only be specified monthly at present.
+                 * Only a 0.2mm threshold for dry probability is supported currently.
+                 * Only lag-1 autocorrelation is supported.
+
+        """
+        print('Perturbing reference statistics')
+
+        if self.spatial_model:
+            raise TypeError('Statistic perturbation is only implemented for the single site model currently.')
+
+        if change_factor_names == 'default':
+            change_factor_names = {
+                'mean': 'mean_changefactor_ts1_to_ts3',
+                'variance': 'variance_changefactor_ts1_to_ts3',
+                'skewness': 'skewness_changefactor_ts1_to_ts3',
+                'probability_dry_0.2mm': 'pd_0p2_changefactor_ts1_to_ts3',
+                'autocorrelation_lag1': 'l1ac_changefactor_ts1_to_ts3',
+            }
+
+        durations = list(change_factors.keys())
+        statistic_names = list(change_factor_names.keys())
+
+        ref_stats = self.reference_statistics.copy()
+
+        easting = self.point_metadata.loc[self.point_metadata['point_id'] == 1, 'easting'].values[0]
+        northing = self.point_metadata.loc[self.point_metadata['point_id'] == 1, 'northing'].values[0]
+
+        stat_defs = self.statistic_definitions.loc[self.statistic_definitions['duration'].isin(durations)]
+
+        self.reference_statistics = perturbation.perturb_statistics(
+            stat_defs=stat_defs,
+            statistic_names=statistic_names,
+            durations=durations,
+            change_factors=change_factors,
+            month_variable=month_variable,
+            easting_name=easting_name,
+            northing_name=northing_name,
+            easting=easting,
+            northing=northing,
+            change_factor_names=change_factor_names,
+            ref_stats=ref_stats,
+        )
+
+        if write_output:
+            utils.write_statistics(
+                self.reference_statistics,
+                os.path.join(self.output_folder, output_filename),
+                self.season_definitions,
+            )
+
+        print('  - Completed')
+
     def update_output_folder(self, output_folder):
         self.output_folder = output_folder
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
 
     def update_simulation_config(
             self,
@@ -975,6 +1263,34 @@ class RainfallModel:
             self.simulation_config = simulation_config
         else:
             return simulation_config
+
+    def update_shuffling_config(
+            self,
+            target_duration='1M',
+            month_divisions=4,  # TODO: Could be 8 for single site?
+            reorder_months=True
+    ):
+        """
+        Update shuffling settings for fitting and simulation using modified Kim and Onof (2020) method.
+
+        Args:
+            target_duration (str): Duration to use for reference variance in fitting (cannot be changed currently).
+            month_divisions (int): Number of windows to divide month into when shuffling. This needs to be an even
+                number currently (4, 6 or 8). Possible to use 8 with a single site model, but 4 better for a spatial
+                model.
+            reorder_months (bool): If True (default) then apply both shuffling algorithm and then further reordering
+                based on an AR1 model. These stages correspond to modules 2 and 3 in Kim and Onof (2020).
+
+        """
+        shuffling_config = dict(
+            target_duration=target_duration,
+            month_divisions=month_divisions,
+            reorder_months=reorder_months,
+        )
+        if hasattr(self, 'shuffling_config'):
+            self.shuffling_config = shuffling_config
+        else:
+            return shuffling_config
 
     def plot(self, plot_type='annual_cycle', data_types='all', point_id=1):
         """

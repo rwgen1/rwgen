@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import scipy.interpolate
@@ -97,6 +99,16 @@ def main(
     df['raincell_duration'] = rng.exponential(1.0 / df['eta'])
     df['raincell_end'] = df['raincell_arrival'] + df['raincell_duration']
 
+    # ---
+    # !221121 (047) - Testing adjustment of raincell intensity parameters for storms crossing over month boundaries
+    # - if raincell arrival or end in same month as storm then keep the same
+    # - otherwise, if raincell midpoint in another month then use intensity parameters from that month
+    # - implement by using a dummy arrival variable for month lookup for parameter assignment only
+    # - main month variable remains the same as for storm arrival
+    # _modify_parameters(df, month_lengths, simulation_length, parameters)
+
+    # ---
+
     # Step 5 - Simulate raincell intensities
     if intensity_distribution == 'exponential':
         df['raincell_intensity'] = rng.exponential(df['theta'])  # rng.exponential(1.0 / df['xi'])
@@ -105,6 +117,9 @@ def main(
     elif intensity_distribution == 'generalised_gamma':
         df['raincell_intensity'] = scipy.stats.gengamma.rvs(
             a=(df['kappa_1'] / df['kappa_2']), c=df['kappa_2'], scale=df['theta'], random_state=rng)
+
+    # Tidy df
+    df.drop(columns=['lamda', 'beta', 'rho', 'eta', 'gamma', 'theta', 'kappa'], inplace=True, errors='ignore')
 
     return df
 
@@ -297,9 +312,13 @@ def merge_parameters(df, month_lengths, simulation_length, parameters):
     """
     df['month'] = lookup_months(month_lengths, simulation_length, df['storm_arrival'].values)
     parameters_subset = parameters.loc[parameters['fit_stage'] == 'final'].copy()
-    parameters_subset = parameters_subset.drop(
-        ['fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations'], axis=1
-    )
+    # parameters_subset = parameters_subset.drop(
+    #     ['fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations'], axis=1
+    # )
+    parameters_subset = parameters_subset.drop([  # !221121
+        'fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations', 'delta', 'ar1_slope',
+        'ar1_intercept', 'ar1_stderr'
+    ], axis=1, errors='ignore')
     df = pd.merge(df, parameters_subset, how='left', on='month')
     return df
 
@@ -409,6 +428,7 @@ def simulate_raincells_for_month(
         )
 
     # Simulate outer region if using Burton et al. (2010) method
+    # TODO: Fix this method - it does not work properly yet!
     if not buffer:
 
         # Construct CDF lookup function for distances of relevant raincells occurring in outer
@@ -628,3 +648,166 @@ def sample_outer_locations(d, xrange, yrange, xmin, xmax, ymin, ymax, rng):
     y[segment_id == 8] = ymin + d[segment_id == 8] * np.sin(3.0 / 2.0 * np.pi - theta[segment_id == 8])
 
     return x, y
+
+
+# ---
+
+def main2(
+        spatial_model,
+        parameters,
+        simulation_length,
+        month_lengths,
+        season_definitions,
+        intensity_distribution,
+        rng,
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+        method,
+        buffer_factor,
+        dth,  # !221120
+):
+    """
+    Alternative approach using a second simulation to provide raincells that overlap month boundaries (i.e. with
+    the associated parameters of the target month, rather than the previous month. NOT CURRENTLY USED.
+
+    """
+    # Ensure parameters are available monthly (i.e. repeated for each month in season)
+    if len(season_definitions.keys()) == 12:
+        parameters = parameters.copy()
+        parameters['month'] = parameters['season']
+    else:
+        months = []
+        seasons = []
+        for month, season in season_definitions.items():
+            months.append(month)
+            seasons.append(season)
+        df_seasons = pd.DataFrame({'month': months, 'season': seasons})
+        parameters = pd.merge(df_seasons, parameters, how='left', on='season')
+    parameters.sort_values(by='month', inplace=True)
+
+    # ---
+    # Simulate the main series
+    df = main(
+        spatial_model, parameters, simulation_length, month_lengths, season_definitions, intensity_distribution,
+        rng, xmin, xmax, ymin, ymax, method, buffer_factor,
+    )
+
+    # Ensure that minimum arrival time is greater than zero (for binning) and maximum end if less than block
+    df.drop(index=df.index[df['raincell_arrival'] >= dth['end_time'].max()], inplace=True)
+    df['raincell_end'] = np.where(
+        df['raincell_end'] > dth['end_time'].max(), dth['end_time'].max(), df['raincell_end']
+    )
+
+    # For each storm, identify the month index in which the arrival occurs
+    df['storm_month_idx'] = np.digitize(df['storm_arrival'], dth['end_time'], right=True)
+
+    # Merge in time information
+    df = df.merge(dth[['month_id', 'end_time']], left_on='storm_month_idx', right_on='month_id')
+    df.drop(columns='month_id', inplace=True)
+
+    # Subset on raincells starting in the same month as the storm
+    df = df.loc[df['raincell_arrival'] < df['end_time']]  # .copy()
+
+    # Truncate raincells crossing month ends
+    df['raincell_end'] = np.minimum(df['raincell_end'], df['end_time'])
+
+    # Prepare for merge
+    df.drop(columns=['storm_month_idx', 'end_time'], inplace=True)
+
+    # ---
+    # Simulate a secondary series for storms that overlap month boundaries
+    df1 = main(
+        spatial_model, parameters, simulation_length, month_lengths, season_definitions, intensity_distribution,
+        rng, xmin, xmax, ymin, ymax, method, buffer_factor,
+    )
+
+    # Ensure that minimum arrival time is greater than zero (for binning) and maximum end if less than block
+    df1.drop(index=df1.index[df1['raincell_arrival'] >= dth['end_time'].max()], inplace=True)
+    df1['raincell_end'] = np.where(
+        df1['raincell_end'] > dth['end_time'].max(), dth['end_time'].max(), df1['raincell_end']
+    )
+
+    # For each storm, identify the month index in which the arrival occurs
+    df1['storm_month_idx'] = np.digitize(df1['storm_arrival'], dth['end_time'], right=True)
+
+    # Merge in time information
+    df1 = df1.merge(
+        dth[['month_id', 'n_hours', 'start_time', 'end_time']], left_on='storm_month_idx', right_on='month_id'
+    )
+    df1.drop(columns='month_id', inplace=True)
+
+    # Identify those cells that end after notional month end time (i.e. should go into next month)
+    df1 = df1.loc[df1['raincell_end'] > df1['end_time']]  # .copy()
+
+    # Adjust times ready for merging
+    df1['storm_arrival'] -= df1['n_hours']
+    df1['raincell_arrival'] -= df1['n_hours']
+    df1['raincell_end'] -= df1['n_hours']
+    df1['storm_arrival'] = np.where(df1['storm_arrival'] < df1['start_time'], df1['start_time'], df1['storm_arrival'])
+
+    # Check that no really long raincells that somehow extend beyond the end of the month even with adjusted times
+    df1 = df1.loc[df1['raincell_end'] <= df1['end_time']]
+
+    # Merge with main series
+    df1['storm_id'] = df1['storm_id'].ne(df1['storm_id'].shift()).cumsum() + df['storm_id'].max()
+    df1.drop(columns=['storm_month_idx', 'n_hours', 'start_time', 'end_time'], inplace=True)
+    df = pd.concat([df, df1])
+    df.sort_values(by=['storm_arrival', 'raincell_arrival'], inplace=True, ignore_index=False)
+    df['storm_id'] = df['storm_id'].ne(df['storm_id'].shift()).cumsum() - 1
+
+    return df
+
+
+def _modify_parameters(df, month_lengths, simulation_length, parameters):
+    """
+    For testing whether reassigning intensity parameters helps (047). NOT CURRENTLY USED.
+
+    """
+    # First need to ensure all raincell arrivals are in simulation period
+    end_time = float(np.sum(month_lengths))
+    df.drop(index=df.index[df['raincell_arrival'] >= end_time], inplace=True)
+    df['raincell_duration'] = np.where(
+        df['raincell_end'] >= end_time,
+        (end_time - df['raincell_arrival']) * 0.99,
+        df['raincell_duration']
+    )
+    df['raincell_end'] = np.where(
+        df['raincell_end'] >= end_time,
+        df['raincell_arrival'] + df['raincell_duration'],
+        df['raincell_end']
+    )
+
+    # Find month associated with raincell arrival and midpoints
+    df['rc_midpoint'] = df['raincell_arrival'] + df['raincell_duration'] / 2.0
+    df['rc_arrival_month'] = lookup_months(month_lengths, simulation_length, df['raincell_arrival'].values)
+    df['rc_midpoint_month'] = lookup_months(month_lengths, simulation_length, df['rc_midpoint'].values)
+
+    # Identify the correct month for parameter lookup
+    df['rc_month'] = (
+        np.where(
+            df['rc_arrival_month'] == df['month'],
+            df['month'],
+            np.where(
+                df['rc_midpoint_month'] != df['month'],
+                df['rc_midpoint_month'],
+                df['month'],
+            )
+        )
+    )
+
+    # Redo parameter merge
+    parameters_subset = parameters.loc[parameters['fit_stage'] == 'final'].copy()
+    parameters_subset = parameters_subset.drop([
+        'fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations', 'delta', 'ar1_slope',
+        'ar1_intercept', 'ar1_stderr', 'season'
+    ], axis=1, errors='ignore')
+    parameters_subset.rename(columns={'month': 'rc_month'}, inplace=True)
+    df.drop(columns=['lamda', 'beta', 'rho', 'eta', 'gamma', 'theta', 'kappa'], inplace=True, errors='ignore')
+    df = pd.merge(df, parameters_subset, how='left', on='rc_month')
+
+    # Tidy up df
+    df.drop(columns=['rc_midpoint', 'rc_arrival_month', 'rc_midpoint_month', 'rc_month'], inplace=True)
+
+    return df

@@ -303,10 +303,10 @@ def read_statistics(filepath):
             threshold = threshold.replace('_probability_dry', '')
             if '.' in threshold:
                 threshold = float(threshold.replace('mm', ''))
-                if duration == 1:
+                if duration == '1H':
                     if threshold not in [0.0, 0.1, 0.2]:
                         raise ValueError('1-hour probability dry threshold must be 0.0, 0.1 or 0.2')
-                elif duration == 24:
+                elif duration == '24H':
                     if threshold not in [0.0, 0.2, 1.0]:
                         raise ValueError('24-hour probability dry threshold must be 0.0, 0.2 or 1.0')
                 else:
@@ -518,9 +518,15 @@ def write_phi(df, file_path):
 
 def write_maxima(df, output_path, analysis_mode):
     df.reset_index(inplace=True)
-    df.rename(columns={'index': 'year'}, inplace=True)
+    # df.rename(columns={'index': 'year'}, inplace=True)
+    df.rename(columns={'index': 'year', 'datetime': 'year'}, inplace=True)
     df = df.loc[:, ['realisation_id', 'point_id', 'duration', 'year', 'value']]
-    df.sort_values(['realisation_id', 'point_id', 'duration', 'year'], inplace=True)
+
+    df['dur_tmp'] = [int(duration[:-1]) for duration in df['duration']]
+    # df.sort_values(['realisation_id', 'point_id', 'duration', 'year'], inplace=True)
+    df.sort_values(['realisation_id', 'point_id', 'dur_tmp', 'year'], inplace=True)
+    df.drop(columns=['dur_tmp'], inplace=True)
+
     df.columns = ['Realisation_ID', 'Point_ID', 'Duration', 'Year', 'Value']
     if analysis_mode == 'preprocessing':
         df.drop(columns=['Realisation_ID'], inplace=True)
@@ -805,24 +811,34 @@ def define_grid_extent(catchments, cell_size, dem):
     """
     xmin, ymin, xmax, ymax = geodataframe_bounding_box(catchments, round_extent=False)
     if dem is not None:
-        dem_cell_size = dem.x.values[1] - dem.x.values[0]
-        new_xmin = dem.x.values[0] - dem_cell_size / 2.0
-        new_ymin = dem.y.values[-1] - dem_cell_size / 2.0
-        x_offset = new_xmin - round_down(xmin, cell_size)
-        y_offset = new_ymin - round_down(ymin, cell_size)
-        new_xmax = round_up(xmax, cell_size) - (cell_size - x_offset)
-        new_ymax = round_up(ymax, cell_size) - (cell_size - y_offset)
-        if new_xmax < xmax:
-            xmax = new_xmax + cell_size
-        else:
-            xmax = new_xmax
-        if new_ymax < ymax:
-            ymax = new_ymax + cell_size
-        else:
-            ymax = new_ymax
-        xmin = new_xmin
-        ymin = new_ymin
-    grid = ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size)
+        # !221122 - TESTING commented outlines below
+        # dem_cell_size = dem.x.values[1] - dem.x.values[0]
+        # new_xmin = dem.x.values[0] - dem_cell_size / 2.0
+        # new_ymin = dem.y.values[-1] - dem_cell_size / 2.0
+        # x_offset = new_xmin - round_down(xmin, cell_size)
+        # y_offset = new_ymin - round_down(ymin, cell_size)
+        # new_xmax = round_up(xmax, cell_size) - (cell_size - x_offset)
+        # new_ymax = round_up(ymax, cell_size) - (cell_size - y_offset)
+        # if new_xmax < xmax:
+        #     xmax = new_xmax + cell_size
+        # else:
+        #     xmax = new_xmax
+        # if new_ymax < ymax:
+        #     ymax = new_ymax + cell_size
+        # else:
+        #     ymax = new_ymax
+        # xmin = new_xmin
+        # ymin = new_ymin
+
+        # !221122 - TESTING new lines
+        new_xmin = round_down(xmin, cell_size)
+        new_ymin = round_down(ymin, cell_size)
+        new_xmax = round_up(xmax, cell_size)
+        new_ymax = round_up(ymax, cell_size)
+
+    # grid = ascii_grid_headers_from_extent(xmin, ymin, xmax, ymax, cell_size)
+    grid = ascii_grid_headers_from_extent(new_xmin, new_ymin, new_xmax, new_ymax, cell_size)
+
     return grid
 
 
@@ -883,8 +899,13 @@ def catchment_weights(
         # Swap northing coordinates so go from high to low (north-south)
         cube = cube.reindex(y=cube.y[::-1])
 
+        # print(cube.Dummy.x)  # !221122 - low to high
+        # print(cube.Dummy.y)  # !221122 - high to low
+        # sys.exit()
+
         # Adjust data array itself to match (only change in y-direction required)
-        cube.Dummy.data = np.flipud(cube.Dummy.data)
+        # !221122 - TESTING - commented out line below
+        # !! cube.Dummy.data = np.flipud(cube.Dummy.data)
 
         # Resample (coarsen) to output grid resolution
         window = int(output_grid_resolution / shapefile_grid_resolution)
@@ -896,6 +917,13 @@ def catchment_weights(
         # y = yy[cube.Dummy.data > 0.0]
         # weights = cube.Dummy.data[cube.Dummy.data > 0.0]
         # discretisation_points[id_field] = {'easting': x, 'northing': y, 'weight': weights}
+
+        # print(cube.Dummy.data)
+        # print(cube.Dummy.data.shape)
+        # np.savetxt(
+        #     'H:/Projects/rwgen/working/iss13/stnsrp/discretisation/weights_1c.txt', cube.Dummy.data, '%.4f'
+        # )
+        # sys.exit()
 
         # Add all points to output dictionary
         xx, yy = np.meshgrid(cube.x, cube.y)

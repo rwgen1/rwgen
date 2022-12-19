@@ -1,3 +1,8 @@
+import os
+import sys
+import datetime
+import shutil
+
 import numpy as np
 import pandas as pd
 import scipy.optimize
@@ -5,6 +10,8 @@ import scipy.stats
 
 from . import properties
 from . import utils
+from . import simulation
+from . import analysis
 
 
 def main(
@@ -23,6 +30,15 @@ def main(
         initial_parameters,
         smoothing_tolerance,
         write_output,
+        # !221123
+        n_iterations,  # !221123 - for prebiasing
+        output_folder,
+        point_metadata,
+        phi,
+        statistic_definitions,
+        random_seed,
+        use_pooling,
+        testing_pars,  # TEMPORARY FOR TESTING
 ):
     """
     Fit model parameters.
@@ -37,18 +53,126 @@ def main(
         'converged', 'objective_function', 'iterations', 'function_evaluations'
     ])
 
-    # Select and run fitting method
+    # Month statistics not used in NSRP fitting
+    reference_statistics = reference_statistics.loc[reference_statistics['duration'] != '1M'].copy()
+
+    # Subset reference statistics further if pooling is being used
+    if spatial_model and use_pooling:
+        reference_statistics = reference_statistics.loc[reference_statistics['point_id'] == -1]
+
+    # For now no initial parameters or modified parameter bounds during pre-biasing iterations
+    par_bounds = parameter_bounds.copy()
+    initial_parameters = None
+
+    # Do an initial fit
+    ref_stats = reference_statistics.copy()
+    _ref_stats = ref_stats.copy()
+    _ref_stats['duration'] = [int(dur_code[:-1]) for dur_code in _ref_stats['duration']]
     if fitting_method == 'default':
         parameters, fitted_statistics = fit_by_season(
-            unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-            all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters
+            unique_seasons, _ref_stats, spatial_model, intensity_distribution, n_workers,
+            all_parameter_names, parameters_to_fit, par_bounds, fixed_parameters,
+            initial_parameters=initial_parameters, use_pooling=use_pooling,
         )
     elif fitting_method == 'empirical_smoothing':
-        parameters, fitted_statistics = fit_with_empirical_smoothing(
-            unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-            all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, initial_parameters,
-            smoothing_tolerance
+        raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
+    # parameters = testing_pars  # TESTING
+
+    # ---
+    # Iterations of NSRP fitting to allow for "pre-biasing" of reference statistics to account for (1) bias in
+    # analytical vs simulated dry probability and (2) apparent bias in skewness
+    rng = np.random.default_rng()
+    tmp_folder = os.path.join(output_folder, 'tmp-' + str(rng.integers(100000, 999999)))
+    for iteration in range(n_iterations):
+        # print(iteration)
+    # for iteration in range(1, n_iterations + 1):  # TESTING
+
+        # Get simulated statistics and carry out "pre-biasing" calculations
+        if not os.path.exists(tmp_folder):
+            os.makedirs(tmp_folder)
+        stat_defs = statistic_definitions.loc[
+            (statistic_definitions['name'] == 'skewness')
+            | ((statistic_definitions['name'] == 'probability_dry') & (statistic_definitions['duration'] == '24H'))
+            # | (statistic_definitions['name'] == 'probability_dry')  # TESTING 059e/059f
+        ]
+        sim_stats = _get_simulated_statistics(
+            intensity_distribution, tmp_folder, season_definitions, parameters, phi, stat_defs, random_seed,
+            spatial_model, point_metadata,
         )
+        ref_stats = _prebias_reference_statistics(  # TODO: Check - does cross-correlation come through ok?
+            reference_statistics,
+            ref_stats,
+            sim_stats,
+            spatial_model,
+            use_pooling,  # for ensuring point_id matches in merge
+            iteration,  # TESTING - just so can save each iteration for now
+        )
+
+        # **
+        # # Use parameters from previous fitting as initial parameters in upcoming iteration
+        # initial_parameters = {}
+        # for season in unique_seasons:
+        #     tmp = []
+        #     for par_name in parameters_to_fit:
+        #         tmp.append(parameters.loc[parameters['season'] == season, par_name].values[0])
+        #     initial_parameters[season] = np.asarray(tmp)
+        #
+        # # Also modify bounds so +/- 25% of annual mean parameter values?
+        # par_bounds = {}
+        # for season in unique_seasons:
+        #     tmp = []
+        #     i = 0
+        #     for par_name in parameters_to_fit:
+        #         par_val = parameters.loc[parameters['season'] == season, par_name].values[0]
+        #         lb = max(parameter_bounds[season][i][0], par_val - parameters[par_name].mean() * 0.25)
+        #         ub = min(parameter_bounds[season][i][1], par_val + parameters[par_name].mean() * 0.25)
+        #         tmp.append((lb, ub))
+        #         i += 1
+        #     par_bounds[season] = tmp
+        # **
+
+        # And then proceed to fitting (which takes duration as an integer in hours)
+        _ref_stats = ref_stats.copy()
+        _ref_stats['duration'] = [int(dur_code[:-1]) for dur_code in _ref_stats['duration']]
+        if fitting_method == 'default':
+            parameters, fitted_statistics = fit_by_season(
+                unique_seasons, _ref_stats, spatial_model, intensity_distribution, n_workers,
+                all_parameter_names, parameters_to_fit, par_bounds, fixed_parameters,
+                initial_parameters=initial_parameters, use_pooling=use_pooling,
+            )
+        elif fitting_method == 'empirical_smoothing':
+            raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
+
+    # TESTING
+    # _ = _get_simulated_statistics(
+    #     intensity_distribution, tmp_folder, season_definitions, parameters, phi, stat_defs, random_seed,
+    #     spatial_model, point_metadata, write_statistics=True, output_folder=output_folder,
+    # )
+
+    # Get rid of any temporary folders or files
+    if os.path.exists(tmp_folder):
+        os.rmdir(tmp_folder)
+
+    # ---
+
+    # !221123 - original commented out below
+    # Select and run fitting method
+    # if fitting_method == 'default':
+    #     parameters, fitted_statistics = fit_by_season(
+    #         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+    #         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters
+    #     )
+    # elif fitting_method == 'empirical_smoothing':
+    #     raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
+    #     parameters, fitted_statistics = fit_with_empirical_smoothing(
+    #         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
+    #         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, initial_parameters,
+    #         smoothing_tolerance
+    #     )
+
+    # Update needed to work with reference duration codes
+    fitted_statistics = fitted_statistics.loc[fitted_statistics['duration'] != '1M'].copy()
+    fitted_statistics['duration'] = [str(dur_code) + 'H' for dur_code in fitted_statistics['duration']]
 
     # Write outputs
     if write_output:
@@ -64,7 +188,8 @@ def main(
 
 def fit_by_season(
         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-        all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, stage='final'
+        all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, stage='final',
+        initial_parameters=None, use_pooling=False,  # !221123
 ):
     """
     Optimise parameters for each season independently.
@@ -72,52 +197,215 @@ def fit_by_season(
     """
     results = {}
     fitted_statistics = []
-    if len(unique_seasons) == 12:
-        print('  - Month = ', end='')
-    else:
-        print('  - Season = ', end='')
+    # if len(unique_seasons) == 12:
+    #     print('  - Month = ', end='')
+    # else:
+    #     print('  - Season = ', end='')
     for season in unique_seasons:
-        if season == max(unique_seasons):
-            print(season)
-        else:
-            print(season, end=' ')
+        # if season == max(unique_seasons):
+        #     print(season)
+        # else:
+        #     print(season, end=' ')
+
+        # Check on whether both rho and gamma are fixed  # TODO: Move to model.fit()
+        if not isinstance(fixed_parameters, dict):  # if no fixed parameters then empty dictionary here
+            if (
+                    (('rho' in fixed_parameters.columns) and ('gamma' not in fixed_parameters.columns))
+                    | (('gamma' in fixed_parameters.columns) and ('rho' not in fixed_parameters.columns))
+            ):
+                raise ValueError('Both rho and gamma must be fixed (or neither fixed).')
 
         # Gather relevant data, weights and objective function scaling terms
-        season_reference_statistics = reference_statistics.loc[reference_statistics['season'] == season].copy()
-        statistic_ids, fitting_data, ref, weights, gs = prepare(season_reference_statistics)
+        # - if using pooled statistics in a spatial model then first fit is just a point model
+        season_ref_stats = reference_statistics.loc[reference_statistics['season'] == season].copy()
+        if spatial_model:
+            if use_pooling:
+                season_ref_stats = season_ref_stats.loc[season_ref_stats['name'] != 'cross-correlation']
+                if 'rho' in parameters_to_fit:
+                    _spatial_model = False  # fit first as point model using nu
+                else:
+                    _spatial_model = True  # fit as spatial model using rho and gamma
+            else:
+                _spatial_model = True
+        else:
+            _spatial_model = False
+        statistic_ids, fitting_data, ref, weights, gs = prepare(season_ref_stats)
+
+        # Also need to replace rho/gamma in parameter lists and bounds with nu if using pooled statistics
+        if spatial_model and use_pooling and ('rho' in parameters_to_fit):
+
+            # Replace rho and gamma with nu in parameter name lists (order needed for fitting)
+            _all_parameter_names = [pn for pn in all_parameter_names if pn not in ['rho', 'gamma']]
+            _all_parameter_names.append('nu')
+            _parameters_to_fit = [pn for pn in parameters_to_fit if pn not in ['rho', 'gamma']]
+            _parameters_to_fit.append('nu')
+            _fixed_parameters = fixed_parameters
+
+            # Replace rho and gamma bounds with nu bounds (if they are being fitted)
+            rho_idx = parameters_to_fit.index('rho')
+            gamma_idx = parameters_to_fit.index('gamma')
+            _parameter_bounds = []
+            for idx in range(len(parameter_bounds[season])):
+                if (idx != rho_idx) and (idx != gamma_idx):
+                    _parameter_bounds.append(parameter_bounds[season][idx])
+            rho_min = parameter_bounds[season][rho_idx][0]
+            rho_max = parameter_bounds[season][rho_idx][1]
+            gamma_min = parameter_bounds[season][gamma_idx][0]
+            gamma_max = parameter_bounds[season][gamma_idx][1]
+            nu_min = 2.0 * np.pi * rho_min / gamma_max ** 2.0
+            nu_max = 2.0 * np.pi * rho_max / gamma_min ** 2.0
+            _parameter_bounds.append((nu_min, nu_max))
+
+        # If point model or not pooling then no changes needed
+        else:
+            _all_parameter_names = all_parameter_names
+            _parameters_to_fit = parameters_to_fit
+            _fixed_parameters = fixed_parameters
+            _parameter_bounds = parameter_bounds[season]
+
+        # !221123 Option for initial parameters estimate  # TODO: Account for pooled statistics / spatial model
+        if initial_parameters is not None:
+            x0 = initial_parameters[season]
+        else:
+            x0 = None
 
         # Run optimisation
         result = scipy.optimize.differential_evolution(
             func=fitting_wrapper,
-            bounds=parameter_bounds[season],
+            bounds=_parameter_bounds,  # parameter_bounds[season],
             args=(
-                spatial_model,
+                _spatial_model,
                 intensity_distribution,
                 statistic_ids,
                 fitting_data,
                 ref,
                 weights,
                 gs,
-                all_parameter_names,
-                parameters_to_fit,
-                fixed_parameters,
+                _all_parameter_names,
+                _parameters_to_fit,
+                _fixed_parameters,
                 season
             ),
             tol=0.001,
             updating='deferred',
-            workers=n_workers
+            workers=n_workers,
+            x0=x0,  # !221123
         )
 
         # Store optimisation results for season
-        for idx in range(len(parameters_to_fit)):
-            results[(parameters_to_fit[idx], season)] = result.x[idx]
+        for idx in range(len(_parameters_to_fit)):
+            results[(_parameters_to_fit[idx], season)] = result.x[idx]
         results[('converged', season)] = result.success
         results[('objective_function', season)] = result.fun
         results[('iterations', season)] = result.nit
         results[('function_evaluations', season)] = result.nfev
 
-        # Get and store statistics associated with optimised parameters
-        dfs = []
+        # --
+
+        # Additional fit for rho and gamma if using pooled statistics with spatial model
+        # - optimise rho and back-calculate gamma from rho and nu
+        if spatial_model and use_pooling and ('rho' in parameters_to_fit):
+
+            # Get reference statistics etc ready
+            season_ref_stats = reference_statistics.loc[
+                (reference_statistics['season'] == season) & (reference_statistics['name'] == 'cross-correlation')
+            ].copy()
+            statistic_ids, fitting_data, ref, weights, gs = prepare(season_ref_stats)
+
+            # Parameter lists and bounds etc for rho
+            _spatial_model = True
+            _all_parameter_names = ['rho']
+            _parameters_to_fit = ['rho']
+            _fixed_parameters = {}
+            rho_idx = parameters_to_fit.index('rho')
+            _parameter_bounds = [parameter_bounds[season][rho_idx]]
+
+            # Need to pass nu (as known) plus other parameters too (as basically all are needed for analytical
+            # calculation of cross-correlations)
+            nu = results[('nu', season)]
+            if 'lamda' in parameters_to_fit:
+                lamda = results[('lamda', season)]
+            else:
+                lamda = fixed_parameters.loc[fixed_parameters['season'] == season, 'lamda'].values[0]
+            if 'beta' in parameters_to_fit:
+                beta = results[('beta', season)]
+            else:
+                beta = fixed_parameters.loc[fixed_parameters['season'] == season, 'beta'].values[0]
+            if 'eta' in parameters_to_fit:
+                eta = results[('eta', season)]
+            else:
+                eta = fixed_parameters.loc[fixed_parameters['season'] == season, 'eta'].values[0]
+            if 'theta' in parameters_to_fit:
+                theta = results[('theta', season)]
+            else:
+                theta = fixed_parameters.loc[fixed_parameters['season'] == season, 'theta'].values[0]
+            if intensity_distribution == 'weibull':
+                if 'kappa' in parameters_to_fit:
+                    kappa = results[('kappa', season)]
+                else:
+                    kappa = fixed_parameters.loc[fixed_parameters['season'] == season, 'kappa'].values[0]
+            else:
+                kappa = None
+
+            # TODO: Sort out initial parameters
+            x0 = None
+
+            # Run optimisation
+            result = scipy.optimize.differential_evolution(
+                func=fitting_wrapper,
+                bounds=_parameter_bounds,  # parameter_bounds[season],
+                args=(
+                    _spatial_model,
+                    intensity_distribution,
+                    statistic_ids,
+                    fitting_data,
+                    ref,
+                    weights,
+                    gs,
+                    _all_parameter_names,
+                    _parameters_to_fit,
+                    _fixed_parameters,
+                    season,
+                    nu,
+                    lamda,
+                    beta,
+                    eta,
+                    theta,
+                    kappa
+                ),
+                tol=0.001,
+                updating='deferred',
+                workers=n_workers,
+                x0=x0,  # !221123
+            )
+
+            # Store optimisation results for season
+            # - add in gamma, as needs to be back-calculated from rho and nu
+            for idx in range(len(_parameters_to_fit)):
+                results[(_parameters_to_fit[idx], season)] = result.x[idx]
+            results[('gamma', season)] = (2.0 * np.pi * results[('rho', season)] / results[('nu', season)]) ** 0.5
+
+            # Combine optimisation information for two steps for now
+            if result.success and results[('converged', season)]:
+                pass
+            else:
+                results[('converged', season)] = False
+            results[('objective_function', season)] += result.fun
+            results[('iterations', season)] += result.nit
+            results[('function_evaluations', season)] += result.nfev
+
+            # print(results[('lamda', season)].dtype)
+            # print(results[('rho', season)].dtype)
+            # print(results[('gamma', season)].dtype)
+            # print(results[('nu', season)].dtype)
+            # sys.exit()
+
+            # TODO: Consider whether to drop nu from results dictionary - may be removed anyway in storage step below
+            results.pop(('nu', season))
+
+        # --
+
+        # Get parameters into dictionary ready for formatting
         # parameters = []
         # for parameter in parameters_to_fit:
         #     parameters.append(results[(parameter, season)])
@@ -127,6 +415,12 @@ def fit_by_season(
                 parameters_dict[parameter_name] = results[(parameter_name, season)]
             else:
                 parameters_dict[parameter_name] = fixed_parameters[(season, parameter_name)]
+
+        # Get and store statistics (all) associated with optimised parameters
+        dfs = []
+        statistic_ids, fitting_data, ref, weights, gs = prepare(
+            reference_statistics.loc[reference_statistics['season'] == season]
+        )
         mod_stats = calculate_analytical_properties(
             spatial_model, intensity_distribution, parameters_dict, statistic_ids, fitting_data
         )
@@ -246,7 +540,8 @@ def format_results(results, all_parameter_names, parameters_to_fit, fixed_parame
 
 def fitting_wrapper(
         parameters, spatial_model, intensity_distribution, statistic_ids, fitting_data, ref_stats, weights, gs,
-        all_parameter_names, parameters_to_fit, fixed_parameters, season
+        all_parameter_names, parameters_to_fit, fixed_parameters, season, nu=None, lamda=None, beta=None, eta=None,
+        theta=None, kappa=None
 ):
     # List of parameters from optimisation can be converted to a dictionary for easier comprehension in analytical
     # property calculations. Fixed parameters can also be included
@@ -256,6 +551,20 @@ def fitting_wrapper(
             parameters_dict[parameter_name] = parameters[parameters_to_fit.index(parameter_name)]
         else:
             parameters_dict[parameter_name] = fixed_parameters[(season, parameter_name)]
+
+    # If nu is passed then assume that rho is being optimised and gamma should be back-calculated
+    # - this will be the second step of fitting a spatial model when the first step is fitting a point model via nu,
+    # i.e. typically using a pooled approach to spatial model fitting
+    # - fixed parameters should not change in this case - empty dictionary
+    # - also need then to add other parameters to dictionary for calculation of analytical properties
+    if nu is not None:
+        parameters_dict['gamma'] = (2 * np.pi * parameters[0] / nu) ** 0.5
+        parameters_dict['lamda'] = lamda
+        parameters_dict['beta'] = beta
+        parameters_dict['eta'] = eta
+        parameters_dict['theta'] = theta
+        if intensity_distribution == 'weibull':
+            parameters_dict['kappa'] = kappa
 
     # Calculate properties and objective function
     mod_stats = calculate_analytical_properties(
@@ -301,7 +610,7 @@ def calculate_analytical_properties(
     eta = parameters_dict['eta']
     theta = parameters_dict['theta']
 
-    # Get or calculate nu (rho and gamma then no longer needed)
+    # Get or calculate nu
     if not spatial_model:
         nu = parameters_dict['nu']
     else:
@@ -376,4 +685,194 @@ def calculate_analytical_properties(
 def calculate_objective_function(ref, mod, w, sf):
     obj_fun = np.sum((w ** 2 / sf ** 2) * (ref - mod) ** 2)
     return obj_fun
+
+
+def _get_simulated_statistics(
+        intensity_distribution, tmp_folder, season_definitions, parameters, phi, statistic_definitions, random_seed,
+        spatial_model, point_metadata=None, write_statistics=False, output_folder=None,
+):
+    _parameters = parameters.copy()
+    # if 'nu' not in parameters.columns:
+    #     _parameters['nu'] = 2.0 * np.pi * _parameters['rho'] / _parameters['gamma'] ** 2.0
+    #     _parameters.drop(columns=['rho', 'gamma'], inplace=True)
+
+    # output_folder = 'Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/tmp-776852'
+
+    if spatial_model:
+        _point_metadata = point_metadata.loc[point_metadata['point_id'] == point_metadata['point_id'].min()]
+
+    else:
+        _point_metadata = None
+
+    # TESTING
+    # run_simulation = False
+    # if run_simulation:
+
+    simulation.main(
+        spatial_model=spatial_model,
+        intensity_distribution=intensity_distribution,
+        output_types=['point'],
+        output_folder=tmp_folder,
+        output_subfolders=dict(point=''),
+        output_format='txt',
+        season_definitions=season_definitions,
+        parameters=_parameters,
+        point_metadata=_point_metadata,
+        catchment_metadata=None,
+        grid_metadata=None,
+        epsg_code=None,
+        cell_size=None,
+        dem=None,
+        phi=phi,
+        simulation_length=10000,
+        number_of_realisations=1,
+        timestep_length=1,
+        start_year=2000,
+        calendar='gregorian',
+        random_seed=random_seed,
+        default_block_size=1000,
+        check_block_size=True,
+        minimum_block_size=10,
+        check_available_memory=True,
+        maximum_memory_percentage=75,
+        block_subset_size=50,
+        project_name='tmp',
+        spatial_raincell_method='buffer',
+        spatial_buffer_factor=15,
+        simulation_mode='no_shuffling',
+        weather_model=None,
+        max_dsl=6.0,
+        n_divisions=4,
+        do_reordering=False,
+    )
+
+    # t1 = datetime.datetime.now()
+
+    _stat_defs = statistic_definitions.loc[statistic_definitions['name'] != 'cross-correlation']
+
+    sim_stats, _ = analysis.main(
+            spatial_model=spatial_model,
+            season_definitions=season_definitions,
+            statistic_definitions=_stat_defs,
+            timeseries_format='txt',
+            start_date=datetime.datetime(2000, 1, 1),
+            timestep_length=1,
+            calendar='gregorian',
+            timeseries_path=None,
+            timeseries_folder=tmp_folder,
+            point_metadata=_point_metadata,
+            calculation_period=None,
+            completeness_threshold=0.0,
+            output_statistics_path=None,
+            outlier_method=None,
+            maximum_relative_difference=None,
+            maximum_alterations=None,
+            analysis_mode='postprocessing',
+            n_years=10000,
+            n_realisations=1,
+            subset_length=200,  # ??
+            output_amax_path=None,
+            amax_durations=None,
+            amax_window_type=None,
+            output_ddf_path=None,
+            ddf_return_periods=None,
+            write_output=False,
+            simulation_name='tmp',
+            use_pooling=False,
+            calculate_statistics=True,
+        )
+
+    # t2 = datetime.datetime.now()
+    # print(t2 - t1)
+    # sys.exit()
+
+    # sim_stats = pd.read_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/sim_stats_1a.csv')
+    if write_statistics:
+        output_path = os.path.join(output_folder, 'simulated_statistics_DEBUGGING.csv')
+        if not os.path.exists(output_path):
+            sim_stats.to_csv(output_path, index=False)
+    # sys.exit()
+
+    # Remove temporary simulation files
+    files_to_delete = os.listdir(tmp_folder)
+    for fn in files_to_delete:
+        fp = os.path.join(tmp_folder, fn)
+        os.remove(fp)
+
+    return sim_stats
+
+
+def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spatial_model, use_pooling, iteration):  # TESTING - just so can save each iteration for now
+    # Prepare to merge
+    curr_ref_stats.rename(columns={'value': 'curr_ref_value'}, inplace=True)
+    sim_stats.rename(columns={'mean': 'sim_value'}, inplace=True)
+
+    if spatial_model and use_pooling:
+        sim_stats['point_id'] = -1
+
+    # !221215
+    # orig_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/orig_ref_stats_1a.csv', index=False)
+    # curr_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/curr_ref_stats_1a.csv', index=False)
+    # sim_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/sim_stats_1a.csv', index=False)
+
+    # TODO: Need to merge without cross-correlations then get them back in while keeping order of orig_ref_stats
+
+    # Merge simulated and reference statistics
+    orig_ref_stats_sub = orig_ref_stats.loc[orig_ref_stats['name'] != 'cross-correlation']
+    if spatial_model:
+        new_ref_stats = orig_ref_stats_sub.merge(
+            curr_ref_stats[['point_id', 'statistic_id', 'point_id2', 'season', 'curr_ref_value']], how='left'
+        )
+    else:
+        new_ref_stats = orig_ref_stats_sub.merge(
+            curr_ref_stats[['point_id', 'statistic_id', 'season', 'curr_ref_value']], how='left'
+        )
+        # !221215
+        # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0a.csv', index=False)
+    new_ref_stats = new_ref_stats.merge(
+        sim_stats[['point_id', 'statistic_id', 'season', 'sim_value']], how='left',
+    )
+    # !221215
+    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0b.csv', index=False)
+
+    # Bring cross-correlations back in and ensure order matches original
+    if spatial_model:
+        orig_ref_stats_sub = orig_ref_stats.loc[orig_ref_stats['name'] == 'cross-correlation']
+        new_ref_stats = pd.concat([new_ref_stats, orig_ref_stats_sub])
+    if spatial_model:
+        new_ref_stats.sort_values(['statistic_id', 'point_id', 'season', 'distance'], inplace=True)
+    else:
+        new_ref_stats.sort_values(['statistic_id', 'point_id', 'season'], inplace=True)
+
+    # Calculate current bias in reference statistics
+    new_ref_stats['curr_bias'] = new_ref_stats['value'] - new_ref_stats['curr_ref_value']
+
+    # Calculate required additional bias
+    new_ref_stats['additional_bias'] = new_ref_stats['sim_value'] - new_ref_stats['value']
+
+    # Add required increments to original reference values
+    new_ref_stats['new_value'] = np.where(
+        (new_ref_stats['name'] == 'probability_dry') & (new_ref_stats['duration'] == '24H'),
+        new_ref_stats['value'] - new_ref_stats['curr_bias'] - new_ref_stats['additional_bias'],
+        new_ref_stats['value']
+    )
+    new_ref_stats['new_value'] = np.where(
+        (new_ref_stats['name'] == 'skewness') & (new_ref_stats['value'] > new_ref_stats['sim_value']),
+        new_ref_stats['value'] - new_ref_stats['curr_bias'] - new_ref_stats['additional_bias'],
+        new_ref_stats['new_value']
+    )
+
+    # new_ref_stats.to_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/new_ref_' + str(iteration) + 'a3.csv', index=False)
+
+    # Tidy up df for subsequent fitting
+    new_ref_stats.drop(columns=['value', 'curr_ref_value', 'sim_value', 'curr_bias', 'additional_bias'], inplace=True)
+    new_ref_stats.rename(columns={'new_value': 'value'}, inplace=True)
+
+    # new_ref_stats.to_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/new_ref_' + str(iteration) + 'b3.csv', index=False)
+
+    # !221215
+    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_2a.csv', index=False)
+    # sys.exit()
+
+    return new_ref_stats
 
