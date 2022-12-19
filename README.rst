@@ -7,8 +7,10 @@ the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
 RWGEN supports both single site (point) and spatial rainfall simulations. It
 can conduct data pre-processing, model fitting, simulation and post-processing.
 
-The model and documentation are new and under active development - please check
+The model and `documentation`_ are new and under active development - please check
 back regularly for updates.
+
+.. _documentation: https://davidpritchard1.github.io/rwgen/html/index.html
 
 Demo Notebooks
 --------------
