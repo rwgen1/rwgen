@@ -13,17 +13,18 @@ if __name__ == '__main__':
     rainfall_model = rwgen.RainfallModel(
         spatial_model=False,
         project_name='brize_norton',
-        statistic_definitions='./input/statistic_definitions.csv'
+        input_timeseries='./input/brize_norton.csv',
+        statistic_definitions='./input/statistic_definitions.csv',
+        intensity_distribution='weibull',
     )
 
     # Calculate observed/reference statistics from gauge time series file
-    rainfall_model.preprocess(
-        input_timeseries='./input/brize_norton.csv',
-    )
+    rainfall_model.preprocess()
 
     # Fit model and save parameters to file
     rainfall_model.fit(
-        n_workers=6  # for e.g. a 6-core computer
+        n_workers=8,  # e.g. for computer with 8 cores or logical processors
+        pdry_iterations=0,
     )
 
     # Simulate three realisations of 1000 years with a 1hr timestep
@@ -39,5 +40,5 @@ if __name__ == '__main__':
         ddf_return_periods=[20, 50, 100],  # return periods in years
     )
     
-    # Plotting
+    # Plotting annual cycles (in browser)
     rainfall_model.plot()
