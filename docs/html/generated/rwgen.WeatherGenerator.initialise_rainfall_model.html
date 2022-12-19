@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rwgen.WeatherGenerator.initialise_rainfall_model &mdash; RWGEN 0.0.3 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="rwgen.WeatherGenerator.initialise_weather_model" href="rwgen.WeatherGenerator.initialise_weather_model.html" />
+    <link rel="prev" title="rwgen.WeatherGenerator.__init__" href="rwgen.WeatherGenerator.__init__.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> RWGEN
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../rainfall-overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rainfall-workflow.html">Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rainfall-methods.html">Method Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rainfall-input.html">Input Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Weather Generator</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../weather-overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../weather-workflow.html">Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../weather-input.html">Input Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../weather-generator-api.html">Weather Generator API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../weather-generator-api.html#rwgen.WeatherGenerator"><code class="docutils literal notranslate"><span class="pre">WeatherGenerator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.WeatherGenerator.__init__.html">rwgen.WeatherGenerator.__init__</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">rwgen.WeatherGenerator.initialise_rainfall_model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#rwgen.WeatherGenerator.initialise_rainfall_model"><code class="docutils literal notranslate"><span class="pre">WeatherGenerator.initialise_rainfall_model()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.WeatherGenerator.initialise_weather_model.html">rwgen.WeatherGenerator.initialise_weather_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rwgen.WeatherGenerator.simulate.html">rwgen.WeatherGenerator.simulate</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../rainfall-api.html">Rainfall Model API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../weather-model-api.html">Weather Model API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">RWGEN</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../weather-generator-api.html">Weather Generator API</a></li>
+      <li class="breadcrumb-item active">rwgen.WeatherGenerator.initialise_rainfall_model</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/generated/rwgen.WeatherGenerator.initialise_rainfall_model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="rwgen-weathergenerator-initialise-rainfall-model">
+<h1>rwgen.WeatherGenerator.initialise_rainfall_model<a class="headerlink" href="#rwgen-weathergenerator-initialise-rainfall-model" title="Permalink to this heading"></a></h1>
+<dl class="py method">
+<dt class="sig sig-object py" id="rwgen.WeatherGenerator.initialise_rainfall_model">
+<span class="sig-prename descclassname"><span class="pre">WeatherGenerator.</span></span><span class="sig-name descname"><span class="pre">initialise_rainfall_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_timeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'monthly'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensity_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exponential'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistic_definitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.WeatherGenerator.initialise_rainfall_model" title="Permalink to this definition"></a></dt>
+<dd><p>Initialise rainfall model.</p>
+<p>Link to rwgen.RainfallModel docs for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_timeseries</strong> (<em>str</em>) – Path to file containing timeseries data (for point model) or folder containing
+timeseries data files (for spatial model). Needed if running pre-processing or fitting steps.</p></li>
+<li><p><strong>point_metadata</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Metadata (or path to metadata file) on point (site/gauge)
+locations to use for fitting, simulation and/or evaluation for a spatial model only. See Notes for
+details.</p></li>
+<li><p><strong>season_definitions</strong> (<em>str</em><em>, </em><em>list</em><em> or </em><em>dict</em>) – The model works on a monthly basis by default, but this argument
+allows for user-defined seasons (see Notes).</p></li>
+<li><p><strong>intensity_distribution</strong> (<em>str</em>) – Flag to indicate the type of probability distribution for raincell
+intensities. Defaults to <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code> (with <code class="docutils literal notranslate"><span class="pre">'weibull'</span></code> also available currently).</p></li>
+<li><p><strong>statistic_definitions</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Definitions (descriptions) of statistics to use in fitting
+and/or evaluation (or path to file of definitions). See Notes for explanation of format.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rwgen.WeatherGenerator.__init__.html" class="btn btn-neutral float-left" title="rwgen.WeatherGenerator.__init__" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rwgen.WeatherGenerator.initialise_weather_model.html" class="btn btn-neutral float-right" title="rwgen.WeatherGenerator.initialise_weather_model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, ndp81.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
