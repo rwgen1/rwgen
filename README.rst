@@ -13,7 +13,7 @@ can conduct data pre-processing, model fitting, simulation and post-processing.
   :width: 600
   :align: center
 
-*Example of observed and simulated rainfall annual maxima for different
+*Example of observed and simulated annual maximum rainfall for different
 durations at Heathrow, UK.*
 
 Status
@@ -37,9 +37,9 @@ back regularly for updates. Installation is described in the `documentation`_.
 UK Input Data
 -------------
 
-Data have been processed to help facilitate RWGEN applications in the UK.
-Please see the `documentation`_ for details and download links.
-
+Selected open data have been pre-processed to help facilitate RWGEN
+applications in the UK. Please see the `documentation`_ for details and
+download links.
 
 Demo Notebooks
 --------------
@@ -60,3 +60,6 @@ free `mybinder`_ service. If it is being slow (more than a few minutes), try
 closing the tab and reopening (or try again later).
 
 .. _mybinder: https://mybinder.org/
+
+Note also that the demo version currently uses an older version of the rainfall
+model with some small differences in the interface.
