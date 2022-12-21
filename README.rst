@@ -7,13 +7,14 @@ the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
 RWGEN supports both single site (point) and spatial rainfall simulations. It
 can conduct data pre-processing, model fitting, simulation and post-processing.
 
+|
 
 .. image:: ./docs/_static/amax_example.png
   :width: 600
   :align: center
 
-*Example of observed and simulated rainfall extremes for different durations
-at Heathrow, UK.*
+*Example of observed and simulated rainfall annual maxima for different
+durations at Heathrow, UK.*
 
 Status
 ------
