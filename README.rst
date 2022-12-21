@@ -8,6 +8,7 @@ RWGEN supports both single site (point) and spatial rainfall simulations. It
 can conduct data pre-processing, model fitting, simulation and post-processing.
 
 .. image:: ./docs/_static/amax_example.png
+  :width: 400
 
 Status
 ------
