@@ -543,7 +543,11 @@ class Simulator:
             # print(k, v)
             # break
         for k, v in self.interpolated_parameters.items():
-            self.interpolated_parameters_nb[k] = v
+            if isinstance(v, float):
+                v_ = np.asarray([v])
+            else:
+                v_ = v
+            self.interpolated_parameters_nb[k] = v_
             # print(k, v)
             # break
         # for k, v in self.transformed_statistics_dict.items():

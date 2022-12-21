@@ -74,6 +74,10 @@ def main(
     #     durations.extend(list(amax_durations))
     # durations = sorted(list(set(durations)))
 
+    # Check valid subset_length
+    if (n_years is not None) and (subset_length is not None):
+        subset_length = min(n_years, subset_length)
+
     # Number of subsets to break timeseries into (maximum subset length of 100 years for now)
     if subset_length is None:
         n_subsets = 1

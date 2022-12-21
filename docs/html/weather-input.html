@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Input Data &mdash; RWGEN 0.0.3 documentation</title>
+  <title>Input Data &mdash; RWGEN 0.0.4 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -43,6 +43,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uk-data.html">UK Input Data</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
 <ul>
@@ -91,8 +92,37 @@
   <section id="input-data">
 <h1>Input Data<a class="headerlink" href="#input-data" title="Permalink to this heading"></a></h1>
 <p>This page is under development.</p>
-<p>Please see the <cite>examples</cite> folder for the time series file format. Further
-details will be added.</p>
+<p>Please see the example notebooks scripts (see <a class="reference internal" href="examples.html"><span class="doc">Examples</span></a>) for the daily
+time series file format (and the metadata file format for a spatial model).</p>
+<p>Abbreviated variable names used for key column headers and associated units in
+the time series files are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Precipitation (mm/day): <code class="docutils literal notranslate"><span class="pre">prcp</span></code></p></li>
+<li><p>Daily minimum temperature (°C): <code class="docutils literal notranslate"><span class="pre">temp_min</span></code></p></li>
+<li><p>Daily maximum temperature (°C): <code class="docutils literal notranslate"><span class="pre">temp_max</span></code></p></li>
+<li><p>Daily average temperature (°C): <code class="docutils literal notranslate"><span class="pre">temp_avg</span></code></p></li>
+<li><p>Vapour pressure (kPa): <code class="docutils literal notranslate"><span class="pre">vap_press</span></code></p></li>
+<li><p>Sunshine duration (hours): <code class="docutils literal notranslate"><span class="pre">sun_dur</span></code></p></li>
+<li><p>Wind speed (m/s): <code class="docutils literal notranslate"><span class="pre">wind_speed</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>In the pre-processed <a class="reference internal" href="uk-data.html"><span class="doc">UK Input Data</span></a>, a couple of additional columns are present
+but not used currently:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Relative humidity (%): <code class="docutils literal notranslate"><span class="pre">rel_hum</span></code></p></li>
+<li><p>Daily mean temperature (°C): <code class="docutils literal notranslate"><span class="pre">temp_mean</span></code></p></li>
+</ul>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Daily mean temperature (<code class="docutils literal notranslate"><span class="pre">temp_mean</span></code>) is the mean of an hourly
+temperature series if available. Daily average temperature
+(<code class="docutils literal notranslate"><span class="pre">temp_avg</span></code>) is the mean of the daily minimum and maximum temperatures.
+The latter (<code class="docutils literal notranslate"><span class="pre">temp_avg</span></code>) is currently used in the model.</p>
+</div>
+<p>Further details will be added.</p>
 </section>
 
 

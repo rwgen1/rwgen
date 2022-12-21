@@ -1,0 +1,13 @@
+Point_ID,Easting,Northing,Name,File_Name,Elevation,Other_ID,Latitude,Longitude
+1,504832,259910,bedford,00461_bedford.csv,85,461,52.227,-0.465
+2,462370,191679,benson,00613_benson.csv,57,613,51.62,-1.099
+3,429124,206725,brize-norton,00605_brize-norton.csv,82,605,51.758,-1.578
+4,445554,273691,church-lawford,00595_church-lawford.csv,107,595,52.359,-1.331
+5,507557,176752,heathrow,00708_heathrow.csv,25,708,51.479,-0.451
+6,532989,157882,kenley-airfield,00726_kenley-airfield.csv,170,726,51.304,-0.092
+7,413552,144830,larkhill,00888_larkhill.csv,132,888,51.202,-1.806
+8,421139,218140,little-rissington,00692_little-rissington.csv,210,692,51.861,-1.693
+9,400555,178283,lyneham,00886_lyneham.csv,145,886,51.503,-1.992
+10,473640,149455,odiham,00862_odiham.csv,118,862,51.239,-0.945
+11,397195,250014,pershore,00657_pershore.csv,35,657,52.148,-2.041
+12,485569,154200,south-farnborough,00869_south-farnborough.csv,65,869,51.28,-0.773

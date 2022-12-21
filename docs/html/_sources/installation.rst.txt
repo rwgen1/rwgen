@@ -1,3 +1,11 @@
+.. |rwgen_version| replace:: ``rwgen-0.0.4``
+
+.. |example_folder| replace:: ``H:/RWGEN/rwgen-0.0.4``
+
+.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.4
+
+.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.4.zip
+
 Installation
 ============
 
@@ -50,36 +58,36 @@ The conda-forge channel is needed to help manage dependencies.
 Getting the RWGEN Files
 -----------------------
 
-Download the ``rwgen-0.0.3`` files as a `zip`_ file (if you do not have it
+Download the |rwgen_version| files as a `zip`_ file (if you do not have it
 already) and unzip. It is recommended to create a ``RWGEN`` folder somewhere
 - e.g. ``H:/RWGEN``.
 
 Note that Windows ``Extract All...`` adds the zip file name (e.g.
-``rwgen-0.0.3``) to the default location for unzipping. This can be deleted, as
-the zip file already contains an ``rwgen-0.0.3`` folder housing all other
+|rwgen_version|) to the default location for unzipping. This can be deleted, as
+the zip file already contains an |rwgen_version| folder housing all other
 files.
 
 If the target folder is ``H:/RWGEN`` then we should end up with a folder
-``H:/RWGEN/rwgen-0.0.3``, which contains sub-folders ``docs, examples, rwgen``
+|example_folder|, which contains sub-folders ``docs, examples, rwgen``
 and some files (e.g. ``setup.py, environment.yml, ...``).
-
-.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.3.zip
 
 Creating the Conda Environment
 ------------------------------
 
 In the Anaconda Prompt (or open a new one if closed - see the
 `Updating and Configuring Conda`_ section) and navigate (at the prompt) to the
-unzipped ``rwgen-0.0.3`` folder.
+unzipped |rwgen_version| folder.
 
 For example, to change from the directory ``C:/`` to the directory 
-``H:/RWGEN/rwgen-0.0.3``, first switch drives by typing::
+|example_folder|, first switch drives by typing::
 
     H:
 
-Then to change to ``H:/RWGEN/rwgen-0.0.3`` enter::
+Then to change to |example_folder| enter
 
-    cd H:/RWGEN/rwgen-0.0.3
+.. parsed-literal::
+
+    cd\  |example_folder_nonliteral|\
 
 This folder should contain a file called ``environment.yml``, which lists all
 of the dependencies required by RWGEN.
@@ -114,7 +122,7 @@ Activate the `environment`_ before continuing::
 Installing RWGEN
 ----------------
 
-At the Anaconda Prompt (while still in the ``rwgen-0.0.3`` folder), type the
+At the Anaconda Prompt (while still in the |rwgen_version| folder), type the
 following (including the ``.``) to install RWGEN in developer mode::
 
     pip install -e .

@@ -1,6 +1,12 @@
 Overview
 ========
 
+.. note::
+
+    The rainfall model has been subject to more development and testing than
+    the weather generator/model so far. Please check back for updates to the
+    model and documentation.
+
 There are three key "objects" available within RWGEN:
 
     1. Weather generator
@@ -85,6 +91,15 @@ Regression coefficients are identified using ordinary least squares.
 An error/noise term adds the random component to the regression equations.
 This random component is simulated from a standard normal distribution and
 scaled according to the standard error of the regression equation.
+
+Potential Evapotranspiration
+----------------------------
+
+Potential evapotranspiration (PET) is calculated using the
+`FAO56 Penman-Monteith`_ method. PET is calculated from the simulated
+temperature, vapour pressure, wind speed and sunshine duration time series.
+
+.. _FAO56 Penman-Monteith: https://www.fao.org/3/x0490e/x0490e00.htm
 
 Spatial Weather Model
 ---------------------
