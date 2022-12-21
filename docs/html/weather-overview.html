@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overview &mdash; RWGEN 0.0.3 documentation</title>
+  <title>Overview &mdash; RWGEN 0.0.4 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -43,6 +43,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uk-data.html">UK Input Data</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
 <ul>
@@ -59,6 +60,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#regressions">Regressions</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#potential-evapotranspiration">Potential Evapotranspiration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#spatial-weather-model">Spatial Weather Model</a></li>
 </ul>
 </li>
@@ -98,6 +100,12 @@
              
   <section id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The rainfall model has been subject to more development and testing than
+the weather generator/model so far. Please check back for updates to the
+model and documentation.</p>
+</div>
 <p>There are three key “objects” available within RWGEN:</p>
 <blockquote>
 <div><ol class="arabic simple">
@@ -176,6 +184,12 @@ are classified as wet.</p>
 This random component is simulated from a standard normal distribution and
 scaled according to the standard error of the regression equation.</p>
 </section>
+</section>
+<section id="potential-evapotranspiration">
+<h2>Potential Evapotranspiration<a class="headerlink" href="#potential-evapotranspiration" title="Permalink to this heading"></a></h2>
+<p>Potential evapotranspiration (PET) is calculated using the
+<a class="reference external" href="https://www.fao.org/3/x0490e/x0490e00.htm">FAO56 Penman-Monteith</a> method. PET is calculated from the simulated
+temperature, vapour pressure, wind speed and sunshine duration time series.</p>
 </section>
 <section id="spatial-weather-model">
 <h2>Spatial Weather Model<a class="headerlink" href="#spatial-weather-model" title="Permalink to this heading"></a></h2>

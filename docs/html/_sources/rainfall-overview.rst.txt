@@ -64,8 +64,8 @@ intensities of all active rain cells. As the NSRP process is continuous in
 time, it can be discretised into a time series with a desired time step
 (e.g. hourly, daily).
 
-Parameters (Single Site)
-------------------------
+Parameters
+----------
 
 The single site NSRP process described above requires a minimum of five
 parameters: λ (lambda), ν (nu), β (beta), η (eta) and ξ (xi). The parameters
@@ -76,7 +76,7 @@ Parameters are identified by minimising the differences between a set of
 observed rainfall statistics and their NSRP model counterparts. The statistics
 include: mean, variance, skewness, autocorrelation and dry probability.
 Multiple durations can be used (e.g. 1- and 24-hour statistics) and statistics
-can be weighted differently Need to use an optimisation algorithm to test
+can be weighted differently. We need to use an optimisation algorithm to test
 different possible parameter values to arrive at the “best” ones.
 
 Spatial Model

@@ -1,15 +1,22 @@
+.. |rwgen_version| replace:: ``rwgen-0.0.4``
+
+.. |example_path| replace:: ``H:/RWGEN/rwgen-0.0.4/examples/rainfall_model/single_site/nsrp_example.ipynb``
+
+.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.4/examples/rainfall_model/single_site
+
 Examples
 ========
 
 For outline examples and explanations, see the rainfall model
 :doc:`rainfall-workflow` and weather generator :doc:`weather-workflow` pages.
 
-More detailed examples are provided primarily as Jupyter notebooks. These 
-notebooks contain relatively detailed explanations of the examples/code and 
-provide a more interactive way of trying things out.
+More detailed examples are provided as Jupyter notebooks (just for the rainfall
+model currently) and scripts. The notebooks contain relatively detailed
+explanations of the examples/code and provide a more interactive way of trying
+things out.
 
 The examples can be found in the ``examples`` folder within the RWGEN root
-folder (e.g. ``rwgen-0.0.3``).
+folder (e.g. |rwgen_version|).
 
 .. note::
 
@@ -25,10 +32,12 @@ example::
 
 Then navigate to the folder containing the notebook
 that you would like to run. For example, if the notebook is located at
-``H:/RWGEN/rwgen-0.0.3/examples/nsrp_example.ipynb`` then type::
+|example_path| then type
+
+.. parsed-literal::
 
     H:
-    cd H:\RWGEN\rwgen-0.0.3\examples
+    cd\  |example_folder_nonliteral|\
 
 Next launch JupyterLab by typing at the prompt::
 

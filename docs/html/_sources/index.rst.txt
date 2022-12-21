@@ -17,6 +17,7 @@ back regularly for updates.
 
     installation.rst
     examples.rst
+    uk-data.rst
 
 
 .. toctree::

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overview &mdash; RWGEN 0.0.3 documentation</title>
+  <title>Overview &mdash; RWGEN 0.0.4 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -21,7 +21,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Workflow" href="rainfall-workflow.html" />
-    <link rel="prev" title="Examples" href="examples.html" /> 
+    <link rel="prev" title="UK Input Data" href="uk-data.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,6 +43,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uk-data.html">UK Input Data</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Rainfall Model</span></p>
 <ul class="current">
@@ -54,7 +55,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#final-rainfall-series">Final Rainfall Series</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#parameters-single-site">Parameters (Single Site)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#spatial-model">Spatial Model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#stationarity">Stationarity</a></li>
 </ul>
@@ -159,8 +160,8 @@ time, it can be discretised into a time series with a desired time step
 (e.g. hourly, daily).</p>
 </section>
 </section>
-<section id="parameters-single-site">
-<h2>Parameters (Single Site)<a class="headerlink" href="#parameters-single-site" title="Permalink to this heading"></a></h2>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h2>
 <p>The single site NSRP process described above requires a minimum of five
 parameters: λ (lambda), ν (nu), β (beta), η (eta) and ξ (xi). The parameters
 are typically also specified separately for each month of the year to account
@@ -169,7 +170,7 @@ for seasonality (i.e. 12 x 5 parameters).</p>
 observed rainfall statistics and their NSRP model counterparts. The statistics
 include: mean, variance, skewness, autocorrelation and dry probability.
 Multiple durations can be used (e.g. 1- and 24-hour statistics) and statistics
-can be weighted differently Need to use an optimisation algorithm to test
+can be weighted differently. We need to use an optimisation algorithm to test
 different possible parameter values to arrive at the “best” ones.</p>
 </section>
 <section id="spatial-model">
@@ -233,7 +234,7 @@ considered experimental at present.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="examples.html" class="btn btn-neutral float-left" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="uk-data.html" class="btn btn-neutral float-left" title="UK Input Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="rainfall-workflow.html" class="btn btn-neutral float-right" title="Workflow" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
