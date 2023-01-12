@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import datetime
+import zipfile
+import re
 import inspect
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -1190,3 +1192,32 @@ def define_parameter_bounds(parameter_bounds, fixed_parameters, required_paramet
 
     return parameters_to_fit, fixed_parameters, parameter_bounds
 
+
+def zip_files(folder, file_extension='.txt', delete_uncompressed=False):
+    # Patterns to look for in file names - hardcoded realisation convention (e.g. _r1) and assuming that no more than
+    # 9999 realisations likely
+    patterns = [r'_r\d', r'_r\d\d', r'_r\d\d\d', r'_r\d\d\d\d']
+    patterns = [p + file_extension for p in patterns]
+
+    for root, dirs, file_names in os.walk(folder):
+        for file_name in file_names:
+
+            # Check for time series file realisation convention and extension (e.g. _r1.txt)
+            zip_this_file = False
+            for pattern in patterns:
+                match = re.search(pattern, file_name)
+                if match:
+                    zip_this_file = True
+                    break
+
+            # Zip then optionally delete the uncompressed file
+            if zip_this_file:
+                src = os.path.join(root, file_name)
+                dst = os.path.join(root, file_name.replace(file_extension, '.zip'))
+                if not os.path.exists(dst):
+                    with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED) as zf:
+                        zf.write(src, arcname=file_name)
+                else:
+                    raise FileExistsError('Zip file already exists: ' + dst)
+                if delete_uncompressed:
+                    os.remove(src)
