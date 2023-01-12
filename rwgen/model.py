@@ -260,6 +260,20 @@ class WeatherGenerator:
             weather_model=self.weather_model
         )
 
+    def zip_output(self, file_extension='.txt', delete_uncompressed=False):  # see rainfall/weather model methods
+        """
+        Zip and compress output files of a specified extension (optionally deleting uncompressed files).
+
+        Args:
+            file_extension (str): Delete files with this extension (default is '.txt').
+            delete_uncompressed (bool): Delete uncompressed files after zipping complete (default is False).
+
+        """
+        self.rainfall_model.zip_files(file_extension=file_extension, delete_uncompressed=delete_uncompressed)
+        if self.weather_model is not None:
+            self.weather_model.zip_files(file_extension=file_extension, delete_uncompressed=delete_uncompressed)
+
+
 # Baseline usage idea
 # wg = WeatherGenerator()
 # wg.initialise_rainfall_model()

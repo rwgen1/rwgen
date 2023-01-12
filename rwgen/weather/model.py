@@ -4,6 +4,7 @@ import sys
 from . import preprocessing
 from . import simulation
 from ..rainfall import simulation as rainfall_simulation
+from ..rainfall import utils
 
 
 class WeatherModel:
@@ -312,3 +313,16 @@ class WeatherModel:
             project_name,
             variables=self.output_variables
         )
+
+    def zip_output(self, file_extension='.txt', delete_uncompressed=False):  # see rainfall model
+        """
+        Zip and compress output files of a specified extension (optionally deleting uncompressed files).
+
+        Args:
+            file_extension (str): Delete files with this extension (default is '.txt').
+            delete_uncompressed (bool): Delete uncompressed files after zipping complete (default is False).
+
+        """
+        print('Weather model output zipping')
+        utils.zip_files(self.output_folder, file_extension=file_extension, delete_uncompressed=delete_uncompressed)
+        print('  - Completed')
