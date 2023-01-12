@@ -1370,6 +1370,19 @@ class RainfallModel:
         g = plotting.construct_gridplot(plots, 3)
         plotting.show_plot(g)
 
+    def zip_output(self, file_extension='.txt', delete_uncompressed=False):  # essentially duplicated in weather model
+        """
+        Zip and compress output files of a specified extension (optionally deleting uncompressed files).
+
+        Args:
+            file_extension (str): Delete files with this extension (default is '.txt').
+            delete_uncompressed (bool): Delete uncompressed files after zipping complete (default is False).
+
+        """
+        print('Rainfall model output zipping')
+        utils.zip_files(self.output_folder, file_extension=file_extension, delete_uncompressed=delete_uncompressed)
+        print('  - Completed')
+
     @property
     def parameter_names(self):
         """list of str: Parameter names."""
