@@ -48,8 +48,8 @@ Examples
 ~~~~~~~~
 
 Examples are available in the GitHub repository (see the ``examples`` folder
-and the `documentation`_ for further explanation). Both example Jupyter
-notebooks and scripts are available.
+above and the `documentation`_ for further explanation). Both Jupyter notebooks
+and scripts are available.
 
 Demo Notebooks
 ~~~~~~~~~~~~~~
@@ -101,9 +101,9 @@ Acknowledgments
 
 RWGEN was largely developed during an `Embedded Researcher project`_ as part
 of the UK Climate Resilience Programme funded by UK Research and Innovation
-(UKRI). The developers are also grateful to the researchers whose work has
-formed the basis for RWGEN, as well as those who have contributed to the code
-on which RWGEN depends.
+(UKRI). The authors are also grateful to the researchers whose work over many
+years has formed the basis for RWGEN, as well as to the developers who have
+contributed to the code on which RWGEN depends.
 
 .. _Embedded Researcher project: https://www.ukclimateresilience.org/projects/facilitating-stochastic-simulation-for-uk-climate-resilience/
 
