@@ -1,11 +1,11 @@
 RWGEN
 =====
 
-RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator based on
-the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
+RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator built
+around the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
 
-RWGEN supports both single site (point) and spatial rainfall simulations. It
-can conduct data pre-processing, model fitting, simulation and post-processing.
+RWGEN supports both single site (point) and spatial simulations. It can
+conduct data pre-processing, model fitting, simulation and post-processing.
 
 |
 
@@ -19,30 +19,39 @@ durations at Heathrow, UK.*
 Status
 ------
 
-The package is new and under active development. It should be considered as a
-pre-release for testing at present. Some features may not work properly, but
-the core functionality should behave reasonably in most cases. Development of
-the rainfall model component is ahead of the weather model component, but the
-outputs and behaviour of both should be checked carefully if used in an
+The package is new and still undergoing development. It should be considered
+as a pre-release for testing at present. Some features may not work properly,
+but the core functionality should behave reasonably in most cases. Development
+of the rainfall model component is ahead of the weather model component, but
+the outputs and behaviour of both should be checked carefully if used in an
 application. Parts of the interface may still change.
 
-Installation and Documentation
-------------------------------
+Getting Started
+---------------
 
-The package `documentation`_ is also under active development - please check
-back regularly for updates. Installation is described in the `documentation`_.
+Documentation
+~~~~~~~~~~~~~
 
-.. _documentation: https://davidpritchard1.github.io/rwgen/html/index.html
+Package `documentation`_ is available that explains the core features of RWGEN
+and its typical use. Please check back for updates, as work on the
+documentation is ongoing.
 
-UK Input Data
--------------
+.. _documentation: https://rwgen1.github.io/rwgen/html/index.html
 
-Selected open data have been pre-processed to help facilitate RWGEN
-applications in the UK. Please see the `documentation`_ for details and
-download links.
+Installation
+~~~~~~~~~~~~
+
+Installation is described in the `documentation`_.
+
+Examples
+~~~~~~~~
+
+Examples are available in the GitHub repository (see the `examples` folder and
+the `documentation`_ for further explanation). Both example Jupyter notebooks
+and scripts are available.
 
 Demo Notebooks
---------------
+~~~~~~~~~~~~~~
 
 A `demo`_ version of the rainfall model component can be tried in the browser
 without the need for any Python knowledge or installation. To run the model
@@ -63,3 +72,41 @@ closing the tab and reopening (or try again later).
 
 Note also that the demo version currently uses an older version of the rainfall
 model with some small differences in the interface.
+
+UK Input Data
+~~~~~~~~~~~~~
+
+Selected open data have been pre-processed to help facilitate RWGEN
+applications in the UK. Please see the `documentation`_ for details and
+download links.
+
+Contributing
+------------
+
+Please feel free to get in touch if you would like to discuss ways to
+contribute to the code. All questions, feedback, ideas, problems, bug reports
+and other comments etc are also much appreciated. For most things (including
+questions and problems) it is best to start a conversation by raising an issue
+on GitHub if possible (but see the contact information below if needed).
+
+Contact Information
+-------------------
+
+David Pritchard
+davidp100@hotmail.co.uk
+
+Acknowledgments
+---------------
+
+RWGEN was largely developed during an `Embedded Researcher project`_ as part
+of the UK Climate Resilience Programme funded by UK Research and Innovation
+(UKRI). The developers are also grateful to the researchers whose work provides
+the basis for RWGEN, as well as those who have contributed to the code on which
+RWGEN depends.
+
+.. _Embedded Researcher project: https://www.ukclimateresilience.org/projects/facilitating-stochastic-simulation-for-uk-climate-resilience/
+
+License
+-------
+
+Distributed under the GNU GPL V3 license. See LICENSE for more details.
