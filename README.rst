@@ -1,11 +1,12 @@
 RWGEN
 =====
 
-RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator built
-around the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
+RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator.
 
-RWGEN supports both single site (point) and spatial simulations. It can
-conduct data pre-processing, model fitting, simulation and post-processing.
+The package is built around the Neyman-Scott Rectangular Pulse (NSRP) rainfall
+model. It can conduct data pre-processing, model fitting, simulation and
+post-processing. Both single site (point) and spatial simulations are
+supported.
 
 |
 
@@ -46,9 +47,9 @@ Installation is described in the `documentation`_.
 Examples
 ~~~~~~~~
 
-Examples are available in the GitHub repository (see the `examples` folder and
-the `documentation`_ for further explanation). Both example Jupyter notebooks
-and scripts are available.
+Examples are available in the GitHub repository (see the ``examples`` folder
+and the `documentation`_ for further explanation). Both example Jupyter
+notebooks and scripts are available.
 
 Demo Notebooks
 ~~~~~~~~~~~~~~
@@ -60,9 +61,9 @@ with your own data, please see the `documentation`_.
 .. _demo: https://mybinder.org/v2/gh/davidpritchard1/rwgen-demo/HEAD
 
 Following the link above should load Jupyter in the default browser. If you
-navigate into the `examples` folder you should find sub-folders containing the
-Jupyter notebooks. These notebooks contain explanations and example usages of
-the rainfall model.
+then navigate into the ``examples`` folder you should find sub-folders
+containing the Jupyter notebooks. These notebooks contain explanations and
+example usages of the rainfall model.
 
 Note that the load times for the demo notebook can vary, as it is hosted on the
 free `mybinder`_ service. If it is being slow (more than a few minutes), try
@@ -93,16 +94,16 @@ Contact Information
 -------------------
 
 David Pritchard
-davidp100@hotmail.co.uk
+rwgen.model@gmail.com
 
 Acknowledgments
 ---------------
 
 RWGEN was largely developed during an `Embedded Researcher project`_ as part
 of the UK Climate Resilience Programme funded by UK Research and Innovation
-(UKRI). The developers are also grateful to the researchers whose work provides
-the basis for RWGEN, as well as those who have contributed to the code on which
-RWGEN depends.
+(UKRI). The developers are also grateful to the researchers whose work has
+formed the basis for RWGEN, as well as those who have contributed to the code
+on which RWGEN depends.
 
 .. _Embedded Researcher project: https://www.ukclimateresilience.org/projects/facilitating-stochastic-simulation-for-uk-climate-resilience/
 
