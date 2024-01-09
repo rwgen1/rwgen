@@ -637,7 +637,7 @@ class Preprocessor:
             ['pool_id', 'variable', 'season'],  # , 'transition'
             df1['pool_id'].unique(), df1['variable'].unique(), df1['season'].unique()  # , df1['transition'].unique()
         )
-        tmp2 = df1.groupby(['pool_id', 'variable', 'season'])['mean', 'std'].mean()
+        tmp2 = df1.groupby(['pool_id', 'variable', 'season'])[['mean', 'std']].mean()
         tmp2.reset_index(inplace=True)
         tmp2.rename(columns={'mean': 'tmp_mean', 'std': 'tmp_std'}, inplace=True)
         df1 = pd.merge(df1, tmp1, how='right')
