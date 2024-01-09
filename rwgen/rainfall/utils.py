@@ -1141,9 +1141,15 @@ def define_parameter_bounds(parameter_bounds, fixed_parameters, required_paramet
 
     # Reshape fixed parameters df so that it can be merged with bounds df
     df1 = pd.melt(df1, id_vars='season', var_name='parameter', value_name='fixed_value')
-    df1['parameter'] = df['parameter'].astype(float) # Make sure parameter column is of correct type
 
-    df = pd.merge(df, df1, how='outer', on=['season', 'parameter'])
+    # df1['parameter'] = df1['parameter'].astype('float64') # Make sure parameter column is of correct type
+    # print(df['season'].dtype, df1['parameter'].dtype)
+
+    # Problems with merge for empty dataframes - so just copy over if empty, otherwise merge
+    if len(df) == 0 and len(df1) == 0:
+        df = df1
+    else:
+        df = pd.merge(df, df1, how='outer', on=['season', 'parameter'])
 
     # Parameters to fit (and their bounds) need to be ordered for optimisation (more flexibility on fixed parameters)
     fixed_parameters = {}  # key = tuple (season, parameter), values = parameter value
