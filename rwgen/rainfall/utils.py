@@ -869,7 +869,9 @@ def catchment_weights(
     for index in range(number_of_catchments):
 
         # Duplicate the required polygon to keep the shape of the geodataframe
-        catchment_polygon = catchment_polygons.append(catchment_polygons.iloc[index])
+        # append is deprecated so use concat - noting use of double square brackets to make sure iloc returns a dataframe
+        # not a series
+        catchment_polygon = pd.concat([catchment_polygons,catchment_polygons.iloc[[index]]])
         catchment_polygon.index = range(number_of_catchments + 1)
         catchment_polygon = catchment_polygon.loc[
             (catchment_polygon.index == index) | (catchment_polygon.index == np.max(catchment_polygon.index))
