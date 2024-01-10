@@ -354,8 +354,9 @@ class Preprocessor:
         else:
             input_path = self.input_timeseries
 
-        # Read data
-        df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True)
+        # Read data TODO dayfirst=True not appropriate for YYYY-MM-DD date format - how should we specify this? As argument somewhere?
+        # df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True)
+        df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True)
         df.columns = [column.lower() for column in df.columns]
 
         # Assign month or half-month identifiers
@@ -385,8 +386,12 @@ class Preprocessor:
                     if distance < self.neighbour_radius * 1000.0:
                         neighbour_file = self.metadata['file_name'].values[index]
                         neighbour_path = os.path.join(self.input_timeseries, neighbour_file)
+                        # Read data TODO dayfirst=True not appropriate for YYYY-MM-DD date format - how should we specify this? As argument somewhere?
+                        # df1 = pd.read_csv(
+                        #     neighbour_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True
+                        # )
                         df1 = pd.read_csv(
-                            neighbour_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True
+                            neighbour_path, index_col=0, parse_dates=True, infer_datetime_format=True
                         )
                         df1.columns = [column.lower() for column in df1.columns]
                         df1.reset_index(inplace=True)
