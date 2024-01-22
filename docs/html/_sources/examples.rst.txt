@@ -1,8 +1,8 @@
-.. |rwgen_version| replace:: ``rwgen-0.0.4``
+.. |rwgen_version| replace:: ``rwgen-0.0.5``
 
-.. |example_path| replace:: ``H:/RWGEN/rwgen-0.0.4/examples/rainfall_model/single_site/nsrp_example.ipynb``
+.. |example_path| replace:: ``H:/RWGEN/rwgen-0.0.5/examples/rainfall_model/single_site/nsrp_example.ipynb``
 
-.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.4/examples/rainfall_model/single_site
+.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.5/examples/rainfall_model/single_site
 
 Examples
 ========

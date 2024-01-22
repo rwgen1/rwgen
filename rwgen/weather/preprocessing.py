@@ -355,7 +355,7 @@ class Preprocessor:
             input_path = self.input_timeseries
 
         # Read data
-        df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True)
+        df = pd.read_csv(input_path, index_col=0, parse_dates=True, infer_datetime_format=True)
         df.columns = [column.lower() for column in df.columns]
 
         # Assign month or half-month identifiers
@@ -385,9 +385,8 @@ class Preprocessor:
                     if distance < self.neighbour_radius * 1000.0:
                         neighbour_file = self.metadata['file_name'].values[index]
                         neighbour_path = os.path.join(self.input_timeseries, neighbour_file)
-                        df1 = pd.read_csv(
-                            neighbour_path, index_col=0, parse_dates=True, infer_datetime_format=True, dayfirst=True
-                        )
+
+                        df1 = pd.read_csv(neighbour_path, index_col=0, parse_dates=True, infer_datetime_format=True)
                         df1.columns = [column.lower() for column in df1.columns]
                         df1.reset_index(inplace=True)
                         df1.rename(columns={
@@ -637,7 +636,7 @@ class Preprocessor:
             ['pool_id', 'variable', 'season'],  # , 'transition'
             df1['pool_id'].unique(), df1['variable'].unique(), df1['season'].unique()  # , df1['transition'].unique()
         )
-        tmp2 = df1.groupby(['pool_id', 'variable', 'season'])['mean', 'std'].mean()
+        tmp2 = df1.groupby(['pool_id', 'variable', 'season'])[['mean', 'std']].mean()
         tmp2.reset_index(inplace=True)
         tmp2.rename(columns={'mean': 'tmp_mean', 'std': 'tmp_std'}, inplace=True)
         df1 = pd.merge(df1, tmp1, how='right')

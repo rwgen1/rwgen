@@ -1518,7 +1518,7 @@ def aggregate_windows(datetime_helper, df, n_divisions):
 
     # Depths for windows (equivalent to storm depths but for fixed windows)
     df['raincell_depth'] = df['raincell_intensity'] * df['raincell_duration'] * df['raincell_coverage']  # !221111
-    df_win = df.groupby(['win_id'])['year', 'month', 'win_start', 'win_length', 'raincell_depth'].agg({
+    df_win = df.groupby(['win_id'])[['year', 'month', 'win_start', 'win_length', 'raincell_depth']].agg({
         'year': min, 'month': min, 'win_start': min, 'win_length': min, 'raincell_depth': sum
     })
     df_win.reset_index(inplace=True)

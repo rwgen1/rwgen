@@ -869,7 +869,8 @@ def catchment_weights(
     for index in range(number_of_catchments):
 
         # Duplicate the required polygon to keep the shape of the geodataframe
-        catchment_polygon = catchment_polygons.append(catchment_polygons.iloc[index])
+        # - double square brackets to make sure iloc returns a dataframe not a series
+        catchment_polygon = pd.concat([catchment_polygons, catchment_polygons.iloc[[index]]])
         catchment_polygon.index = range(number_of_catchments + 1)
         catchment_polygon = catchment_polygon.loc[
             (catchment_polygon.index == index) | (catchment_polygon.index == np.max(catchment_polygon.index))
@@ -1141,7 +1142,12 @@ def define_parameter_bounds(parameter_bounds, fixed_parameters, required_paramet
 
     # Reshape fixed parameters df so that it can be merged with bounds df
     df1 = pd.melt(df1, id_vars='season', var_name='parameter', value_name='fixed_value')
-    df = pd.merge(df, df1, how='outer', on=['season', 'parameter'])
+
+    # Problems with merge for empty dataframes - so just copy over if empty, otherwise merge
+    if len(df) == 0 and len(df1) == 0:
+        df = df1
+    else:
+        df = pd.merge(df, df1, how='outer', on=['season', 'parameter'])
 
     # Parameters to fit (and their bounds) need to be ordered for optimisation (more flexibility on fixed parameters)
     fixed_parameters = {}  # key = tuple (season, parameter), values = parameter value

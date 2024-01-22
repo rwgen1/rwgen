@@ -1,17 +1,18 @@
-.. |rwgen_version| replace:: ``rwgen-0.0.4``
+.. |rwgen_version| replace:: ``rwgen-0.0.5``
 
-.. |example_folder| replace:: ``H:/RWGEN/rwgen-0.0.4``
+.. |example_folder| replace:: ``H:/RWGEN/rwgen-0.0.5``
 
-.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.4
+.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.5
 
-.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.4.zip
+.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.5.zip
 
 Installation
 ============
 
 The instructions below are for installing RWGEN as a developer on a Windows
 operating system. Some steps will not be needed once the package has been
-released.
+released on PyPI. A note on updating an existing RWGEN version is also given
+below - see :ref:`Installing RWGEN`.
 
 Python and the RWGEN dependencies can be installed using the `conda`_ package
 manager. `Miniconda`_ provides a lightweight implementation.
@@ -121,6 +122,13 @@ Activate the `environment`_ before continuing::
 
 Installing RWGEN
 ----------------
+
+.. note::
+
+    If you already have a version of RWGEN installed in the activated
+    environment but would like to update it to a newer version, first
+    uninstall the current version by entering ``pip uninstall rwgen``. Then
+    proceed to install the new version as below.
 
 At the Anaconda Prompt (while still in the |rwgen_version| folder), type the
 following (including the ``.``) to install RWGEN in developer mode::
