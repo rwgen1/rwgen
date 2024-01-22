@@ -1,14 +1,18 @@
 RWGEN
 =====
 
-RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator based on
-the Neyman-Scott Rectangular Pulse (NSRP) rainfall model.
+Welcome to the RWGEN documentation!
 
-RWGEN supports both single site (point) and spatial simulations. It can
-conduct data pre-processing, model fitting, simulation and post-processing.
+RWGEN is a stochastic spatiotemporal Rainfall and Weather GENerator built
+around the Neyman-Scott Rectangular Pulse (NSRP) rainfall model. The package
+provides an open Python implementation of the NSRP model coupled with (i) an
+autoregressive model for other weather variables and (ii) FAO56 Penman-Monteith
+potential evapotranspiration calculations.
 
-The model and documentation are new and under active development - please check
-back regularly for updates.
+RWGEN can currently conduct data pre-processing, model fitting, simulation and
+selected post-processing. Both single site (point) and spatial simulations are
+supported. The model and documentation are new and under active development -
+please check back regularly for updates.
 
 
 .. toctree::
