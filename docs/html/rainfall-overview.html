@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Overview &mdash; RWGEN 0.0.4 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=8c5712d9"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -29,11 +30,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> RWGEN
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RWGEN
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -93,7 +98,7 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Overview</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/rainfall-overview.rst.txt" rel="nofollow"> View page source</a>
@@ -105,7 +110,7 @@
            <div itemprop="articleBody">
              
   <section id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h1>
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
 <p>The rainfall component of RWGEN uses a Neyman-Scott Rectangular Pulse (NSRP)
 model. Both single site (point) and spatial models can be configured in a
 standalone mode and as a component of a complete weather generator. This page
@@ -114,7 +119,7 @@ provides an overview of the NSRP model concepts.</p>
 <a class="reference external" href="https://doi.org/10.1016/j.envsoft.2008.04.003">Burton et al. (2008)</a>. For more detailed explanations of NSRP models see
 this paper and references therein.</p>
 <section id="single-site-model">
-<h2>Single Site Model<a class="headerlink" href="#single-site-model" title="Permalink to this heading"></a></h2>
+<h2>Single Site Model<a class="headerlink" href="#single-site-model" title="Link to this heading"></a></h2>
 <p>The basic single site (point) NSRP model consists of the following steps:</p>
 <blockquote>
 <div><ul class="simple">
@@ -129,7 +134,7 @@ of all active rain cells</p></li>
 <a class="reference external" href="https://doi.org/10.1016/j.envsoft.2008.04.003">Burton et al. (2008)</a>). Each step is explained further below.</p>
 <img alt="_images/nsrp_schematic.png" src="_images/nsrp_schematic.png" />
 <section id="storm-origins">
-<h3>Storm Origins<a class="headerlink" href="#storm-origins" title="Permalink to this heading"></a></h3>
+<h3>Storm Origins<a class="headerlink" href="#storm-origins" title="Link to this heading"></a></h3>
 <p>Storm origins are simulated using a Poisson process, which is a model for a
 series of discrete events. The number of events (storms) in a time period is
 sampled from a Poisson distribution. Waiting times between events (storms)
@@ -139,21 +144,21 @@ storms (from Poisson distribution) and waiting times between storms (from
 exponential distribution).</p>
 </section>
 <section id="rain-cell-arrivals">
-<h3>Rain Cell Arrivals<a class="headerlink" href="#rain-cell-arrivals" title="Permalink to this heading"></a></h3>
+<h3>Rain Cell Arrivals<a class="headerlink" href="#rain-cell-arrivals" title="Link to this heading"></a></h3>
 <p>Number of rain cells for a given storm is sampled from a Poisson distribution
 defined by parameter ν (nu). Arrival times of rain cells after the storm
 origin are then sampled from an exponential distribution using parameter
 β (beta).</p>
 </section>
 <section id="rain-cell-intensity-and-duration">
-<h3>Rain Cell Intensity and Duration<a class="headerlink" href="#rain-cell-intensity-and-duration" title="Permalink to this heading"></a></h3>
+<h3>Rain Cell Intensity and Duration<a class="headerlink" href="#rain-cell-intensity-and-duration" title="Link to this heading"></a></h3>
 <p>Each rain cell has a uniform rainfall rate throughout its lifetime. Rain cell
 duration and intensity are sampled from exponential distributions with
 parameters η (eta) and ξ (xi), respectively. However, other distributions can
 be used for intensity, e.g. Weibull, Gamma.</p>
 </section>
 <section id="final-rainfall-series">
-<h3>Final Rainfall Series<a class="headerlink" href="#final-rainfall-series" title="Permalink to this heading"></a></h3>
+<h3>Final Rainfall Series<a class="headerlink" href="#final-rainfall-series" title="Link to this heading"></a></h3>
 <p>The total rainfall intensity at a moment in time comes from the sum of
 intensities of all active rain cells. As the NSRP process is continuous in
 time, it can be discretised into a time series with a desired time step
@@ -161,7 +166,7 @@ time, it can be discretised into a time series with a desired time step
 </section>
 </section>
 <section id="parameters">
-<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h2>
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
 <p>The single site NSRP process described above requires a minimum of five
 parameters: λ (lambda), ν (nu), β (beta), η (eta) and ξ (xi). The parameters
 are typically also specified separately for each month of the year to account
@@ -174,7 +179,7 @@ can be weighted differently. We need to use an optimisation algorithm to test
 different possible parameter values to arrive at the “best” ones.</p>
 </section>
 <section id="spatial-model">
-<h2>Spatial Model<a class="headerlink" href="#spatial-model" title="Permalink to this heading"></a></h2>
+<h2>Spatial Model<a class="headerlink" href="#spatial-model" title="Link to this heading"></a></h2>
 <p>The single site NSRP can be generalised to simulate spatially consistent time
 series at any locations in a domain. The main difference in the spatial model
 is that rain cells (specifically cell centre locations) are simulated via a
@@ -196,7 +201,7 @@ active rain cells.</p>
 and ρ (rho). Including spatial cross-correlations in the set of statistics
 used for fitting facilitates identification of these parameters.</p>
 <section id="stationarity">
-<h3>Stationarity<a class="headerlink" href="#stationarity" title="Permalink to this heading"></a></h3>
+<h3>Stationarity<a class="headerlink" href="#stationarity" title="Link to this heading"></a></h3>
 <p>It should also be noted that, before an additional adjustment, the spatial
 NSRP formulation is also spatially stationary in the statistical sense. This
 means that statistics (e.g. mean) are the same everywhere if averaged over a
@@ -210,7 +215,7 @@ cannot - at least in the basic spatial NSRP model.</p>
 </section>
 </section>
 <section id="shuffling-method">
-<h2>Shuffling Method<a class="headerlink" href="#shuffling-method" title="Permalink to this heading"></a></h2>
+<h2>Shuffling Method<a class="headerlink" href="#shuffling-method" title="Link to this heading"></a></h2>
 <p>The rainfall model has an optional, adapted implementation of the
 “shuffling” method proposed by <a class="reference external" href="https://doi.org/10.1016/j.jhydrol.2020.125150">Kim and Onof (2020)</a>. This method attempts to
 improve the performance of clustered point process rainfall models across

@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installation &mdash; RWGEN 0.0.4 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=8c5712d9"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -29,11 +30,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> RWGEN
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RWGEN
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -85,7 +90,7 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Installation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/installation.rst.txt" rel="nofollow"> View page source</a>
@@ -97,14 +102,15 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
 <p>The instructions below are for installing RWGEN as a developer on a Windows
 operating system. Some steps will not be needed once the package has been
-released.</p>
+released on PyPI. A note on updating an existing RWGEN version is also given
+below - see <a class="reference internal" href="#installing-rwgen"><span class="std std-ref">Installing RWGEN</span></a>.</p>
 <p>Python and the RWGEN dependencies can be installed using the <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/index.html">conda</a> package
 manager. <a class="reference external" href="http://conda.pydata.org/miniconda.html">Miniconda</a> provides a lightweight implementation.</p>
 <section id="installing-miniconda">
-<h2>Installing Miniconda<a class="headerlink" href="#installing-miniconda" title="Permalink to this heading"></a></h2>
+<h2>Installing Miniconda<a class="headerlink" href="#installing-miniconda" title="Link to this heading"></a></h2>
 <p>The conda website provides <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/windows.html">instructions</a> for installing Miniconda.
 Installation on Windows involves downloading and running an <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html#windows-installers">installer</a> (use
 the installer for the most recent Python version).</p>
@@ -115,7 +121,7 @@ typically be skipped.</p>
 </div>
 </section>
 <section id="updating-and-configuring-conda">
-<h2>Updating and Configuring Conda<a class="headerlink" href="#updating-and-configuring-conda" title="Permalink to this heading"></a></h2>
+<h2>Updating and Configuring Conda<a class="headerlink" href="#updating-and-configuring-conda" title="Link to this heading"></a></h2>
 <p>A few settings need to be adjusted after installing conda. To do this open the
 Anaconda Prompt (press the Windows button and then start typing
 <code class="docutils literal notranslate"><span class="pre">anaconda</span> <span class="pre">prompt</span></code>). This should give you a prompt that looks similar to the
@@ -132,30 +138,30 @@ Windows Command Prompt.</p>
 <p>The conda-forge channel is needed to help manage dependencies.</p>
 </section>
 <section id="getting-the-rwgen-files">
-<h2>Getting the RWGEN Files<a class="headerlink" href="#getting-the-rwgen-files" title="Permalink to this heading"></a></h2>
-<p>Download the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.4</span></code> files as a <a class="reference external" href="https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.4.zip">zip</a> file (if you do not have it
+<h2>Getting the RWGEN Files<a class="headerlink" href="#getting-the-rwgen-files" title="Link to this heading"></a></h2>
+<p>Download the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.5</span></code> files as a <a class="reference external" href="https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.5.zip">zip</a> file (if you do not have it
 already) and unzip. It is recommended to create a <code class="docutils literal notranslate"><span class="pre">RWGEN</span></code> folder somewhere
 - e.g. <code class="docutils literal notranslate"><span class="pre">H:/RWGEN</span></code>.</p>
 <p>Note that Windows <code class="docutils literal notranslate"><span class="pre">Extract</span> <span class="pre">All...</span></code> adds the zip file name (e.g.
-<code class="docutils literal notranslate"><span class="pre">rwgen-0.0.4</span></code>) to the default location for unzipping. This can be deleted, as
-the zip file already contains an <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.4</span></code> folder housing all other
+<code class="docutils literal notranslate"><span class="pre">rwgen-0.0.5</span></code>) to the default location for unzipping. This can be deleted, as
+the zip file already contains an <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.5</span></code> folder housing all other
 files.</p>
 <p>If the target folder is <code class="docutils literal notranslate"><span class="pre">H:/RWGEN</span></code> then we should end up with a folder
-<code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.4</span></code>, which contains sub-folders <code class="docutils literal notranslate"><span class="pre">docs,</span> <span class="pre">examples,</span> <span class="pre">rwgen</span></code>
+<code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.5</span></code>, which contains sub-folders <code class="docutils literal notranslate"><span class="pre">docs,</span> <span class="pre">examples,</span> <span class="pre">rwgen</span></code>
 and some files (e.g. <code class="docutils literal notranslate"><span class="pre">setup.py,</span> <span class="pre">environment.yml,</span> <span class="pre">...</span></code>).</p>
 </section>
 <section id="creating-the-conda-environment">
-<h2>Creating the Conda Environment<a class="headerlink" href="#creating-the-conda-environment" title="Permalink to this heading"></a></h2>
+<h2>Creating the Conda Environment<a class="headerlink" href="#creating-the-conda-environment" title="Link to this heading"></a></h2>
 <p>In the Anaconda Prompt (or open a new one if closed - see the
 <a class="reference internal" href="#updating-and-configuring-conda">Updating and Configuring Conda</a> section) and navigate (at the prompt) to the
-unzipped <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.4</span></code> folder.</p>
+unzipped <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.5</span></code> folder.</p>
 <p>For example, to change from the directory <code class="docutils literal notranslate"><span class="pre">C:/</span></code> to the directory
-<code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.4</span></code>, first switch drives by typing:</p>
+<code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.5</span></code>, first switch drives by typing:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">H</span><span class="p">:</span>
 </pre></div>
 </div>
-<p>Then to change to <code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.4</span></code> enter</p>
-<pre class="literal-block">cd H:/RWGEN/rwgen-0.0.4</pre>
+<p>Then to change to <code class="docutils literal notranslate"><span class="pre">H:/RWGEN/rwgen-0.0.5</span></code> enter</p>
+<pre class="literal-block">cd H:/RWGEN/rwgen-0.0.5</pre>
 <p>This folder should contain a file called <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code>, which lists all
 of the dependencies required by RWGEN.</p>
 <div class="admonition note">
@@ -184,8 +190,15 @@ enter <code class="docutils literal notranslate"><span class="pre">conda</span> 
 </div>
 </section>
 <section id="installing-rwgen">
-<h2>Installing RWGEN<a class="headerlink" href="#installing-rwgen" title="Permalink to this heading"></a></h2>
-<p>At the Anaconda Prompt (while still in the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.4</span></code> folder), type the
+<h2>Installing RWGEN<a class="headerlink" href="#installing-rwgen" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you already have a version of RWGEN installed in the activated
+environment but would like to update it to a newer version, first
+uninstall the current version by entering <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">uninstall</span> <span class="pre">rwgen</span></code>. Then
+proceed to install the new version as below.</p>
+</div>
+<p>At the Anaconda Prompt (while still in the <code class="docutils literal notranslate"><span class="pre">rwgen-0.0.5</span></code> folder), type the
 following (including the <code class="docutils literal notranslate"><span class="pre">.</span></code>) to install RWGEN in developer mode:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
 </pre></div>
