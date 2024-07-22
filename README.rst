@@ -94,13 +94,7 @@ Please feel free to get in touch if you would like to discuss ways to
 contribute to the code. All questions, feedback, ideas, problems, bug reports
 and other comments etc are also much appreciated. For most things (including
 questions and problems) it is best to start a conversation by raising an issue
-on GitHub if possible (but see the contact information below if needed).
-
-Contact Information
--------------------
-
-David Pritchard
-rwgen.model@gmail.com
+on GitHub if possible.
 
 Acknowledgments
 ---------------
