@@ -46,6 +46,7 @@ def main(
         # !221123
         use_pooling,  # currently only for skewness
         calculate_statistics,
+        dayfirst,
 ):
     """
     Make tables/dataframes of reference statistics, weights and scale factors for use in model fitting.
@@ -130,8 +131,9 @@ def main(
                 readers[point_id] = pd.read_csv(input_path, header=None, iterator=True, dtype=np.float32)
             elif timeseries_format == 'csv':
                 readers[point_id] = pd.read_csv(
-                    input_path, names=['value'], index_col=0, dtype={'value': np.float32}, skiprows=1, parse_dates=True,
-                    infer_datetime_format=True, dayfirst=True, iterator=True
+                    input_path, names=['value'], index_col=0,
+                    dtype={'value': np.float32}, skiprows=1, parse_dates=True,
+                    iterator=True, dayfirst=dayfirst,
                 )
 
         # Loop subsets
