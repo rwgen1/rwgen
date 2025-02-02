@@ -987,68 +987,6 @@ def calculate_ddf_statistics(maxima, durations, return_periods):
     return ddf
 
 
-# --
-# !221121
-
-def calculate_point_statistics2(
-        statistic_definitions, point_dfs, point_id, calculation_period, analysis_mode, use_pooling, dfs_pooled,
-        spatial_model,
-):
-    """
-    Calculate mean, variance, skewness, lag-n autocorrelation and dry probability by season and duration.
-
-    This version is for testing pooling of skewness, dry probability and autocorrelation.
-
-    """
-    # point_dfs is a dictionary of dictionaries
-    # point_dfs = {point_id: {duration: df}}
-    # so dfs = point_dfs[point_id] --> df = dfs[duration]
-    # dfs_pooled --> df = dfs_pooled[duration]
-
-    statistic_functions = {'mean': 'mean', 'variance': np.var, 'skewness': 'skew'}
-    statistics = []
-    for index, row in statistic_definitions.iterrows():
-        statistic_name = row['name']
-        duration = row['duration']
-
-        # if statistic_name in ['mean', 'variance']:  # 044
-        if statistic_name in ['mean', 'variance', 'probability_dry', 'autocorrelation']:  # 045
-            df = point_dfs[point_id][duration]
-        else:
-            if use_pooling and spatial_model and (analysis_mode == 'preprocessing'):
-                df = dfs_pooled[duration]
-            else:
-                df = point_dfs[point_id][duration]
-
-        if calculation_period is not None:
-            start_year = calculation_period[0]
-            end_year = calculation_period[1]
-            df = df.loc[(df.index.year >= start_year) & (df.index.year <= end_year)]
-
-        if statistic_name in ['mean', 'variance', 'skewness']:
-            values = df.groupby('season')['value'].agg(statistic_functions[statistic_name])
-        elif statistic_name == 'probability_dry':
-            threshold = row['threshold']
-            values = df.groupby('season')['value'].agg(probability_dry(threshold))
-        elif statistic_name == 'autocorrelation':
-            lag = row['lag']
-            values = df.groupby('season')['value'].agg(autocorrelation(lag))
-
-        values = values.to_frame('value')
-        values.reset_index(inplace=True)
-        for column in statistic_definitions.columns:
-            if column not in values.columns:
-                values[column] = row[column]
-        statistics.append(values)
-
-    statistics = pd.concat(statistics)
-    ordered_columns = list(statistic_definitions.columns)
-    ordered_columns.extend(['season', 'value'])
-    statistics = statistics[ordered_columns]
-
-    return statistics
-
-
 def exponential_model(distance, variance, length_scale, nugget=None):
     if nugget is None:
         _nugget = 1.0 - variance
