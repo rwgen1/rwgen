@@ -6,6 +6,7 @@ Script version of nsrp_example.ipynb notebook.
 """
 import rwgen
 
+
 # Boilerplate line needed to use multiprocessing in fitting on Windows OS
 if __name__ == '__main__':
 
@@ -19,7 +20,7 @@ if __name__ == '__main__':
     )
 
     # Calculate observed/reference statistics from gauge time series file
-    rainfall_model.preprocess()
+    rainfall_model.preprocess(dayfirst=True)
 
     # Fit model and save parameters to file
     rainfall_model.fit(

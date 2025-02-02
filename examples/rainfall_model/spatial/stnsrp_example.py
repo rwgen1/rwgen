@@ -4,8 +4,8 @@ Example of spatial NSRP modelling based on a catchment in the Rhine basin.
 Script version of stnsrp_example.ipynb notebook.
 
 """
-
 import rwgen
+
 
 # Boilerplate line needed to use multiprocessing in fitting on Windows OS
 if __name__ == '__main__':
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # Preprocessing using trimming
     rainfall_model.preprocess(
         outlier_method='trim',
-        # output_filenames={'statistics': 'reference_statistics2.csv'},
+        dayfirst=True,
     )
 
     # Fitting with bounds for some parameters and fixed values for others
