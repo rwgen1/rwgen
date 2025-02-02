@@ -1,5 +1,4 @@
 import os
-import sys  # TEMPORARY
 import datetime
 import itertools
 
@@ -11,40 +10,36 @@ import numba
 
 from . import utils
 
-# TODO: Handle case where statistics/AMAX are requested for unavailable durations (e.g. 1hr AMAX from daily data)
-
 
 def main(
         spatial_model,
         season_definitions,
         statistic_definitions,
-        timeseries_format,  # rename timeseries_ as input_
-        start_date,  # NEW - only needed if timeseries_format='txt'
-        timestep_length,  # NEW - only needed if timeseries_format='txt'
-        calendar,  # NEW - only needed if timeseries_format='txt'
+        timeseries_format,
+        start_date,  # only needed if timeseries_format='txt'
+        timestep_length,  # only needed if timeseries_format='txt'
+        calendar,  # only needed if timeseries_format='txt'
         timeseries_path,
         timeseries_folder,
         point_metadata,
         calculation_period,
         completeness_threshold,
-        output_statistics_path,  # CHANGED - output_point_statistics_path,
+        output_statistics_path,
         outlier_method,
         maximum_relative_difference,
         maximum_alterations,
         analysis_mode,  # 'reference_preprocessing' or 'simulation_postprocessing'
-        n_years,  # specify for postprocessing or 'infer' - not needed for preprocessing...
-        n_realisations,  # = 1 for reference; presume that realisations can be lumped together?
-        subset_length,  # how many years to use in each subset - keep separate from calculation_period?
-        output_amax_path,  # output_maxima_folder ?
+        n_years,  # specify for postprocessing or 'infer' - not needed for preprocessing
+        n_realisations,  # = 1 for reference
+        subset_length,  # how many years to use in each subset (i.e. needs to fit in memory)
+        output_amax_path,
         amax_durations,
         amax_window_type,
-        output_ddf_path,  # boolean and/or list ['annual', 'seasonal']; output_ddf_path ?
+        output_ddf_path,
         ddf_return_periods,  # None or dict(annual=[], seasonal=[])
         write_output,
         simulation_name,
-        # n_workers,  # currently only amax extraction has parallel option
-        # !221123
-        use_pooling,  # currently only for skewness
+        use_pooling,
         calculate_statistics,
         dayfirst,
 ):
@@ -57,23 +52,8 @@ def main(
             * phi - Scales the NSRP rainfall process at a given site for spatial variation in the mean and variance
 
     """
-
-    # TODO: Consider what to do in the case of big dfs (reading might be OK, but aggregation...?)
-    # TODO: Simulation DDFs could be maybe be done just empirically, but maybe not (especially higher RPs)
-    # - and observation DDFs NEED to be done by fitting a distribution
-    # TODO: Need to be able to read from text files and construct dates (current simulation output)
-    # TODO: Use np.float32 as data type
-
-    # TODO: Reinstate preprocessing using new read (chunked) approach
-
-    # TODO: Add sub-hourly functionality
-    # TODO: Accommodate csv and csvy formats
-
     # Unique durations based on union of statistic_definitions and maxima_durations
     durations = np.unique(statistic_definitions['duration']).tolist()
-    # if amax_durations is not None:
-    #     durations.extend(list(amax_durations))
-    # durations = sorted(list(set(durations)))
 
     # Check valid subset_length
     if (n_years is not None) and (subset_length is not None):
@@ -94,16 +74,14 @@ def main(
     dfs = {}
 
     # Main loops - timeseries dataframes are only needed for the current realisation/subset combination
-    # print('    - Point statistics')
     for realisation_id in range(1, n_realisations+1):
 
         # Lists of points and file paths so point and spatial models can be called in same loop
-        # TODO: Account for realisation identifiers using an input argument
         file_extension = '.' + timeseries_format
         if not spatial_model:
             point_ids = [1]
             if analysis_mode == 'preprocessing':
-                input_paths = [timeseries_path]  # + file_extension
+                input_paths = [timeseries_path]
             elif analysis_mode == 'postprocessing':
                 file_name = simulation_name + file_extension
                 input_paths = [os.path.join(timeseries_folder, file_name)]
@@ -120,7 +98,6 @@ def main(
 
         # Check for realisation identifier in file names
         if analysis_mode == 'postprocessing':
-            # file_suffix = '_r' + str(realisation_id) + '_prcp' + file_extension  # TODO: Remove hardcoded variable name
             file_suffix = '_r' + str(realisation_id) + file_extension
             input_paths = [fp.replace(file_extension, file_suffix) for fp in input_paths if fp.endswith(file_extension)]
 
@@ -160,7 +137,6 @@ def main(
                     subset_start_date.year + subset_length, subset_start_date.month, subset_start_date.day,
                     subset_start_date.hour, subset_start_date.minute
                 )
-                # subset_end_date -= datetime.timedelta(seconds=1)  # if not using then need to loop etc with < (not <=)
 
                 # Identify chunk size and index of dates
                 datetime_helper = utils.make_datetime_helper(
@@ -193,16 +169,12 @@ def main(
                     maximum_alterations=maximum_alterations,
                 )
 
-            # /-/
-            # !221121 - Second point loop so that all series read before calculations (for pooling)
-
             # Calculate statistics by point (and using pooled time series if applicable)
             _point_ids = point_ids.copy()
             if spatial_model and use_pooling:
                 _point_ids.append(-1)
             for point_id in _point_ids:
 
-                # @@@
                 if calculate_statistics:
 
                     # Prepare dataframe for calculating pooled statistics if requested
@@ -212,9 +184,6 @@ def main(
                             tmp = []
                             for pid in timeseries.keys():
                                 df = timeseries[pid][duration].copy()
-                                # df['mean'] = df.groupby('season')['value'].transform('mean')
-                                # df['value'] /= df['mean']
-                                # df.drop(columns='mean', inplace=True)
                                 df.index.rename('datetime', inplace=True)
                                 df.reset_index(inplace=True)
                                 df = df.merge(
@@ -250,7 +219,6 @@ def main(
                                 phi, point_statistics = calculate_phi(point_statistics, override_phi=True)
                             else:
                                 phi, point_statistics = calculate_phi(point_statistics, override_phi=False)
-                # @@@
 
                 # AMAX extraction
                 if (amax_durations is not None) and (point_id != -1):
@@ -287,16 +255,13 @@ def main(
                         else:
                             dfs['phi'] = pd.concat([dfs['phi'], utils.add_columns(phi, id_columns)])
                             dfs['gs'] = pd.concat([dfs['gs'], utils.add_columns(gs, id_columns)])
-                # @@@
+
                 if (amax_durations is not None) and (point_id != -1):
                     if (realisation_id == 1) and (subset_id == 1) and (point_id == min(point_ids)):
                         dfs['maxima'] = utils.add_columns(maxima, id_columns)
                     else:
                         dfs['maxima'] = pd.concat([dfs['maxima'], utils.add_columns(maxima, id_columns)])
 
-            # /-/
-
-            # @@@
             if calculate_statistics:
 
                 # Calculate cross-correlations
@@ -327,7 +292,6 @@ def main(
                         cc2.sort_values(['distance_bin', 'season'], inplace=True)
 
                         # Fit exponential covariance model to reduce noise
-                        # TODO: Minimum number of distances/bins for which to do this?
                         cc2 = get_fitted_correlations(cc2, unique_seasons)
                         cc2.sort_values(['distance_bin', 'season'], inplace=True)
 
@@ -365,7 +329,6 @@ def main(
                         dfs['cross-correlation'] = pd.concat([
                             dfs['cross-correlation'], utils.add_columns(cross_correlations, id_columns)
                         ])
-            # @@@
 
         # Close file readers after realisation is processed
         for point_id in point_ids:
@@ -374,7 +337,6 @@ def main(
     # Summarise statistics before merging
     if analysis_mode == 'postprocessing':
 
-        # @@@
         if calculate_statistics:
 
             # Point statistics
@@ -395,10 +357,8 @@ def main(
                 df2 = df2.reset_index()
                 df2 = pd.merge(statistic_definitions, df2)
                 dfs['cross-correlation'] = df2
-        # @@@
 
     # Merge point statistics and cross-correlations
-    # @@@
     if calculate_statistics:
         if 'cross-correlation' in statistic_definitions['name'].values:
             if analysis_mode == 'preprocessing':
@@ -408,7 +368,6 @@ def main(
             dfs['statistics'] = utils.merge_statistics(dfs['point_statistics'], dfs['cross-correlation'], value_columns)
         else:
             dfs['statistics'] = dfs['point_statistics']
-    # @@@
 
     # Finalise dataframes
     if analysis_mode == 'preprocessing':
@@ -437,15 +396,12 @@ def main(
             write_gs = False
             write_phi = False
             value_columns = ['mean', 'percentile_5', 'percentile_25', 'percentile_75', 'percentile_95']
-        # @@@
+
         if calculate_statistics:
             utils.write_statistics(
                 dfs['statistics'], output_statistics_path, season_definitions, write_weights, write_gs, write_phi,
                 value_columns
             )
-        # @@@
-        # if spatial_model and (analysis_mode == 'preprocessing'):
-        #     utils.write_phi(phi, output_phi_path)
 
         # Maxima
         if output_amax_path is not None:
@@ -472,7 +428,7 @@ def prepare_point_timeseries(
     or clipping to reduce the influence of outliers, and (4) aggregating timeseries to required durations.
 
     """
-    # Check valid or nan  # TODO: Revisit if this function gets used for non-precipitation variables
+    # Check valid or nan
     df.loc[df['value'] < 0.0] = np.nan
 
     # Apply season definitions and make a running UID for season that goes up by one at each change in season
@@ -513,10 +469,6 @@ def prepare_point_timeseries(
     if not isinstance(df.index, pd.PeriodIndex):
         df = df.to_period(period)
 
-    # TODO: More efficient approach would be to use successive durations in aggregation
-    # - e.g use 1hr to get 3hr, but then use 3hr to get 6hr, 6hr to get 12hr, etc
-    # - only works if there is a neat division, otherwise need to go back to e.g. 1hr
-
     # Prepare order to process durations in, so that long durations can be calculated from daily rather than hourly
     # durations (as faster)
     duration_hours = []
@@ -534,7 +486,6 @@ def prepare_point_timeseries(
     # Aggregate timeseries to required durations
     dfs = {}
     for duration in sorted_durations:
-        # resample_code = str(int(duration)) + 'H'  # TODO: Check/add sub-hourly
         resample_code = duration
         duration_units = duration[-1]
         if duration_units == 'H':
@@ -563,14 +514,10 @@ def prepare_point_timeseries(
                 if duration_units != 'M':
                     df1['group'] = np.where(df1.index.day >= group * duration_days + 1, group, df1['group'])
                 else:
-                    # df1['month'] = df1.index.month
-                    # df1['group'] = df1['month'].ne(df1['month'].shift()).cumsum()
-                    # df1.drop(columns=['month'], inplace=True)
                     df1['group'] = 0
 
-            # df1 = df.groupby([df.index.year, df.index.month, 'group'])['value'].agg(['sum', 'count'])
             df1 = df1.groupby([df1.index.year, df1.index.month, 'group'])['value'].agg(['sum', 'count'])
-            if df1.index.names[0] == 'datetime':  # !221025 - for dfs coming from shuffling (fitting delta)
+            if df1.index.names[0] == 'datetime':  # for dfs coming from shuffling (fitting delta)
                 df1.index.rename(['level_0', 'level_1', 'group'], inplace=True)
             df1.reset_index(inplace=True)
             df1['day'] = df1['group'] * duration_days + 1
@@ -578,41 +525,24 @@ def prepare_point_timeseries(
             df1['datetime'] = pd.to_datetime(df1[['year', 'month', 'day']])
             df1.drop(columns=['year', 'month', 'day', 'group'], inplace=True)
             df1.set_index('datetime', inplace=True)
-            # print(df1)
         else:
             df1 = df['value'].resample(resample_code, closed='left', label='left').agg(['sum', 'count'])
-            # df2 = df['value'].resample(resample_code, closed='left', label='left').count()
-
-        # df1 = df['value'].resample(resample_code, closed='left', label='left').sum()
-        # df2 = df['value'].resample(resample_code, closed='left', label='left').count()
 
         # Remove data below a duration-dependent completeness
-        if duration_hours <= 24:  # TODO: Remove hardcoding of timestep requiring complete data and completeness threshold?
+        if duration_hours <= 24:
             expected_count = int(duration_hours / timestep_length)
         else:
             expected_count = ((duration_hours / timestep_length) / 24) * 0.9  # TODO: Remove hardcoding - user option
-        # df1.values[df2.values < expected_count] = np.nan  # duration
         df1.rename(columns={'sum': 'value'}, inplace=True)
         df1.loc[df1['count'] < expected_count, 'value'] = np.nan
         df1.drop(columns=['count'], inplace=True)
 
-        # df1 = df1.to_frame()
-        # df1.reset_index(inplace=True)
-        # df1.rename(columns={'level_2': 'datetime'}, inplace=True)
-        # df1.set_index('datetime', inplace=True)
         df1.sort_index(inplace=True)
-        # df1.drop(columns=['level_0'], inplace=True)
 
         df1['season'] = df1.index.month.map(season_definitions)
 
         dfs[duration] = df1
         dfs[duration] = dfs[duration][dfs[duration]['value'].notnull()]
-
-    # print(dfs[672])
-    # print(dfs[672].columns)
-    # dfs[672].to_csv('H:/Projects/rwgen/working/iss13/df672_1.csv')
-    # import sys
-    # sys.exit()
 
     return dfs
 
@@ -694,7 +624,6 @@ def probability_dry(threshold=0.0):
 
 def autocorrelation(lag=1):
     def _autocorrelation(x):
-        # r, p = scipy.stats.pearsonr(x[lag:], x.shift(lag)[lag:])
         df = pd.DataFrame({'x': x, 'x_lag': x.shift(lag)})
         df.dropna(inplace=True)
         r, p = scipy.stats.pearsonr(df['x'], df['x_lag'])
@@ -809,9 +738,6 @@ def calculate_phi(statistics, override_phi, merge=True):
 
 
 def extract_maxima(dfs, durations, window_type, analysis_mode, years=None, completeness_threshold=90.0):
-    # TODO: Consider making completeness_threshold a user option
-    # - also should the outputs from here include NA where not available? - currently series is not serially complete
-
     duration_hours = []
     for duration in dfs.keys():
         duration_units = duration[-1]
@@ -874,9 +800,6 @@ def extract_maxima(dfs, durations, window_type, analysis_mode, years=None, compl
             df1.rename(columns={'max': 'value'}, inplace=True)
             df1['duration'] = str(duration) + 'H'  # duration
 
-            # print(df1)
-            # sys.exit()
-
             if sorted_durations.index(duration) == 0:
                 maxima = df1.copy()
             else:
@@ -913,22 +836,16 @@ def _get_maxima(years, values, durations):  # sliding window maxima - assumes no
 
 
 def _aggregate(duration, offset, timestep, df0, completeness_threshold, years, q=None):
-    freq = str(duration) + 'H'  # TODO: Sort out sub-hourly implementation
+    freq = str(duration) + 'H'
     offset_in_hours = int(offset * timestep)
-    # print(_offset)  # label='right', closed='right',
     df = df0['value'].resample(freq, offset=datetime.timedelta(hours=offset_in_hours)).sum()
     df = df.to_frame()
     df['n_valid'] = df0['value'].resample(freq, offset=datetime.timedelta(hours=offset_in_hours)).count()
-    # df['n_total'] = dfs[timestep]['value'].resample(freq, offset=datetime.timedelta(hours=_offset)).size()
 
     expected_count = int(duration / timestep)
     df['value'] = np.where(df['n_valid'] < expected_count, np.nan, df['value'])
 
-    # df = df.groupby(df.index.year)['value'].max()
-    # df = df.to_frame('value')
-    # df['duration'] = duration
-
-    df = df.groupby(df.index.year).agg({'value': max, 'n_valid': sum})  # , 'n_total': sum
+    df = df.groupby(df.index.year).agg({'value': max, 'n_valid': sum})
     df['leap_year'] = [utils.check_if_leap_year(year) for year in df.index]
     df['n_total'] = np.where(df['leap_year'], 366 * int((24 / timestep)), 365 * int((24 / timestep)))
     df['value'] = np.where(
@@ -940,17 +857,15 @@ def _aggregate(duration, offset, timestep, df0, completeness_threshold, years, q
     df = df.loc[df['value'].first_valid_index():df['value'].last_valid_index()]
 
     if years is not None:
-        df.index = years  # TODO: Check how/why this is being set for post-processing
-        # - it is to adjust year to simulation year from analysis year
+        df.index = years  # adjust year to simulation year from analysis year
 
     return df
 
 
 def calculate_ddf_statistics(maxima, durations, return_periods):
-
     # This function could be modified to permit seasonal maxima/DDF calculations
     durations = list(durations)
-    durations = [str(dur) + 'H' for dur in durations]  # TESTING
+    durations = [str(dur) + 'H' for dur in durations]
     point_ids = list(np.unique(maxima['point_id'].values))
     for point_id, duration in itertools.product(point_ids, durations):
         df = maxima.loc[(maxima['duration'] == duration) & (maxima['point_id'] == point_id)]
@@ -996,7 +911,7 @@ def exponential_model(distance, variance, length_scale, nugget=None):
     return x
 
 
-def get_fitted_correlations(df, unique_seasons):  # df = cc2
+def get_fitted_correlations(df, unique_seasons):
     bounds = ([0.01, 0.0], [1.0, 100000000.0])
     tmp = []
     for season in unique_seasons:
