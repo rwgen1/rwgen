@@ -376,8 +376,6 @@ class RainfallModel:
             parameter_bounds=None,
             fixed_parameters=None,
             n_workers=1,
-            initial_parameters=None,
-            smoothing_tolerance=0.2,
             output_filenames='default',
             fit_nsrp=True,
             fit_shuffling=False,
@@ -393,19 +391,13 @@ class RainfallModel:
 
         Args:
             fitting_method (str): Flag to indicate fitting method. Using ``'default'`` will fit each month or season
-                independently. Other options (including ``'empirical_smoothing'``) under development.
+                independently. Other options under development.
             parameter_bounds (dict or str or pandas.DataFrame): Dictionary containing tuples of upper and lower
                 parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
                 dataframe (see Notes).
             fixed_parameters (dict or str or pandas.DataFrame): Dictionary containing fixed parameter values by
                 parameter name. Alternatively the path to a parameters file or an equivalent dataframe (see Notes).
             n_workers (int): Number of workers (cores/processes) to use in fitting. Default is 1.
-            initial_parameters (pandas.DataFrame or str): Initial parameter values to use if ``fitting_method`` is
-                ``'empirical_smoothing'``. If not specified then initial parameter values will be obtained using
-                the default fitting method (for which no initial values are currently required).
-            smoothing_tolerance (float): Permitted deviation in smoothed annual cycle of parameter values (only used
-                if ``fitting_method`` is ``'empirical_smoothing'``). Expressed as fraction of annual mean parameter
-                value, e.g. 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 {'statistics': 'fitted_statistics.csv', 'parameters': 'parameters.csv'} or ``None`` to indicate that
                 no output files should be written.
@@ -542,13 +534,6 @@ class RainfallModel:
             parameter_bounds, fixed_parameters, self.parameter_names, default_bounds, self.unique_seasons
         )
 
-        # Initial parameters are currently only relevant to empirical smoothing method
-        if initial_parameters is not None:
-            if isinstance(initial_parameters, pd.DataFrame):
-                pass
-            elif isinstance(initial_parameters, str):
-                initial_parameters = utils.read_csv_(initial_parameters)
-
         # Construct output paths
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -588,8 +573,6 @@ class RainfallModel:
                 n_workers=n_workers,
                 output_parameters_path=output_parameters_path,
                 output_statistics_path=output_statistics_path,
-                initial_parameters=initial_parameters,
-                smoothing_tolerance=smoothing_tolerance,
                 write_output=write_output,  # NEW
                 # !221123 - for pre-biasing
                 n_iterations=pdry_iterations,
@@ -599,7 +582,6 @@ class RainfallModel:
                 statistic_definitions=self.statistic_definitions,
                 random_seed=random_seed,
                 use_pooling=use_pooling,
-                testing_pars=self.parameters,  # TEMPORARY FOR TESTING
             )
 
         if fit_shuffling:
