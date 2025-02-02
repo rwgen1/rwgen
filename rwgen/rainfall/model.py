@@ -998,6 +998,7 @@ class RainfallModel:
             # n_workers=n_workers,
             use_pooling=False,
             calculate_statistics=calculate_statistics,
+            dayfirst=False,
         )
 
         print('  - Completed')
