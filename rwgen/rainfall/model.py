@@ -239,6 +239,7 @@ class RainfallModel:
             amax_window_type='sliding',
             output_filenames='default',
             use_pooling=True,
+            dayfirst=False,
     ):
         """
         Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.
@@ -266,11 +267,12 @@ class RainfallModel:
             use_pooling (bool): Indicates whether to pool (scaled) point series for calculating statistics for
                 a spatial model. If True (default), cross-correlations are also "averaged" for a set of separation
                 distance bins.
+            dayfirst (bool). Whether dates are formatted as dd/mm/yyyy[ hh:mm]. Default False (i.e. yyyy-mm-dd hh:mm).
 
         Notes:
             Currently ``.csv`` files are used for time series inputs. These files are expected to contain a
-            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format, i.e. '%d/%m/%Y %H:%M'. They should also contain
-            a ``Value`` column using units of mm/timestep.
+            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format ('%d/%m/%Y %H:%M') or ``yyyy-mm-dd hh:mm``
+            ('%Y-%m-%d %H:%M'). They should also contain a ``Value`` column using units of mm/timestep.
 
         """
         print('Rainfall model preprocessing')
@@ -363,6 +365,7 @@ class RainfallModel:
             simulation_name=None,
             use_pooling=use_pooling,
             calculate_statistics=True,
+            dayfirst=dayfirst,
         )
 
         print('  - Completed')
