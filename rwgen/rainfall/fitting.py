@@ -1,7 +1,5 @@
 import os
-import sys
 import datetime
-import shutil
 
 import numpy as np
 import pandas as pd
@@ -20,25 +18,21 @@ def main(
         intensity_distribution,
         fitting_method,
         reference_statistics,
-        all_parameter_names,  # RENAMED
-        parameters_to_fit,  # NEW
-        parameter_bounds,  # SAME
-        fixed_parameters,  # NEW
+        all_parameter_names,
+        parameters_to_fit,
+        parameter_bounds,
+        fixed_parameters,
         n_workers,
         output_parameters_path,
-        output_statistics_path,  # CHANGED - output_point_statistics_path,
-        initial_parameters,
-        smoothing_tolerance,
+        output_statistics_path,
         write_output,
-        # !221123
-        n_iterations,  # !221123 - for prebiasing
+        n_iterations,  # for prebiasing (dry probability)
         output_folder,
         point_metadata,
         phi,
         statistic_definitions,
         random_seed,
         use_pooling,
-        testing_pars,  # TEMPORARY FOR TESTING
 ):
     """
     Fit model parameters.
@@ -62,7 +56,7 @@ def main(
 
     # For now no initial parameters or modified parameter bounds during pre-biasing iterations
     par_bounds = parameter_bounds.copy()
-    initial_parameters = None
+    initial_parameters = None  # formerly an argument to functino
 
     # Do an initial fit
     ref_stats = reference_statistics.copy()
@@ -76,16 +70,12 @@ def main(
         )
     elif fitting_method == 'empirical_smoothing':
         raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
-    # parameters = testing_pars  # TESTING
 
-    # ---
     # Iterations of NSRP fitting to allow for "pre-biasing" of reference statistics to account for (1) bias in
     # analytical vs simulated dry probability and (2) apparent bias in skewness
     rng = np.random.default_rng()
     tmp_folder = os.path.join(output_folder, 'tmp-' + str(rng.integers(100000, 999999)))
     for iteration in range(n_iterations):
-        # print(iteration)
-    # for iteration in range(1, n_iterations + 1):  # TESTING
 
         # Get simulated statistics and carry out "pre-biasing" calculations
         if not os.path.exists(tmp_folder):
@@ -93,43 +83,19 @@ def main(
         stat_defs = statistic_definitions.loc[
             (statistic_definitions['name'] == 'skewness')
             | ((statistic_definitions['name'] == 'probability_dry') & (statistic_definitions['duration'] == '24H'))
-            # | (statistic_definitions['name'] == 'probability_dry')  # TESTING 059e/059f
         ]
         sim_stats = _get_simulated_statistics(
             intensity_distribution, tmp_folder, season_definitions, parameters, phi, stat_defs, random_seed,
             spatial_model, point_metadata,
         )
-        ref_stats = _prebias_reference_statistics(  # TODO: Check - does cross-correlation come through ok?
+        ref_stats = _prebias_reference_statistics(
             reference_statistics,
             ref_stats,
             sim_stats,
             spatial_model,
             use_pooling,  # for ensuring point_id matches in merge
-            iteration,  # TESTING - just so can save each iteration for now
+            iteration,
         )
-
-        # **
-        # # Use parameters from previous fitting as initial parameters in upcoming iteration
-        # initial_parameters = {}
-        # for season in unique_seasons:
-        #     tmp = []
-        #     for par_name in parameters_to_fit:
-        #         tmp.append(parameters.loc[parameters['season'] == season, par_name].values[0])
-        #     initial_parameters[season] = np.asarray(tmp)
-        #
-        # # Also modify bounds so +/- 25% of annual mean parameter values?
-        # par_bounds = {}
-        # for season in unique_seasons:
-        #     tmp = []
-        #     i = 0
-        #     for par_name in parameters_to_fit:
-        #         par_val = parameters.loc[parameters['season'] == season, par_name].values[0]
-        #         lb = max(parameter_bounds[season][i][0], par_val - parameters[par_name].mean() * 0.25)
-        #         ub = min(parameter_bounds[season][i][1], par_val + parameters[par_name].mean() * 0.25)
-        #         tmp.append((lb, ub))
-        #         i += 1
-        #     par_bounds[season] = tmp
-        # **
 
         # And then proceed to fitting (which takes duration as an integer in hours)
         _ref_stats = ref_stats.copy()
@@ -143,32 +109,9 @@ def main(
         elif fitting_method == 'empirical_smoothing':
             raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
 
-    # TESTING
-    # _ = _get_simulated_statistics(
-    #     intensity_distribution, tmp_folder, season_definitions, parameters, phi, stat_defs, random_seed,
-    #     spatial_model, point_metadata, write_statistics=True, output_folder=output_folder,
-    # )
-
     # Get rid of any temporary folders or files
     if os.path.exists(tmp_folder):
         os.rmdir(tmp_folder)
-
-    # ---
-
-    # !221123 - original commented out below
-    # Select and run fitting method
-    # if fitting_method == 'default':
-    #     parameters, fitted_statistics = fit_by_season(
-    #         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-    #         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters
-    #     )
-    # elif fitting_method == 'empirical_smoothing':
-    #     raise NotImplementedError('Empirical smoothing method is not fully implemented in fitting yet.')
-    #     parameters, fitted_statistics = fit_with_empirical_smoothing(
-    #         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-    #         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, initial_parameters,
-    #         smoothing_tolerance
-    #     )
 
     # Update needed to work with reference duration codes
     fitted_statistics = fitted_statistics.loc[fitted_statistics['duration'] != '1M'].copy()
@@ -189,7 +132,7 @@ def main(
 def fit_by_season(
         unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
         all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters, stage='final',
-        initial_parameters=None, use_pooling=False,  # !221123
+        initial_parameters=None, use_pooling=False,
 ):
     """
     Optimise parameters for each season independently.
@@ -197,15 +140,7 @@ def fit_by_season(
     """
     results = {}
     fitted_statistics = []
-    # if len(unique_seasons) == 12:
-    #     print('  - Month = ', end='')
-    # else:
-    #     print('  - Season = ', end='')
     for season in unique_seasons:
-        # if season == max(unique_seasons):
-        #     print(season)
-        # else:
-        #     print(season, end=' ')
 
         # Check on whether both rho and gamma are fixed  # TODO: Move to model.fit()
         if not isinstance(fixed_parameters, dict):  # if no fixed parameters then empty dictionary here
@@ -263,7 +198,7 @@ def fit_by_season(
             _fixed_parameters = fixed_parameters
             _parameter_bounds = parameter_bounds[season]
 
-        # !221123 Option for initial parameters estimate  # TODO: Account for pooled statistics / spatial model
+        # Option for initial parameters estimate
         if initial_parameters is not None:
             x0 = initial_parameters[season]
         else:
@@ -272,7 +207,7 @@ def fit_by_season(
         # Run optimisation
         result = scipy.optimize.differential_evolution(
             func=fitting_wrapper,
-            bounds=_parameter_bounds,  # parameter_bounds[season],
+            bounds=_parameter_bounds,
             args=(
                 _spatial_model,
                 intensity_distribution,
@@ -289,7 +224,7 @@ def fit_by_season(
             tol=0.001,
             updating='deferred',
             workers=n_workers,
-            x0=x0,  # !221123
+            x0=x0,
         )
 
         # Store optimisation results for season
@@ -299,8 +234,6 @@ def fit_by_season(
         results[('objective_function', season)] = result.fun
         results[('iterations', season)] = result.nit
         results[('function_evaluations', season)] = result.nfev
-
-        # --
 
         # Additional fit for rho and gamma if using pooled statistics with spatial model
         # - optimise rho and back-calculate gamma from rho and nu
@@ -353,7 +286,7 @@ def fit_by_season(
             # Run optimisation
             result = scipy.optimize.differential_evolution(
                 func=fitting_wrapper,
-                bounds=_parameter_bounds,  # parameter_bounds[season],
+                bounds=_parameter_bounds,
                 args=(
                     _spatial_model,
                     intensity_distribution,
@@ -376,7 +309,7 @@ def fit_by_season(
                 tol=0.001,
                 updating='deferred',
                 workers=n_workers,
-                x0=x0,  # !221123
+                x0=x0,
             )
 
             # Store optimisation results for season
@@ -394,21 +327,10 @@ def fit_by_season(
             results[('iterations', season)] += result.nit
             results[('function_evaluations', season)] += result.nfev
 
-            # print(results[('lamda', season)].dtype)
-            # print(results[('rho', season)].dtype)
-            # print(results[('gamma', season)].dtype)
-            # print(results[('nu', season)].dtype)
-            # sys.exit()
-
             # TODO: Consider whether to drop nu from results dictionary - may be removed anyway in storage step below
             results.pop(('nu', season))
 
-        # --
-
         # Get parameters into dictionary ready for formatting
-        # parameters = []
-        # for parameter in parameters_to_fit:
-        #     parameters.append(results[(parameter, season)])
         parameters_dict = {}
         for parameter_name in all_parameter_names:
             if parameter_name in parameters_to_fit:
@@ -437,74 +359,6 @@ def fit_by_season(
     fitted_statistics = pd.concat(fitted_statistics)
     parameters['fit_stage'] = stage
     fitted_statistics['fit_stage'] = stage
-
-    return parameters, fitted_statistics
-
-
-# TODO: Update with modifications to fit_by_season (i.e. signature) to allow for fixed parameters
-def fit_with_empirical_smoothing(
-        unique_seasons, reference_statistics, spatial_model, intensity_distribution, n_workers,
-        all_parameter_names, parameters_to_fit, parameter_bounds, fixed_parameters,
-        initial_parameters, smoothing_tolerance
-):
-    """
-    Optimise parameters by season but with an empirical smoothing step.
-
-    Notes:
-        Three-step process: (1) optimise each season independently, (2) smooth annual cycle of parameter values using a
-        simple weighted moving-average, (3) optimise each season independently again but this time using bounds based on
-        a permitted deviation from the smoothed annual cycle determined in step (2). These bounds are currently set as
-        constant for each season. The half-width of the bounds is set as the mean value of a parameter from step (2)
-        (i.e. averaged across all seasons) multiplied by a factor smoothing_tolerance. The bounds for each season are
-        then set as the smoothed parameter value +/- the half-width of the bounds (constrained according to
-        parameter_bounds).
-
-    """
-    # Step 1 - Initial parameters for can either be passed, read or obtained from default season-wise fitting
-    if initial_parameters is None:
-        initial_parameters, _ = fit_by_season(
-            unique_seasons, reference_statistics, parameter_bounds, spatial_model, intensity_distribution, n_workers,
-            parameters_to_fit, stage='interim'
-        )
-    else:
-        initial_parameters = initial_parameters.copy()
-
-    # Step 2 - Smooth the parameter values using a +/-1 season weighted moving average
-
-    # Insert (repeat) final season at beginning of df and first season at end to avoid boundary effects
-    tmp1 = initial_parameters.loc[initial_parameters['season'] == 12].copy()
-    tmp1.loc[:, 'season'] = 0
-    tmp2 = initial_parameters.loc[initial_parameters['season'] == 1].copy()
-    tmp2.loc[:, 'season'] = max(unique_seasons) + 1
-    df = pd.concat([initial_parameters, tmp1, tmp2])
-    df.sort_values('season', inplace=True)
-
-    # TODO: Consider removing hardcoded weights in moving average
-    def weighted_average(x):
-        return (x.values[0] * 0.5 + x.values[1] + x.values[2] * 0.5) / 2.0
-
-    # Apply weighted moving average smoothing
-    df1 = df.rolling(window=3, center=True, on='season').apply(weighted_average)
-    df1 = df1.loc[(df1['season'] >= min(unique_seasons)) & (df1['season'] <= max(unique_seasons))]
-
-    # Define new bounds for optimisation by season using fraction of annual mean of smoothed parameter
-    new_parameter_bounds = {}
-    for season in unique_seasons:
-        new_parameter_bounds[season] = []
-        for parameter in parameters_to_fit:
-            parameter_idx = parameters_to_fit.index(parameter)
-            parameter_mean = df1[parameter].mean()
-            offset = parameter_mean * smoothing_tolerance
-            smoothed_initial_value = df1.loc[df1['season'] == season, parameter].values[0]
-            lower_bound = max(smoothed_initial_value - offset, parameter_bounds[parameter_idx][0])
-            upper_bound = min(smoothed_initial_value + offset, parameter_bounds[parameter_idx][1])
-            new_parameter_bounds[season].append((lower_bound, upper_bound))
-
-    # Step 3 - Refit by season with refined bounds
-    parameters, fitted_statistics = fit_by_season(
-        unique_seasons, reference_statistics, new_parameter_bounds, spatial_model, intensity_distribution, n_workers,
-        parameters_to_fit, stage='final'
-    )
 
     return parameters, fitted_statistics
 
@@ -629,9 +483,6 @@ def calculate_analytical_properties(
     moments = []
     for n in [1, 2, 3]:
         if intensity_distribution == 'exponential':
-            # mu_1 = 1.0 / (1.0 / theta)
-            # mu_2 = 2.0 / (1.0 / theta) ** 2.0
-            # mu_3 = 6.0 / (1.0 / theta) ** 3.0
             moments.append(scipy.stats.expon.moment(n, scale=theta))
         elif intensity_distribution == 'weibull':
             moments.append(scipy.stats.weibull_min.moment(n, c=kappa, scale=theta))
@@ -692,21 +543,12 @@ def _get_simulated_statistics(
         spatial_model, point_metadata=None, write_statistics=False, output_folder=None,
 ):
     _parameters = parameters.copy()
-    # if 'nu' not in parameters.columns:
-    #     _parameters['nu'] = 2.0 * np.pi * _parameters['rho'] / _parameters['gamma'] ** 2.0
-    #     _parameters.drop(columns=['rho', 'gamma'], inplace=True)
-
-    # output_folder = 'Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/tmp-776852'
 
     if spatial_model:
         _point_metadata = point_metadata.loc[point_metadata['point_id'] == point_metadata['point_id'].min()]
 
     else:
         _point_metadata = None
-
-    # TESTING
-    # run_simulation = False
-    # if run_simulation:
 
     simulation.main(
         spatial_model=spatial_model,
@@ -746,8 +588,6 @@ def _get_simulated_statistics(
         do_reordering=False,
     )
 
-    # t1 = datetime.datetime.now()
-
     _stat_defs = statistic_definitions.loc[statistic_definitions['name'] != 'cross-correlation']
 
     sim_stats, _ = analysis.main(
@@ -783,16 +623,10 @@ def _get_simulated_statistics(
             dayfirst=False,
         )
 
-    # t2 = datetime.datetime.now()
-    # print(t2 - t1)
-    # sys.exit()
-
-    # sim_stats = pd.read_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/sim_stats_1a.csv')
     if write_statistics:
         output_path = os.path.join(output_folder, 'simulated_statistics_DEBUGGING.csv')
         if not os.path.exists(output_path):
             sim_stats.to_csv(output_path, index=False)
-    # sys.exit()
 
     # Remove temporary simulation files
     files_to_delete = os.listdir(tmp_folder)
@@ -811,13 +645,6 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
     if spatial_model and use_pooling:
         sim_stats['point_id'] = -1
 
-    # !221215
-    # orig_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/orig_ref_stats_1a.csv', index=False)
-    # curr_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/curr_ref_stats_1a.csv', index=False)
-    # sim_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/sim_stats_1a.csv', index=False)
-
-    # TODO: Need to merge without cross-correlations then get them back in while keeping order of orig_ref_stats
-
     # Merge simulated and reference statistics
     orig_ref_stats_sub = orig_ref_stats.loc[orig_ref_stats['name'] != 'cross-correlation']
     if spatial_model:
@@ -828,13 +655,9 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
         new_ref_stats = orig_ref_stats_sub.merge(
             curr_ref_stats[['point_id', 'statistic_id', 'season', 'curr_ref_value']], how='left'
         )
-        # !221215
-        # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0a.csv', index=False)
     new_ref_stats = new_ref_stats.merge(
         sim_stats[['point_id', 'statistic_id', 'season', 'sim_value']], how='left',
     )
-    # !221215
-    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_0b.csv', index=False)
 
     # Bring cross-correlations back in and ensure order matches original
     if spatial_model:
@@ -863,17 +686,8 @@ def _prebias_reference_statistics(orig_ref_stats, curr_ref_stats, sim_stats, spa
         new_ref_stats['new_value']
     )
 
-    # new_ref_stats.to_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/new_ref_' + str(iteration) + 'a3.csv', index=False)
-
     # Tidy up df for subsequent fitting
     new_ref_stats.drop(columns=['value', 'curr_ref_value', 'sim_value', 'curr_bias', 'additional_bias'], inplace=True)
     new_ref_stats.rename(columns={'new_value': 'value'}, inplace=True)
 
-    # new_ref_stats.to_csv('Z:/DP/Work/ER/rwgen/testing/stnsrp/059/output/new_ref_' + str(iteration) + 'b3.csv', index=False)
-
-    # !221215
-    # new_ref_stats.to_csv('H:/Projects/rwgen/working/nsrp_prebias/new_ref_stats_2a.csv', index=False)
-    # sys.exit()
-
     return new_ref_stats
-
