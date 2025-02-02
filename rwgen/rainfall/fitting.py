@@ -780,6 +780,7 @@ def _get_simulated_statistics(
             simulation_name='tmp',
             use_pooling=False,
             calculate_statistics=True,
+            dayfirst=False,
         )
 
     # t2 = datetime.datetime.now()
