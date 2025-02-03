@@ -45,7 +45,9 @@ Gauge Time Series Files
 The example uses csv format for time series files. Required columns are:
 
     1. ``DateTime`` - ``dd/mm/yyyy hh:mm`` format (i.e.
-       ``'%d/%m/%Y %H:%M'``), e.g. ``01/01/2005 00:00``
+       ``'%d/%m/%Y %H:%M'``, e.g. ``01/01/2005 00:00``) or
+       ``yyyy-mm-dd hh:mm`` format (i.e. ``'%Y-%m-%d %H:%M'``, e.g.
+       ``2005-01-01 00:00``)
     2. ``Value`` (float) - mm/timestep
 
 Missing data can be represented as -999 (the code will set any negative values 
