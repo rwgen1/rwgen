@@ -579,11 +579,9 @@ def _get_simulated_statistics(
         maximum_memory_percentage=75,
         block_subset_size=50,
         project_name='tmp',
-        spatial_raincell_method='buffer',
         spatial_buffer_factor=15,
         simulation_mode='no_shuffling',
         weather_model=None,
-        max_dsl=6.0,
         n_divisions=4,
         do_reordering=False,
     )
