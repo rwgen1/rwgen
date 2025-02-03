@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 import pandas as pd
 import scipy.interpolate
@@ -18,7 +16,6 @@ def main(
         xmax,
         ymin,
         ymax,
-        method,
         buffer_factor,
 ):
     """
@@ -67,8 +64,6 @@ def main(
         xmax = xmax / 1000.0
         ymin = ymin / 1000.0
         ymax = ymax / 1000.0
-        xrange = xmax - xmin
-        yrange = ymax - ymin
 
     # NSRP process simulation
 
@@ -80,12 +75,8 @@ def main(
     if not spatial_model:
         df = simulate_raincells_point(storms, parameters, rng)
     else:
-        if method == 'buffer':
-            buffer = True
-        else:
-            buffer = False
         df = simulate_raincells_spatial(
-            storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor
+            storms, parameters, xmin, xmax, ymin, ymax, rng, buffer_factor,
         )
 
     # Helper step - Merge parameters into master (row per raincell) dataframe
@@ -99,19 +90,9 @@ def main(
     df['raincell_duration'] = rng.exponential(1.0 / df['eta'])
     df['raincell_end'] = df['raincell_arrival'] + df['raincell_duration']
 
-    # ---
-    # !221121 (047) - Testing adjustment of raincell intensity parameters for storms crossing over month boundaries
-    # - if raincell arrival or end in same month as storm then keep the same
-    # - otherwise, if raincell midpoint in another month then use intensity parameters from that month
-    # - implement by using a dummy arrival variable for month lookup for parameter assignment only
-    # - main month variable remains the same as for storm arrival
-    # _modify_parameters(df, month_lengths, simulation_length, parameters)
-
-    # ---
-
     # Step 5 - Simulate raincell intensities
     if intensity_distribution == 'exponential':
-        df['raincell_intensity'] = rng.exponential(df['theta'])  # rng.exponential(1.0 / df['xi'])
+        df['raincell_intensity'] = rng.exponential(df['theta'])  # in rainsim terms, theta = 1 / xi
     elif intensity_distribution == 'weibull':
         df['raincell_intensity'] = scipy.stats.weibull_min.rvs(c=df['kappa'], scale=df['theta'], random_state=rng)
     elif intensity_distribution == 'generalised_gamma':
@@ -138,8 +119,6 @@ def simulate_storms(month_lengths, simulation_length, parameters, rng):
 
         # Set up simulation_length and month_lengths with buffer applied
         simulation_length += 4
-        # idx = 4 * 12  # i.e. 4-year buffer
-        # month_lengths = np.concatenate([month_lengths, month_lengths[-idx:]])
         for _ in range(4):
             month_lengths = np.concatenate([month_lengths, month_lengths[-12:]])
 
@@ -180,11 +159,10 @@ def simulate_storms(month_lengths, simulation_length, parameters, rng):
 
 def simulate_raincells_point(storms, parameters, rng):
     """
-    Simulate raincells for point model.  # TODO: Expand explanation
+    Simulate raincells for point model.
 
     """
     # Temporarily merging parameters here, but can be done before this method is called if generalise
-    # _storm_arrays_by_raincell() method to work using all columns
     tmp = pd.merge(storms, parameters, how='left', on='month')
     tmp.sort_values(['storm_id'], inplace=True)  # checks that order matches self.storms
 
@@ -205,9 +183,9 @@ def simulate_raincells_point(storms, parameters, rng):
     return df
 
 
-def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor):
+def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, rng, buffer_factor):
     """
-    Simulate raincells for spatial model.  # TODO: Expand explanation
+    Simulate raincells for spatial model.
 
     Notes:
         Requires parameters dataframe to be ordered by month (1-12).
@@ -219,12 +197,13 @@ def simulate_raincells_spatial(storms, parameters, xmin, xmax, ymin, ymax, xrang
         storms_in_month = storms.loc[storms['month'] == row['month']]
         month_number_of_storms = storms_in_month.shape[0]
         month_number_of_raincells_by_storm, \
+            _, \
             month_raincell_x_coords, \
             month_raincell_y_coords, \
             month_raincell_radii = (
-                simulate_raincells_for_month(
-                    row['rho'], row['gamma'], month_number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, rng,
-                    buffer, buffer_factor
+                spatial_poisson_process(
+                    row['rho'], row['gamma'], month_number_of_storms, xmin, xmax, ymin,
+                    ymax, rng, buffer_factor
                 )
             )
 
@@ -312,9 +291,6 @@ def merge_parameters(df, month_lengths, simulation_length, parameters):
     """
     df['month'] = lookup_months(month_lengths, simulation_length, df['storm_arrival'].values)
     parameters_subset = parameters.loc[parameters['fit_stage'] == 'final'].copy()
-    # parameters_subset = parameters_subset.drop(
-    #     ['fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations'], axis=1
-    # )
     parameters_subset = parameters_subset.drop([  # !221121
         'fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations', 'delta', 'ar1_slope',
         'ar1_intercept', 'ar1_stderr'
@@ -327,14 +303,11 @@ def merge_parameters(df, month_lengths, simulation_length, parameters):
 # Functions required for raincell simulation for spatial model
 
 def spatial_poisson_process(
-        rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, rng, buffer=True, buffer_factor=15
+        rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, rng, buffer_factor=15,
 ):
     # Apply buffer to domain
-    if buffer:
-        radius_variance = scipy.stats.expon.stats(moments='v', scale=(1.0 / gamma))
-        buffer_distance = buffer_factor * radius_variance ** 0.5
-    else:
-        buffer_distance = 0.0
+    radius_variance = scipy.stats.expon.stats(moments='v', scale=(1.0 / gamma))
+    buffer_distance = buffer_factor * radius_variance ** 0.5
     xmin_b = xmin - buffer_distance
     xmax_b = xmax + buffer_distance
     ymin_b = ymin - buffer_distance
@@ -404,410 +377,3 @@ def find_relevant_raincells(x, y, radius, xmin, xmax, ymin, ymax):
     relevant_flag[min_distance < radius] = 1
 
     return relevant_flag
-
-
-def simulate_raincells_for_month(
-        rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, xrange, yrange, rng, buffer, buffer_factor
-):
-    """
-    Simulate raincells in inner and outer regions of domain for a calendar month (e.g. all Januarys).
-
-    """
-    # Inner region - "standard" spatial Poisson process
-    # inner_number_of_raincells_by_storm = rng.poisson(rho * area, number_of_storms)
-    # inner_number_of_raincells = np.sum(inner_number_of_raincells_by_storm)
-    # inner_x_coords = rng.uniform(xmin, xmax, inner_number_of_raincells)
-    # inner_y_coords = rng.uniform(ymin, ymax, inner_number_of_raincells)
-    # inner_radii = rng.exponential((1.0 / gamma), inner_number_of_raincells)
-    inner_number_of_raincells_by_storm,\
-        inner_number_of_raincells,\
-        inner_x_coords,\
-        inner_y_coords,\
-        inner_radii = spatial_poisson_process(
-            rho, gamma, number_of_storms, xmin, xmax, ymin, ymax, rng, buffer, buffer_factor
-        )
-
-    # Simulate outer region if using Burton et al. (2010) method
-    # TODO: Fix this method - it does not work properly yet!
-    if not buffer:
-
-        # Construct CDF lookup function for distances of relevant raincells occurring in outer
-        # region - Burton et al. (2010) equation A8
-        distance_from_quantile_func = construct_outer_raincells_inverse_cdf(gamma, xrange, yrange)
-
-        # Density of relevant raincells in outer region - Burton et al. (2010) equation A9
-        rho_y = 2 * rho / gamma ** 2 * (gamma * (xrange + yrange) + 4)
-
-        # Number of relevant raincells in outer region
-        outer_number_of_raincells_by_storm = rng.poisson(rho_y, number_of_storms)  # check rho=mean
-        outer_number_of_raincells = np.sum(outer_number_of_raincells_by_storm)
-
-        # Sample from CDF of distances of relevant raincells occurring in outer region
-        outer_raincell_distance_quantiles = rng.uniform(0.0, 1.0, outer_number_of_raincells)
-        outer_raincell_distances = distance_from_quantile_func(outer_raincell_distance_quantiles)
-
-        # Sample eastings and northings from uniform distribution given distance from domain
-        # boundaries
-        outer_x_coords, outer_y_coords = sample_outer_locations(
-            outer_raincell_distances, xrange, yrange, xmin, xmax, ymin, ymax, rng
-        )
-
-        # Sample raincell radii - for outer region raincells the radii need to exceed the distance
-        # of the cell centre from the domain boundary (i.e. conditional)
-        min_quantiles = scipy.stats.expon.cdf(outer_raincell_distances, scale=(1.0 / gamma))
-        quantiles = rng.uniform(min_quantiles, np.ones(min_quantiles.shape[0]))
-        outer_radii = scipy.stats.expon.ppf(quantiles, scale=(1.0 / gamma))
-
-        # Combine inner and outer region raincells
-        # number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
-        # raincell_x_coords = np.concatenate([inner_x_coords, outer_x_coords])
-        # raincell_y_coords = np.concatenate([inner_y_coords, outer_y_coords])
-        # raincell_radii = np.concatenate([inner_radii, outer_radii])
-        # TODO: Remove four commented out lines above (incorrect - newer lines below are correct)
-        number_of_raincells_by_storm,\
-            raincell_x_coords,\
-            raincell_y_coords,\
-            raincell_radii = combine_inner_outer_raincells(
-                inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
-                inner_y_coords, outer_y_coords, inner_radii, outer_radii
-            )
-
-    else:
-        number_of_raincells_by_storm = inner_number_of_raincells_by_storm
-        raincell_x_coords = inner_x_coords
-        raincell_y_coords = inner_y_coords
-        raincell_radii = inner_radii
-
-    return number_of_raincells_by_storm, raincell_x_coords, raincell_y_coords, raincell_radii
-
-
-def combine_inner_outer_raincells(
-        inner_number_of_raincells_by_storm, outer_number_of_raincells_by_storm, inner_x_coords, outer_x_coords,
-        inner_y_coords, outer_y_coords, inner_radii, outer_radii
-):
-    number_of_raincells_by_storm = inner_number_of_raincells_by_storm + outer_number_of_raincells_by_storm
-    n_storms = number_of_raincells_by_storm.shape[0]
-
-    total_raincells = np.sum(number_of_raincells_by_storm)
-    x = np.zeros(total_raincells)
-    y = np.zeros(total_raincells)
-    radius = np.zeros(total_raincells)
-
-    i = 0
-    inner_rc_idx = 0
-    outer_rc_idx = 0
-    for storm_idx in range(n_storms):
-        n_inner = inner_number_of_raincells_by_storm[storm_idx]
-        n_outer = outer_number_of_raincells_by_storm[storm_idx]
-        for _ in range(n_inner):
-            x[i] = inner_x_coords[inner_rc_idx]
-            y[i] = inner_y_coords[inner_rc_idx]
-            radius[i] = inner_radii[inner_rc_idx]
-            inner_rc_idx += 1
-            i += 1
-        for _ in range(n_outer):
-            x[i] = outer_x_coords[outer_rc_idx]
-            y[i] = outer_y_coords[outer_rc_idx]
-            radius[i] = outer_radii[outer_rc_idx]
-            outer_rc_idx += 1
-            i += 1
-
-    return number_of_raincells_by_storm, x, y, radius
-
-
-def outer_raincells_cdf(x, gamma, xrange, yrange, q=0):
-    """
-    CDF of distances of raincells in outer region according to Burton et al. (2010) equation A8.
-
-    """
-    # x = distance from domain boundaries, xrange is w and yrange is z in Burton et al. (2010)
-    # returns y = cdf of distance of relevant raincells occurring in the outer region
-    # additionally subtracting q (in range 0-1) to enable solving for x given a desired y
-    return 1 - (1 + (4 * x * gamma) / (gamma * (xrange + yrange) + 4)) * np.exp(-gamma * x) - q
-
-
-def construct_outer_raincells_inverse_cdf(gamma, xrange, yrange):
-    """
-    Empirically constructed inverse CDF of raincells in outer region.
-
-    """
-    # So that x (distance) can be looked up from (sampled) y (cdf quantile)
-
-    # Make a sample of distances (x) corresponding with CDF quantile (y)
-    y1 = np.arange(0.0, 0.01, 0.0001)
-    y2 = np.arange(0.01, 0.99, 0.001)
-    y3 = np.arange(0.99, 1.0+0.00001, 0.0001)
-    y = np.concatenate([y1, y2, y3])
-    x = []
-    i = 1
-    for q in y:
-        r, info, ier, msg = scipy.optimize.fsolve(
-            outer_raincells_cdf, 0, args=(gamma, xrange, yrange, q), full_output=True
-        )
-        x.append(r[0])
-
-        # Final quantile at ~1 may be subject to convergence issues, so use previous value of x
-        if ier != 1:
-            if i == y.shape[0] and ier == 5:
-                pass
-            else:
-                raise RuntimeError('Convergence error in construction of inverse CDF for outer raincells')
-
-        i += 1
-
-    # Construct inverse CDF function using linear interpolation
-    x = np.asarray(x)
-    y[-1] = 1.0
-    # cdf = scipy.interpolate.interp1d(x, y)
-    inverse_cdf = scipy.interpolate.interp1d(y, x)
-
-    return inverse_cdf
-
-
-def sample_outer_locations(d, xrange, yrange, xmin, xmax, ymin, ymax, rng):
-    """
-    Sample centre locations of raincells in outer region given their distances (d) from the domain boundary.
-
-    """
-    # d = distance to raincell centre = x in Burton et al. (2010)
-    # vectorised so perimeter array contains a perimeter for each raincell's distance d
-
-    # Perimeter is the sum of the domain perimeter and four quarter-circle arc lengths
-    perimeter = 2 * xrange + 2 * yrange
-    perimeter += 2 * np.pi * d
-
-    # Sample along the perimeter
-    uniform_sample = rng.uniform(0.0, 1.0, perimeter.shape[0])
-    position_1d = uniform_sample * perimeter
-
-    # Identify which of the eight line segments that the sampled lengths correspond to using the lower left as a
-    # reference point (xmin-d, ymin). Also identify the length relative to the segment origin (first point reached
-    # moving clockwise from lower left)
-    corner_length = (2.0 * np.pi * d) / 4.0  # quarter-circle arc length
-    segment_id = np.zeros(perimeter.shape[0], dtype=int)
-    segment_position = np.zeros(perimeter.shape[0])  # i.e. length relative to segment origin
-    for i in range(1, 8+1):
-        if i == 1:
-            min_length = np.zeros(perimeter.shape[0])
-            max_length = xrange
-        elif i == 2:
-            min_length = np.zeros(perimeter.shape[0]) + xrange
-            max_length = xrange + corner_length
-        elif i == 3:
-            min_length = xrange + corner_length
-            max_length = xrange + corner_length + yrange
-        elif i == 4:
-            min_length = xrange + corner_length + yrange
-            max_length = xrange + 2 * corner_length + yrange
-        elif i == 5:
-            min_length = xrange + 2 * corner_length + yrange
-            max_length = 2 * xrange + 2 * corner_length + yrange
-        elif i == 6:
-            min_length = 2 * xrange + 2 * corner_length + yrange
-            max_length = 2 * xrange + 3 * corner_length + yrange
-        elif i == 7:
-            min_length = 2 * xrange + 3 * corner_length + yrange
-            max_length = 2 * xrange + 3 * corner_length + 2 * yrange
-        elif i == 8:
-            min_length = 2 * xrange + 3 * corner_length + 2 * yrange
-            max_length = perimeter  # = 2 * xrange + 4 * corner_length + 2 * yrange
-
-        segment_id[(position_1d >= min_length) & (position_1d < max_length)] = i
-
-        segment_position[segment_id == i] = (position_1d[segment_id == i] - min_length[segment_id == i])
-
-    # Identify eastings and northings for straight-line segments first (1, 3, 5, 7)
-    x = np.zeros(perimeter.shape[0])
-    y = np.zeros(perimeter.shape[0])
-    x[segment_id == 1] = xmin - d[segment_id == 1]
-    y[segment_id == 1] = ymin + segment_position[segment_id == 1]
-    x[segment_id == 3] = xmin + segment_position[segment_id == 3]
-    y[segment_id == 3] = ymax + d[segment_id == 3]
-    x[segment_id == 5] = xmax + d[segment_id == 5]
-    y[segment_id == 5] = ymax - segment_position[segment_id == 5]
-    x[segment_id == 7] = xmax - segment_position[segment_id == 7]
-    y[segment_id == 7] = ymin - d[segment_id == 7]
-
-    # Identify eastings and northings for corner segments (2, 4, 6, 8)
-    theta = np.zeros(perimeter.shape[0])  # angle of sector corresponding with arc length
-
-    theta[segment_id == 2] = segment_position[segment_id == 2] / d[segment_id == 2]
-    x[segment_id == 2] = xmin + d[segment_id == 2] * np.cos(np.pi - theta[segment_id == 2])
-    y[segment_id == 2] = ymax + d[segment_id == 2] * np.sin(np.pi - theta[segment_id == 2])
-
-    theta[segment_id == 4] = segment_position[segment_id == 4] / d[segment_id == 4]
-    x[segment_id == 4] = xmax + d[segment_id == 4] * np.cos(np.pi / 2.0 - theta[segment_id == 4])
-    y[segment_id == 4] = ymax + d[segment_id == 4] * np.sin(np.pi / 2.0 - theta[segment_id == 4])
-
-    theta[segment_id == 6] = segment_position[segment_id == 6] / d[segment_id == 6]
-    x[segment_id == 6] = xmax + d[segment_id == 6] * np.cos(2.0 * np.pi - theta[segment_id == 6])
-    y[segment_id == 6] = ymin + d[segment_id == 6] * np.sin(2.0 * np.pi - theta[segment_id == 6])
-
-    theta[segment_id == 8] = segment_position[segment_id == 8] / d[segment_id == 8]
-    x[segment_id == 8] = xmin + d[segment_id == 8] * np.cos(3.0 / 2.0 * np.pi - theta[segment_id == 8])
-    y[segment_id == 8] = ymin + d[segment_id == 8] * np.sin(3.0 / 2.0 * np.pi - theta[segment_id == 8])
-
-    return x, y
-
-
-# ---
-
-def main2(
-        spatial_model,
-        parameters,
-        simulation_length,
-        month_lengths,
-        season_definitions,
-        intensity_distribution,
-        rng,
-        xmin,
-        xmax,
-        ymin,
-        ymax,
-        method,
-        buffer_factor,
-        dth,  # !221120
-):
-    """
-    Alternative approach using a second simulation to provide raincells that overlap month boundaries (i.e. with
-    the associated parameters of the target month, rather than the previous month. NOT CURRENTLY USED.
-
-    """
-    # Ensure parameters are available monthly (i.e. repeated for each month in season)
-    if len(season_definitions.keys()) == 12:
-        parameters = parameters.copy()
-        parameters['month'] = parameters['season']
-    else:
-        months = []
-        seasons = []
-        for month, season in season_definitions.items():
-            months.append(month)
-            seasons.append(season)
-        df_seasons = pd.DataFrame({'month': months, 'season': seasons})
-        parameters = pd.merge(df_seasons, parameters, how='left', on='season')
-    parameters.sort_values(by='month', inplace=True)
-
-    # ---
-    # Simulate the main series
-    df = main(
-        spatial_model, parameters, simulation_length, month_lengths, season_definitions, intensity_distribution,
-        rng, xmin, xmax, ymin, ymax, method, buffer_factor,
-    )
-
-    # Ensure that minimum arrival time is greater than zero (for binning) and maximum end if less than block
-    df.drop(index=df.index[df['raincell_arrival'] >= dth['end_time'].max()], inplace=True)
-    df['raincell_end'] = np.where(
-        df['raincell_end'] > dth['end_time'].max(), dth['end_time'].max(), df['raincell_end']
-    )
-
-    # For each storm, identify the month index in which the arrival occurs
-    df['storm_month_idx'] = np.digitize(df['storm_arrival'], dth['end_time'], right=True)
-
-    # Merge in time information
-    df = df.merge(dth[['month_id', 'end_time']], left_on='storm_month_idx', right_on='month_id')
-    df.drop(columns='month_id', inplace=True)
-
-    # Subset on raincells starting in the same month as the storm
-    df = df.loc[df['raincell_arrival'] < df['end_time']]  # .copy()
-
-    # Truncate raincells crossing month ends
-    df['raincell_end'] = np.minimum(df['raincell_end'], df['end_time'])
-
-    # Prepare for merge
-    df.drop(columns=['storm_month_idx', 'end_time'], inplace=True)
-
-    # ---
-    # Simulate a secondary series for storms that overlap month boundaries
-    df1 = main(
-        spatial_model, parameters, simulation_length, month_lengths, season_definitions, intensity_distribution,
-        rng, xmin, xmax, ymin, ymax, method, buffer_factor,
-    )
-
-    # Ensure that minimum arrival time is greater than zero (for binning) and maximum end if less than block
-    df1.drop(index=df1.index[df1['raincell_arrival'] >= dth['end_time'].max()], inplace=True)
-    df1['raincell_end'] = np.where(
-        df1['raincell_end'] > dth['end_time'].max(), dth['end_time'].max(), df1['raincell_end']
-    )
-
-    # For each storm, identify the month index in which the arrival occurs
-    df1['storm_month_idx'] = np.digitize(df1['storm_arrival'], dth['end_time'], right=True)
-
-    # Merge in time information
-    df1 = df1.merge(
-        dth[['month_id', 'n_hours', 'start_time', 'end_time']], left_on='storm_month_idx', right_on='month_id'
-    )
-    df1.drop(columns='month_id', inplace=True)
-
-    # Identify those cells that end after notional month end time (i.e. should go into next month)
-    df1 = df1.loc[df1['raincell_end'] > df1['end_time']]  # .copy()
-
-    # Adjust times ready for merging
-    df1['storm_arrival'] -= df1['n_hours']
-    df1['raincell_arrival'] -= df1['n_hours']
-    df1['raincell_end'] -= df1['n_hours']
-    df1['storm_arrival'] = np.where(df1['storm_arrival'] < df1['start_time'], df1['start_time'], df1['storm_arrival'])
-
-    # Check that no really long raincells that somehow extend beyond the end of the month even with adjusted times
-    df1 = df1.loc[df1['raincell_end'] <= df1['end_time']]
-
-    # Merge with main series
-    df1['storm_id'] = df1['storm_id'].ne(df1['storm_id'].shift()).cumsum() + df['storm_id'].max()
-    df1.drop(columns=['storm_month_idx', 'n_hours', 'start_time', 'end_time'], inplace=True)
-    df = pd.concat([df, df1])
-    df.sort_values(by=['storm_arrival', 'raincell_arrival'], inplace=True, ignore_index=False)
-    df['storm_id'] = df['storm_id'].ne(df['storm_id'].shift()).cumsum() - 1
-
-    return df
-
-
-def _modify_parameters(df, month_lengths, simulation_length, parameters):
-    """
-    For testing whether reassigning intensity parameters helps (047). NOT CURRENTLY USED.
-
-    """
-    # First need to ensure all raincell arrivals are in simulation period
-    end_time = float(np.sum(month_lengths))
-    df.drop(index=df.index[df['raincell_arrival'] >= end_time], inplace=True)
-    df['raincell_duration'] = np.where(
-        df['raincell_end'] >= end_time,
-        (end_time - df['raincell_arrival']) * 0.99,
-        df['raincell_duration']
-    )
-    df['raincell_end'] = np.where(
-        df['raincell_end'] >= end_time,
-        df['raincell_arrival'] + df['raincell_duration'],
-        df['raincell_end']
-    )
-
-    # Find month associated with raincell arrival and midpoints
-    df['rc_midpoint'] = df['raincell_arrival'] + df['raincell_duration'] / 2.0
-    df['rc_arrival_month'] = lookup_months(month_lengths, simulation_length, df['raincell_arrival'].values)
-    df['rc_midpoint_month'] = lookup_months(month_lengths, simulation_length, df['rc_midpoint'].values)
-
-    # Identify the correct month for parameter lookup
-    df['rc_month'] = (
-        np.where(
-            df['rc_arrival_month'] == df['month'],
-            df['month'],
-            np.where(
-                df['rc_midpoint_month'] != df['month'],
-                df['rc_midpoint_month'],
-                df['month'],
-            )
-        )
-    )
-
-    # Redo parameter merge
-    parameters_subset = parameters.loc[parameters['fit_stage'] == 'final'].copy()
-    parameters_subset = parameters_subset.drop([
-        'fit_stage', 'converged', 'objective_function', 'iterations', 'function_evaluations', 'delta', 'ar1_slope',
-        'ar1_intercept', 'ar1_stderr', 'season'
-    ], axis=1, errors='ignore')
-    parameters_subset.rename(columns={'month': 'rc_month'}, inplace=True)
-    df.drop(columns=['lamda', 'beta', 'rho', 'eta', 'gamma', 'theta', 'kappa'], inplace=True, errors='ignore')
-    df = pd.merge(df, parameters_subset, how='left', on='rc_month')
-
-    # Tidy up df
-    df.drop(columns=['rc_midpoint', 'rc_arrival_month', 'rc_midpoint_month', 'rc_month'], inplace=True)
-
-    return df
