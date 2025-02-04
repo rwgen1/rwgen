@@ -113,7 +113,7 @@ class RainfallModel:
             spatial_model,
             project_name,  # TODO: Check whether needed now that variable name is used in output files (for WG)
             input_timeseries=None,
-            point_metadata=None,  # TODO: Compulsory or not for rainfall model? - ideally not
+            point_metadata=None,
             season_definitions='monthly',
             intensity_distribution='exponential',
             output_folder='./output',
@@ -133,11 +133,9 @@ class RainfallModel:
         self.input_timeseries = input_timeseries
 
         # Spatial model requires a table of metadata for points
-        # if self.spatial_model:
         if isinstance(point_metadata, pd.DataFrame):
             self.point_metadata = point_metadata
             self.point_metadata.columns = [name.lower() for name in self.point_metadata.columns]
-            # TODO: Other dataframe arguments need to be converted to lowercase column headings (e.g. statistic defs...)
         elif isinstance(point_metadata, str):
             self.point_metadata = utils.read_csv_(point_metadata)
         else:
@@ -330,9 +328,6 @@ class RainfallModel:
             self.calculation_period = None
         else:
             self.calculation_period = calculation_period
-
-        # AMAX durations using resample codes
-        # _amax_durations = [str(dur) + 'H' for dur in amax_durations]
 
         # Do preprocessing
         self.reference_statistics, self.phi = analysis.main(
@@ -565,16 +560,15 @@ class RainfallModel:
                 fitting_method=fitting_method,
                 reference_statistics=self.reference_statistics.loc[
                     self.reference_statistics['duration'] != self.shuffling_config['target_duration']
-                ],  # TODO: This subset may no longer be needed, as all weights except nsrp can potentially go to zero
-                all_parameter_names=self.parameter_names,  # RENAMED
-                parameters_to_fit=parameters_to_fit,  # NEW
-                parameter_bounds=parameter_bounds,  # SAME
-                fixed_parameters=fixed_parameters,  # NEW
+                ],  # TODO: Check if subset still needed, as all weights except nsrp can potentially go to zero
+                all_parameter_names=self.parameter_names,
+                parameters_to_fit=parameters_to_fit,
+                parameter_bounds=parameter_bounds,
+                fixed_parameters=fixed_parameters,
                 n_workers=n_workers,
                 output_parameters_path=output_parameters_path,
                 output_statistics_path=output_statistics_path,
-                write_output=write_output,  # NEW
-                # !221123 - for pre-biasing
+                write_output=write_output,
                 n_iterations=pdry_iterations,
                 output_folder=self.output_folder,
                 point_metadata=self.point_metadata,
@@ -619,7 +613,6 @@ class RainfallModel:
                     else:
                         line = (
                             line
-                            # + ',' + str(self.parameters['max_dsl'].values[i-1])
                             + ',' + str(self.parameters['delta'].values[i - 1])
                             + ',' + str(self.parameters['ar1_slope'].values[i - 1])
                             + ',' + str(self.parameters['ar1_intercept'].values[i - 1])
@@ -746,7 +739,7 @@ class RainfallModel:
         if self.project_name is None:
             output_name = 'simulation'
         else:
-            output_name = self.project_name  # TODO: Sort out inclusion of variable name...
+            output_name = self.project_name  # TODO: Sort out inclusion of variable name
 
         # Ensure only "final" parameters are used in simulation (in case intermediate parameters were recorded during
         # fitting)
@@ -766,14 +759,6 @@ class RainfallModel:
             n_realisations=n_realisations,
             simulation_name=output_name,
         )
-
-        # Get input timeseries data file/folder paths to help with shuffling
-        if self.spatial_model:
-            timeseries_path = None
-            timeseries_folder = self.input_timeseries
-        else:
-            timeseries_path = self.input_timeseries
-            timeseries_folder = None
 
         if apply_shuffling:
             simulation_mode = 'with_shuffling'
@@ -826,7 +811,7 @@ class RainfallModel:
             amax_durations=None,
             ddf_return_periods=None,
             amax_window_type='sliding',
-            subset_length=200,  # 50,
+            subset_length=200,
             output_filenames='default',
             calculate_statistics=True,
             simulation_format=None,
@@ -836,7 +821,6 @@ class RainfallModel:
             simulation_subfolders=None,
             simulation_length=None,
             n_realisations=None,
-            # n_workers=1,  # TODO: Define n_workers in __init__()
     ):
         """
         Post-processing to calculate statistics from simulated point output.
@@ -935,17 +919,8 @@ class RainfallModel:
                 ddf_return_periods = [ddf_return_periods]
 
         # Construct paths to simulation (point) output
-        if simulation_subfolders == 'default':
-            if self.spatial_model:
-                simulation_subfolders = dict(point='point', catchment='catchment', grid='grid')
-            else:
-                simulation_subfolders = dict(point='')
         timeseries_path = None
         timeseries_folder = os.path.join(output_subfolder)
-
-        # Subset on points to use in post-processing
-        # if 'postprocess' in self.point_metadata.columns:
-        #     pass
 
         self.simulated_statistics, _ = analysis.main(
             spatial_model=self.spatial_model,
@@ -975,7 +950,6 @@ class RainfallModel:
             ddf_return_periods=ddf_return_periods,
             write_output=True,
             simulation_name=self.project_name,
-            # n_workers=n_workers,
             use_pooling=False,
             calculate_statistics=calculate_statistics,
             dayfirst=False,
@@ -1021,18 +995,10 @@ class RainfallModel:
         print('Setting rainfall statistics')
 
         # Point metadata
-        # if self.spatial_model and point_metadata is None:
-        #     raise ValueError('point_metadata must be supplied for a spatial model.')
-        if (self.point_metadata is None) and (point_metadata is None):
-            # TODO: Confirm whether point_metadata is needed/compulsory for rainfall model - ideally not
-            # raise ValueError('point_metadata must be supplied.')
-            pass
         if isinstance(point_metadata, pd.DataFrame):
             self.point_metadata = point_metadata
         elif isinstance(point_metadata, str):
             self.point_metadata = utils.read_csv_(point_metadata)
-        # if not self.spatial_model:
-        #     self.point_metadata = None
 
         # Reference statistics
         if reference_statistics is not None:
@@ -1382,5 +1348,3 @@ class RainfallModel:
     def unique_seasons(self):
         """list of int: Unique season identifiers."""
         return list(set(self.season_definitions.values()))
-
-
