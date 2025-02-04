@@ -142,13 +142,7 @@ def fit_by_season(
     fitted_statistics = []
     for season in unique_seasons:
 
-        # Check on whether both rho and gamma are fixed  # TODO: Move to model.fit()
-        if not isinstance(fixed_parameters, dict):  # if no fixed parameters then empty dictionary here
-            if (
-                    (('rho' in fixed_parameters.columns) and ('gamma' not in fixed_parameters.columns))
-                    | (('gamma' in fixed_parameters.columns) and ('rho' not in fixed_parameters.columns))
-            ):
-                raise ValueError('Both rho and gamma must be fixed (or neither fixed).')
+        # TODO: Check that both rho and gamma are fixed if one of them is (move check to model.fit too perhaps)
 
         # Gather relevant data, weights and objective function scaling terms
         # - if using pooled statistics in a spatial model then first fit is just a point model
@@ -259,24 +253,24 @@ def fit_by_season(
             if 'lamda' in parameters_to_fit:
                 lamda = results[('lamda', season)]
             else:
-                lamda = fixed_parameters.loc[fixed_parameters['season'] == season, 'lamda'].values[0]
+                lamda = fixed_parameters[(season, 'lamda')]
             if 'beta' in parameters_to_fit:
                 beta = results[('beta', season)]
             else:
-                beta = fixed_parameters.loc[fixed_parameters['season'] == season, 'beta'].values[0]
+                beta = fixed_parameters[(season, 'beta')]
             if 'eta' in parameters_to_fit:
                 eta = results[('eta', season)]
             else:
-                eta = fixed_parameters.loc[fixed_parameters['season'] == season, 'eta'].values[0]
+                eta = fixed_parameters[(season, 'eta')]
             if 'theta' in parameters_to_fit:
                 theta = results[('theta', season)]
             else:
-                theta = fixed_parameters.loc[fixed_parameters['season'] == season, 'theta'].values[0]
+                theta = fixed_parameters[(season, 'theta')]
             if intensity_distribution == 'weibull':
                 if 'kappa' in parameters_to_fit:
                     kappa = results[('kappa', season)]
                 else:
-                    kappa = fixed_parameters.loc[fixed_parameters['season'] == season, 'kappa'].values[0]
+                    kappa = fixed_parameters[(season, 'kappa')]
             else:
                 kappa = None
 
