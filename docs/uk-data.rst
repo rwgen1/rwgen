@@ -52,6 +52,27 @@ button on the `dataset landing page`_ or see the following direct links:
 .. _Daily weather data: https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/
 .. _Gauge/station metadata: https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv
 
+Bulk download tools can be used to obtain all files or alternatively a small
+script, such as the following Python example::
+
+    import os
+    import requests
+
+    import pandas as pd
+
+
+    metadata_url = 'https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv'
+    weather_base_url = 'https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/'
+    output_folder = ...  # TODO: Insert path to output folder
+
+    df = pd.read_csv(metadata_url)
+
+    for file_name in df['File_Name']:
+        print(file_name)
+        with requests.get(f'{weather_base_url}{file_name}') as r:
+            with open(os.path.join(output_folder, file_name), 'wb') as fh:
+                fh.write(r.content)
+
 .. note::
 
     The EIDC dataset entry contains an archived version of the model code, but
