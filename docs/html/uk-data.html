@@ -144,6 +144,27 @@ button on the <a class="reference external" href="https://catalogue.ceh.ac.uk/do
 <li><p><a class="reference external" href="https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv">Gauge/station metadata</a></p></li>
 </ul>
 </div></blockquote>
+<p>Bulk download tools can be used to obtain all files or alternatively a small
+script, such as the following Python example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+
+<span class="n">metadata_url</span> <span class="o">=</span> <span class="s1">&#39;https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv&#39;</span>
+<span class="n">weather_base_url</span> <span class="o">=</span> <span class="s1">&#39;https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/&#39;</span>
+<span class="n">output_folder</span> <span class="o">=</span> <span class="o">...</span>  <span class="c1"># TODO: Insert path to output folder</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">metadata_url</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;File_Name&#39;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">weather_base_url</span><span class="si">}{</span><span class="n">file_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_folder</span><span class="p">,</span> <span class="n">file_name</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</pre></div>
+</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The EIDC dataset entry contains an archived version of the model code, but
