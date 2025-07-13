@@ -39,27 +39,50 @@ for the gauges/stations.
 Downloads
 ---------
 
-The formatted `MIDAS-Open`_ data are available at the links below. Downloads
-should begin once the links are clicked.
+The formatted `MIDAS-Open`_ data are now available for download from the UKCEH
+Environmental Information Data Centre (EIDC). Click on the "download data"
+button on the `dataset landing page`_ or see the following direct links:
 
     - `Hourly rainfall data`_
     - `Daily weather data`_
     - `Gauge/station metadata`_
 
-.. _Hourly rainfall data: https://www.dropbox.com/s/f3jfpymsl2u3193/hourly-rainfall_0.0.0.zip?dl=1
-.. _Daily weather data: https://www.dropbox.com/s/901lml2m5hvnti0/daily-weather_0.0.0.zip?dl=1
-.. _Gauge/station metadata: https://www.dropbox.com/s/kpowe8d66hruq79/metadata_0.0.0.csv?dl=1
+.. _dataset landing page: https://catalogue.ceh.ac.uk/documents/44c577d3-665f-40de-adce-74ecad7b304a
+.. _Hourly rainfall data: https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_hourly-rainfall/
+.. _Daily weather data: https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/
+.. _Gauge/station metadata: https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv
+
+Bulk download tools can be used to obtain all files or alternatively a small
+script, such as the following Python example::
+
+    import os
+    import requests
+
+    import pandas as pd
+
+
+    metadata_url = 'https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv'
+    weather_base_url = 'https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/'
+    output_folder = ...  # TODO: Insert path to output folder
+
+    df = pd.read_csv(metadata_url)
+
+    for file_name in df['File_Name']:
+        print(file_name)
+        with requests.get(f'{weather_base_url}{file_name}') as r:
+            with open(os.path.join(output_folder, file_name), 'wb') as fh:
+                fh.write(r.content)
 
 .. note::
 
-    Note that the time series data files are zipped - they need to be unzipped
-    for use with RWGEN currently, although an option to read from zip files
-    will be added.
+    The EIDC dataset entry contains an archived version of the model code, but
+    this has been superseded. Instead, please refer to the GitHub repository,
+    which contains the most recent code.
 
-Coming Soon
+Future Data
 -----------
 
-Additional data will be added soon:
+Additional data to be added in the future include:
 
     - Updated gauge/station time series supplemented by point extractions from
       `HadUK-Grid`_ to supplement missing precipitation and temperature data
