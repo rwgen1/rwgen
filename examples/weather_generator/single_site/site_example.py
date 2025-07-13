@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # lines below
 
     # # Calculate rainfall reference statistics from gauge time series
-    # wg.rainfall_model.preprocess()
+    # wg.rainfall_model.preprocess(dayfirst=True)
     #
     # # Fit rainfall model parameters using reference statistics
     # wg.rainfall_model.fit()

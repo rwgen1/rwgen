@@ -113,7 +113,7 @@ class RainfallModel:
             spatial_model,
             project_name,  # TODO: Check whether needed now that variable name is used in output files (for WG)
             input_timeseries=None,
-            point_metadata=None,  # TODO: Compulsory or not for rainfall model? - ideally not
+            point_metadata=None,
             season_definitions='monthly',
             intensity_distribution='exponential',
             output_folder='./output',
@@ -133,11 +133,9 @@ class RainfallModel:
         self.input_timeseries = input_timeseries
 
         # Spatial model requires a table of metadata for points
-        # if self.spatial_model:
         if isinstance(point_metadata, pd.DataFrame):
             self.point_metadata = point_metadata
             self.point_metadata.columns = [name.lower() for name in self.point_metadata.columns]
-            # TODO: Other dataframe arguments need to be converted to lowercase column headings (e.g. statistic defs...)
         elif isinstance(point_metadata, str):
             self.point_metadata = utils.read_csv_(point_metadata)
         else:
@@ -239,6 +237,7 @@ class RainfallModel:
             amax_window_type='sliding',
             output_filenames='default',
             use_pooling=True,
+            dayfirst=False,
     ):
         """
         Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.
@@ -266,11 +265,12 @@ class RainfallModel:
             use_pooling (bool): Indicates whether to pool (scaled) point series for calculating statistics for
                 a spatial model. If True (default), cross-correlations are also "averaged" for a set of separation
                 distance bins.
+            dayfirst (bool). Whether dates are formatted as dd/mm/yyyy[ hh:mm]. Default False (i.e. yyyy-mm-dd hh:mm).
 
         Notes:
             Currently ``.csv`` files are used for time series inputs. These files are expected to contain a
-            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format, i.e. '%d/%m/%Y %H:%M'. They should also contain
-            a ``Value`` column using units of mm/timestep.
+            ``DateTime`` column using ``dd/mm/yyyy hh:mm`` format ('%d/%m/%Y %H:%M') or ``yyyy-mm-dd hh:mm``
+            ('%Y-%m-%d %H:%M'). They should also contain a ``Value`` column using units of mm/timestep.
 
         """
         print('Rainfall model preprocessing')
@@ -329,9 +329,6 @@ class RainfallModel:
         else:
             self.calculation_period = calculation_period
 
-        # AMAX durations using resample codes
-        # _amax_durations = [str(dur) + 'H' for dur in amax_durations]
-
         # Do preprocessing
         self.reference_statistics, self.phi = analysis.main(
             spatial_model=self.spatial_model,
@@ -363,6 +360,7 @@ class RainfallModel:
             simulation_name=None,
             use_pooling=use_pooling,
             calculate_statistics=True,
+            dayfirst=dayfirst,
         )
 
         print('  - Completed')
@@ -373,8 +371,6 @@ class RainfallModel:
             parameter_bounds=None,
             fixed_parameters=None,
             n_workers=1,
-            initial_parameters=None,
-            smoothing_tolerance=0.2,
             output_filenames='default',
             fit_nsrp=True,
             fit_shuffling=False,
@@ -390,19 +386,13 @@ class RainfallModel:
 
         Args:
             fitting_method (str): Flag to indicate fitting method. Using ``'default'`` will fit each month or season
-                independently. Other options (including ``'empirical_smoothing'``) under development.
+                independently. Other options under development.
             parameter_bounds (dict or str or pandas.DataFrame): Dictionary containing tuples of upper and lower
                 parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
                 dataframe (see Notes).
             fixed_parameters (dict or str or pandas.DataFrame): Dictionary containing fixed parameter values by
                 parameter name. Alternatively the path to a parameters file or an equivalent dataframe (see Notes).
             n_workers (int): Number of workers (cores/processes) to use in fitting. Default is 1.
-            initial_parameters (pandas.DataFrame or str): Initial parameter values to use if ``fitting_method`` is
-                ``'empirical_smoothing'``. If not specified then initial parameter values will be obtained using
-                the default fitting method (for which no initial values are currently required).
-            smoothing_tolerance (float): Permitted deviation in smoothed annual cycle of parameter values (only used
-                if ``fitting_method`` is ``'empirical_smoothing'``). Expressed as fraction of annual mean parameter
-                value, e.g. 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.
             output_filenames (str or dict): Either key/value pairs indicating output file names, ``'default'`` to use
                 {'statistics': 'fitted_statistics.csv', 'parameters': 'parameters.csv'} or ``None`` to indicate that
                 no output files should be written.
@@ -539,13 +529,6 @@ class RainfallModel:
             parameter_bounds, fixed_parameters, self.parameter_names, default_bounds, self.unique_seasons
         )
 
-        # Initial parameters are currently only relevant to empirical smoothing method
-        if initial_parameters is not None:
-            if isinstance(initial_parameters, pd.DataFrame):
-                pass
-            elif isinstance(initial_parameters, str):
-                initial_parameters = utils.read_csv_(initial_parameters)
-
         # Construct output paths
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -577,18 +560,15 @@ class RainfallModel:
                 fitting_method=fitting_method,
                 reference_statistics=self.reference_statistics.loc[
                     self.reference_statistics['duration'] != self.shuffling_config['target_duration']
-                ],  # TODO: This subset may no longer be needed, as all weights except nsrp can potentially go to zero
-                all_parameter_names=self.parameter_names,  # RENAMED
-                parameters_to_fit=parameters_to_fit,  # NEW
-                parameter_bounds=parameter_bounds,  # SAME
-                fixed_parameters=fixed_parameters,  # NEW
+                ],  # TODO: Check if subset still needed, as all weights except nsrp can potentially go to zero
+                all_parameter_names=self.parameter_names,
+                parameters_to_fit=parameters_to_fit,
+                parameter_bounds=parameter_bounds,
+                fixed_parameters=fixed_parameters,
                 n_workers=n_workers,
                 output_parameters_path=output_parameters_path,
                 output_statistics_path=output_statistics_path,
-                initial_parameters=initial_parameters,
-                smoothing_tolerance=smoothing_tolerance,
-                write_output=write_output,  # NEW
-                # !221123 - for pre-biasing
+                write_output=write_output,
                 n_iterations=pdry_iterations,
                 output_folder=self.output_folder,
                 point_metadata=self.point_metadata,
@@ -596,7 +576,6 @@ class RainfallModel:
                 statistic_definitions=self.statistic_definitions,
                 random_seed=random_seed,
                 use_pooling=use_pooling,
-                testing_pars=self.parameters,  # TEMPORARY FOR TESTING
             )
 
         if fit_shuffling:
@@ -634,7 +613,6 @@ class RainfallModel:
                     else:
                         line = (
                             line
-                            # + ',' + str(self.parameters['max_dsl'].values[i-1])
                             + ',' + str(self.parameters['delta'].values[i - 1])
                             + ',' + str(self.parameters['ar1_slope'].values[i - 1])
                             + ',' + str(self.parameters['ar1_intercept'].values[i - 1])
@@ -761,7 +739,7 @@ class RainfallModel:
         if self.project_name is None:
             output_name = 'simulation'
         else:
-            output_name = self.project_name  # TODO: Sort out inclusion of variable name...
+            output_name = self.project_name  # TODO: Sort out inclusion of variable name
 
         # Ensure only "final" parameters are used in simulation (in case intermediate parameters were recorded during
         # fitting)
@@ -781,14 +759,6 @@ class RainfallModel:
             n_realisations=n_realisations,
             simulation_name=output_name,
         )
-
-        # Get input timeseries data file/folder paths to help with shuffling
-        if self.spatial_model:
-            timeseries_path = None
-            timeseries_folder = self.input_timeseries
-        else:
-            timeseries_path = self.input_timeseries
-            timeseries_folder = None
 
         if apply_shuffling:
             simulation_mode = 'with_shuffling'
@@ -827,11 +797,9 @@ class RainfallModel:
                 maximum_memory_percentage=self.simulation_config['maximum_memory_percentage'],
                 block_subset_size=self.simulation_config['block_subset_size'],
                 project_name=output_name,
-                spatial_raincell_method=self.simulation_config['spatial_raincell_method'],
                 spatial_buffer_factor=self.simulation_config['spatial_buffer_factor'],
                 simulation_mode=simulation_mode,
                 weather_model=weather_model,
-                max_dsl=6.0,  # TODO: Remove?
                 n_divisions=self.shuffling_config['month_divisions'],
                 do_reordering=self.shuffling_config['reorder_months'],
             )
@@ -843,7 +811,7 @@ class RainfallModel:
             amax_durations=None,
             ddf_return_periods=None,
             amax_window_type='sliding',
-            subset_length=200,  # 50,
+            subset_length=200,
             output_filenames='default',
             calculate_statistics=True,
             simulation_format=None,
@@ -853,7 +821,6 @@ class RainfallModel:
             simulation_subfolders=None,
             simulation_length=None,
             n_realisations=None,
-            # n_workers=1,  # TODO: Define n_workers in __init__()
     ):
         """
         Post-processing to calculate statistics from simulated point output.
@@ -952,17 +919,8 @@ class RainfallModel:
                 ddf_return_periods = [ddf_return_periods]
 
         # Construct paths to simulation (point) output
-        if simulation_subfolders == 'default':
-            if self.spatial_model:
-                simulation_subfolders = dict(point='point', catchment='catchment', grid='grid')
-            else:
-                simulation_subfolders = dict(point='')
         timeseries_path = None
         timeseries_folder = os.path.join(output_subfolder)
-
-        # Subset on points to use in post-processing
-        # if 'postprocess' in self.point_metadata.columns:
-        #     pass
 
         self.simulated_statistics, _ = analysis.main(
             spatial_model=self.spatial_model,
@@ -992,9 +950,9 @@ class RainfallModel:
             ddf_return_periods=ddf_return_periods,
             write_output=True,
             simulation_name=self.project_name,
-            # n_workers=n_workers,
             use_pooling=False,
             calculate_statistics=calculate_statistics,
+            dayfirst=False,
         )
 
         print('  - Completed')
@@ -1037,18 +995,10 @@ class RainfallModel:
         print('Setting rainfall statistics')
 
         # Point metadata
-        # if self.spatial_model and point_metadata is None:
-        #     raise ValueError('point_metadata must be supplied for a spatial model.')
-        if (self.point_metadata is None) and (point_metadata is None):
-            # TODO: Confirm whether point_metadata is needed/compulsory for rainfall model - ideally not
-            # raise ValueError('point_metadata must be supplied.')
-            pass
         if isinstance(point_metadata, pd.DataFrame):
             self.point_metadata = point_metadata
         elif isinstance(point_metadata, str):
             self.point_metadata = utils.read_csv_(point_metadata)
-        # if not self.spatial_model:
-        #     self.point_metadata = None
 
         # Reference statistics
         if reference_statistics is not None:
@@ -1224,7 +1174,6 @@ class RainfallModel:
             check_available_memory=True,
             maximum_memory_percentage=75,
             block_subset_size=50,
-            spatial_raincell_method='buffer',
             spatial_buffer_factor=15,
     ):
         """
@@ -1243,8 +1192,6 @@ class RainfallModel:
                 until the ``minimum_block_size`` is reached.
             block_subset_size (int): Block subset size (number of years) for internal use in discretisation (as it is
                 much faster to discretise subsets of each block).
-            spatial_raincell_method (str): Flag to use ``'buffer'`` method or Burton et al. (2010) method ``'burton'``
-                for spatial raincell simulation.
             spatial_buffer_factor (float): Number of standard deviations of raincell radius distribution to use with
                 buffer method of spatial raincell simulation.
 
@@ -1256,7 +1203,6 @@ class RainfallModel:
             check_available_memory=check_available_memory,
             maximum_memory_percentage=maximum_memory_percentage,
             block_subset_size=block_subset_size,
-            spatial_raincell_method=spatial_raincell_method,
             spatial_buffer_factor=spatial_buffer_factor,
         )
         if hasattr(self, 'simulation_config'):
@@ -1402,5 +1348,3 @@ class RainfallModel:
     def unique_seasons(self):
         """list of int: Unique season identifiers."""
         return list(set(self.season_definitions.values()))
-
-

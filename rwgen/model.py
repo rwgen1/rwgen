@@ -1,5 +1,4 @@
 import os
-import sys
 
 import numpy as np
 
@@ -19,7 +18,7 @@ class WeatherGenerator:
             easting=None,
             northing=None,
             elevation=None,
-            easting_min=None,  # domain extent could ultimately be inferred - perhaps from rainfall model...? / dem
+            easting_min=None,
             easting_max=None,
             northing_min=None,
             northing_max=None,
@@ -53,7 +52,7 @@ class WeatherGenerator:
         print('Weather generator initialisation')
 
         self.spatial_model = spatial_model
-        self.project_name = project_name  # ? droppable ?
+        self.project_name = project_name
         self.output_folder = output_folder
         self.latitude = latitude
         self.longitude = longitude
@@ -84,8 +83,6 @@ class WeatherGenerator:
     ):
         """
         Initialise rainfall model.
-
-        Link to rwgen.RainfallModel docs for more details.
 
         Args:
             input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
@@ -127,8 +124,6 @@ class WeatherGenerator:
         """
         Initialise weather model.
 
-        Link to rwgen.WeatherModel docs for more details.
-
         Args:
             input_timeseries (str): Path to file containing timeseries data (for point model) or folder containing
                 timeseries data files (for spatial model). Currently compulsory.
@@ -145,7 +140,7 @@ class WeatherGenerator:
         # Things that could be potentially be arguments (but are not easily changed by the user currently)
         predictors = 'default'
         input_variables = 'default'
-        dem = None  # currently no dem reading in weather model stuff, so could only be taken as xarray dataset (at the moment)
+        dem = None  # currently no dem reading in weather model
         residual_method = 'default'
 
         self.weather_model = WeatherModel(
@@ -159,8 +154,6 @@ class WeatherGenerator:
             output_variables=output_variables,
             season_length=season_length,
             wet_threshold=wet_threshold,
-            # timestep=timestep,
-            # random_seed=random_seed,
             dem=dem,
             residual_method=residual_method,
             wind_height=wind_height,
@@ -186,14 +179,12 @@ class WeatherGenerator:
             timestep_length=1,
             start_year=2000,
             calendar='gregorian',
-            random_seed=None,  # pass on initialisation? one seed for weather generator?
+            random_seed=None,
             run_simulation=True,
             apply_shuffling=False,
     ):
         """
         Simulate rainfall and other weather (temperature, PET, ...) variables.
-
-        Link to rgwen.RainfallModel.simulate() for more details.
 
         Args:
             output_types (str or list of str): Types of output (discretised) rainfall required. Options are ``'point'``,
@@ -260,7 +251,7 @@ class WeatherGenerator:
             weather_model=self.weather_model
         )
 
-    def zip_output(self, file_extension='.txt', delete_uncompressed=False):  # see rainfall/weather model methods
+    def zip_output(self, file_extension='.txt', delete_uncompressed=False):
         """
         Zip and compress output files of a specified extension (optionally deleting uncompressed files).
 
@@ -272,27 +263,3 @@ class WeatherGenerator:
         self.rainfall_model.zip_files(file_extension=file_extension, delete_uncompressed=delete_uncompressed)
         if self.weather_model is not None:
             self.weather_model.zip_files(file_extension=file_extension, delete_uncompressed=delete_uncompressed)
-
-
-# Baseline usage idea
-# wg = WeatherGenerator()
-# wg.initialise_rainfall_model()
-# wg.rainfall_model.preprocess()
-# wg.rainfall_model.fit()
-# wg.initialise_weather_model()
-# wg.weather_model.preprocess()
-# wg.weather_model.fit()
-# wg.simulate()
-# wg.rainfall_model.postprocess()
-# # wg.weather_model.postprocess()
-# # wg.rainfall_model.plot(['reference', 'fitted'], ...)
-
-# Climate change usage idea
-# ... initialise ...
-# wg.rainfall_model.set_statistics()
-# wg.rainfall_model.perturb_statistics()
-# wg.rainfall_model.fit()
-# wg.weather_model.set_statistics()
-# wg.weather_model.perturb_statistics()
-# wg.weather_model.set_parameters()
-# wg.simulate()

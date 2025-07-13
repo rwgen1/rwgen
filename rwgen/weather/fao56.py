@@ -2,9 +2,6 @@
 FAO56 (Allen et al. 1998) reference evapotranspiration functions.
 
 """
-import datetime
-import calendar
-
 import numpy as np
 
 
