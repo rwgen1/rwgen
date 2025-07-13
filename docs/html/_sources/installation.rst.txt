@@ -1,10 +1,10 @@
-.. |rwgen_version| replace:: ``rwgen-0.0.5``
+.. |rwgen_version| replace:: ``rwgen-0.0.6``
 
-.. |example_folder| replace:: ``H:/RWGEN/rwgen-0.0.5``
+.. |example_folder| replace:: ``H:/RWGEN/rwgen-0.0.6``
 
-.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.5
+.. |example_folder_nonliteral| replace:: H:/RWGEN/rwgen-0.0.6
 
-.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.5.zip
+.. _zip: https://github.com/davidpritchard1/rwgen/archive/refs/tags/v0.0.6.zip
 
 Installation
 ============

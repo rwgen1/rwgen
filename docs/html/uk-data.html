@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UK Input Data &mdash; RWGEN 0.0.4 documentation</title>
+  <title>UK Input Data &mdash; RWGEN 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8c5712d9"></script>
+        <script src="_static/documentation_options.js?v=1fd71caa"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -51,7 +51,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">UK Input Data</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#available-data">Available Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#downloads">Downloads</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#future-data">Future Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coming-soon">Coming Soon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#licence-information">Licence Information</a></li>
 </ul>
 </li>
@@ -134,47 +134,25 @@ for the gauges/stations.</p>
 </section>
 <section id="downloads">
 <h2>Downloads<a class="headerlink" href="#downloads" title="Link to this heading"></a></h2>
-<p>The formatted <a class="reference external" href="https://catalogue.ceda.ac.uk/uuid/dbd451271eb04662beade68da43546e1">MIDAS-Open</a> data are now available for download from the UKCEH
-Environmental Information Data Centre (EIDC). Click on the “download data”
-button on the <a class="reference external" href="https://catalogue.ceh.ac.uk/documents/44c577d3-665f-40de-adce-74ecad7b304a">dataset landing page</a> or see the following direct links:</p>
+<p>The formatted <a class="reference external" href="https://catalogue.ceda.ac.uk/uuid/dbd451271eb04662beade68da43546e1">MIDAS-Open</a> data are available at the links below. Downloads
+should begin once the links are clicked.</p>
 <blockquote>
 <div><ul class="simple">
-<li><p><a class="reference external" href="https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_hourly-rainfall/">Hourly rainfall data</a></p></li>
-<li><p><a class="reference external" href="https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/">Daily weather data</a></p></li>
-<li><p><a class="reference external" href="https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv">Gauge/station metadata</a></p></li>
+<li><p><a class="reference external" href="https://www.dropbox.com/s/f3jfpymsl2u3193/hourly-rainfall_0.0.0.zip?dl=1">Hourly rainfall data</a></p></li>
+<li><p><a class="reference external" href="https://www.dropbox.com/s/901lml2m5hvnti0/daily-weather_0.0.0.zip?dl=1">Daily weather data</a></p></li>
+<li><p><a class="reference external" href="https://www.dropbox.com/s/kpowe8d66hruq79/metadata_0.0.0.csv?dl=1">Gauge/station metadata</a></p></li>
 </ul>
 </div></blockquote>
-<p>Bulk download tools can be used to obtain all files or alternatively a small
-script, such as the following Python example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">requests</span>
-
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-
-
-<span class="n">metadata_url</span> <span class="o">=</span> <span class="s1">&#39;https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/station_metadata.csv&#39;</span>
-<span class="n">weather_base_url</span> <span class="o">=</span> <span class="s1">&#39;https://catalogue.ceh.ac.uk/datastore/eidchub/44c577d3-665f-40de-adce-74ecad7b304a/historical_daily-weather/&#39;</span>
-<span class="n">output_folder</span> <span class="o">=</span> <span class="o">...</span>  <span class="c1"># TODO: Insert path to output folder</span>
-
-<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">metadata_url</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;File_Name&#39;</span><span class="p">]:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">weather_base_url</span><span class="si">}{</span><span class="n">file_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_folder</span><span class="p">,</span> <span class="n">file_name</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
-            <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-</pre></div>
-</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The EIDC dataset entry contains an archived version of the model code, but
-this has been superseded. Instead, please refer to the GitHub repository,
-which contains the most recent code.</p>
+<p>Note that the time series data files are zipped - they need to be unzipped
+for use with RWGEN currently, although an option to read from zip files
+will be added.</p>
 </div>
 </section>
-<section id="future-data">
-<h2>Future Data<a class="headerlink" href="#future-data" title="Link to this heading"></a></h2>
-<p>Additional data to be added in the future include:</p>
+<section id="coming-soon">
+<h2>Coming Soon<a class="headerlink" href="#coming-soon" title="Link to this heading"></a></h2>
+<p>Additional data will be added soon:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>Updated gauge/station time series supplemented by point extractions from
