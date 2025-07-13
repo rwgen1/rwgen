@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.fit &mdash; RWGEN 0.0.4 documentation</title>
+  <title>rwgen.RainfallModel.fit &mdash; RWGEN 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
 
@@ -15,8 +15,8 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=8c5712d9"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/documentation_options.js?v=1fd71caa"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -117,7 +117,7 @@
 <h1>rwgen.RainfallModel.fit<a class="headerlink" href="#rwgen-rainfallmodel-fit" title="Link to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.fit">
-<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fitting_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_nsrp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_shuffling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdry_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.fit" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fitting_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_nsrp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_shuffling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdry_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.fit" title="Link to this definition"></a></dt>
 <dd><p>Fit model parameters.</p>
 <p>Depends on <code class="docutils literal notranslate"><span class="pre">self.reference_statistics</span></code> attribute. Sets <code class="docutils literal notranslate"><span class="pre">self.parameters</span></code> and <code class="docutils literal notranslate"><span class="pre">self.fitted_statistics</span></code>.
 Also writes <code class="docutils literal notranslate"><span class="pre">parameters</span></code> and <cite>fitted_statistics`</cite> output files.</p>
@@ -125,19 +125,13 @@ Also writes <code class="docutils literal notranslate"><span class="pre">paramet
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>fitting_method</strong> (<em>str</em>) – Flag to indicate fitting method. Using <code class="docutils literal notranslate"><span class="pre">'default'</span></code> will fit each month or season
-independently. Other options (including <code class="docutils literal notranslate"><span class="pre">'empirical_smoothing'</span></code>) under development.</p></li>
+independently. Other options under development.</p></li>
 <li><p><strong>parameter_bounds</strong> (<em>dict</em><em> or </em><em>str</em><em> or </em><em>pandas.DataFrame</em>) – Dictionary containing tuples of upper and lower
 parameter bounds by parameter name. Alternatively the path to a parameter bounds file or an equivalent
 dataframe (see Notes).</p></li>
 <li><p><strong>fixed_parameters</strong> (<em>dict</em><em> or </em><em>str</em><em> or </em><em>pandas.DataFrame</em>) – Dictionary containing fixed parameter values by
 parameter name. Alternatively the path to a parameters file or an equivalent dataframe (see Notes).</p></li>
 <li><p><strong>n_workers</strong> (<em>int</em>) – Number of workers (cores/processes) to use in fitting. Default is 1.</p></li>
-<li><p><strong>initial_parameters</strong> (<em>pandas.DataFrame</em><em> or </em><em>str</em>) – Initial parameter values to use if <code class="docutils literal notranslate"><span class="pre">fitting_method</span></code> is
-<code class="docutils literal notranslate"><span class="pre">'empirical_smoothing'</span></code>. If not specified then initial parameter values will be obtained using
-the default fitting method (for which no initial values are currently required).</p></li>
-<li><p><strong>smoothing_tolerance</strong> (<em>float</em>) – Permitted deviation in smoothed annual cycle of parameter values (only used
-if <code class="docutils literal notranslate"><span class="pre">fitting_method</span></code> is <code class="docutils literal notranslate"><span class="pre">'empirical_smoothing'</span></code>). Expressed as fraction of annual mean parameter
-value, e.g. 0.2 allows a +/- 20% deviation from the smoothed annual cycle for a given parameter.</p></li>
 <li><p><strong>output_filenames</strong> (<em>str</em><em> or </em><em>dict</em>) – Either key/value pairs indicating output file names, <code class="docutils literal notranslate"><span class="pre">'default'</span></code> to use
 {‘statistics’: ‘fitted_statistics.csv’, ‘parameters’: ‘parameters.csv’} or <code class="docutils literal notranslate"><span class="pre">None</span></code> to indicate that
 no output files should be written.</p></li>

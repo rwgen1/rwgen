@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>rwgen.RainfallModel.preprocess &mdash; RWGEN 0.0.4 documentation</title>
+  <title>rwgen.RainfallModel.preprocess &mdash; RWGEN 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
 
@@ -15,8 +15,8 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=8c5712d9"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/documentation_options.js?v=1fd71caa"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -117,7 +117,7 @@
 <h1>rwgen.RainfallModel.preprocess<a class="headerlink" href="#rwgen-rainfallmodel-preprocess" title="Link to this heading"></a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="rwgen.RainfallModel.preprocess">
-<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">calculation_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full_record'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">completeness_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outlier_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_relative_difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_durations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sliding'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.preprocess" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">RainfallModel.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">calculation_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full_record'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">completeness_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outlier_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_relative_difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_durations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amax_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sliding'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pooling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dayfirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rwgen.RainfallModel.preprocess" title="Link to this definition"></a></dt>
 <dd><p>Prepare reference statistics, weights and scale factors for use in model fitting, simulation and evaluation.</p>
 <p>Updates <code class="docutils literal notranslate"><span class="pre">self.reference_statistics</span></code> and <code class="docutils literal notranslate"><span class="pre">self.phi</span></code> attributes and writes a <code class="docutils literal notranslate"><span class="pre">reference_statistics</span></code> output
 file.</p>
@@ -143,13 +143,14 @@ no output files should be written.</p></li>
 <li><p><strong>use_pooling</strong> (<em>bool</em>) – Indicates whether to pool (scaled) point series for calculating statistics for
 a spatial model. If True (default), cross-correlations are also “averaged” for a set of separation
 distance bins.</p></li>
+<li><p><strong>dayfirst</strong> (<em>bool</em>) – mm]. Default False (i.e. yyyy-mm-dd hh:mm).</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <p>Currently <code class="docutils literal notranslate"><span class="pre">.csv</span></code> files are used for time series inputs. These files are expected to contain a
-<code class="docutils literal notranslate"><span class="pre">DateTime</span></code> column using <code class="docutils literal notranslate"><span class="pre">dd/mm/yyyy</span> <span class="pre">hh:mm</span></code> format, i.e. ‘%d/%m/%Y %H:%M’. They should also contain
-a <code class="docutils literal notranslate"><span class="pre">Value</span></code> column using units of mm/timestep.</p>
+<code class="docutils literal notranslate"><span class="pre">DateTime</span></code> column using <code class="docutils literal notranslate"><span class="pre">dd/mm/yyyy</span> <span class="pre">hh:mm</span></code> format (‘%d/%m/%Y %H:%M’) or <code class="docutils literal notranslate"><span class="pre">yyyy-mm-dd</span> <span class="pre">hh:mm</span></code>
+(‘%Y-%m-%d %H:%M’). They should also contain a <code class="docutils literal notranslate"><span class="pre">Value</span></code> column using units of mm/timestep.</p>
 </dd></dl>
 
 </section>
